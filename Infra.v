@@ -67,6 +67,7 @@ Notation "(=/= x )" := (fun y => y =/= x) (only parsing) : math_scope.
 Class Setoid A {Ae : Equiv A} : Prop := setoid_eq :> Equivalence (@equiv A Ae).
 
 Section SETOID_MORPHISM.
+  
   Context `{Ae : Equiv A} `{Be : Equiv B} (f : A -> B).
 
   Class Setoid_Morphism :=
@@ -78,38 +79,86 @@ Section SETOID_MORPHISM.
 
 End SETOID_MORPHISM.
 
+Section SETOID_MORPHISM_PROP.
+
+  Context `{Ae : Equiv A} `{Be : Equiv B} `{Ce : Equiv C} (f : A -> B) (g: B -> C) `{morphAB: !Setoid_Morphism f} `{morphBC: !Setoid_Morphism g}.
+
+  Lemma setoid_morphism_trans: Setoid_Morphism (compose g f).
+  Proof. constructor; [exact (setoidmor_a f) | exact (setoidmor_b g) | repeat intro; unfold compose; apply sm_proper; auto; apply sm_proper; auto]. Qed.
+  
+End SETOID_MORPHISM_PROP.
+
 Arguments sm_proper {A Ae B Be f Setoid_Morphism} _ _ _.
 
-Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f :=f)).
+Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f := f)).
 
 Class Pred A := pred : A -> Prop.
 
 Definition Sub {A} (PA : Pred A) := {x : A | pred x}.
 
-Class SubSetoid A {Ae : Equiv A} (PA : Pred A) : Prop :=
-  {
-    super_setoid : Setoid A;
-    pred_proper :> Proper ((=) ==> iff) pred
-  }.
+Definition sub_int_pred {A} (P1 P2 : Pred A) : Pred A := fun m => (@pred _ P1) m /\ (@pred _ P2) m.
+
+Definition subsub_int_pred {A} (P1 P2 : Pred A) : Pred (Sub P1) := fun m => (@pred _ P2) (proj1_sig m).
 
 Instance sub_equiv `{Equiv A} (PA : Pred A) : Equiv (Sub PA) := fun x y => proj1_sig x = proj1_sig y.
 
-Section SUB_SETOID.
+Definition pred_equiv {A} (P1 P2 : Pred A) := pointwise_relation A iff (@pred _ P1) (@pred _ P2).
+
+Instance pred_equiv_equiv {A} : Equivalence (@pred_equiv A) := Equivalence.pointwise_equivalence iff_equivalence.
+
+Section SUB_SUB.
+  
+  Context {A} (P1 P2: Pred A).
+
+  Lemma subsub_sub_satisfied: forall (x : Sub (subsub_int_pred P1 P2)), (@pred _ (sub_int_pred P1 P2)) (proj1_sig (proj1_sig x)). Proof. intros. split; auto. Qed.
+  
+  Definition subsub_sub (x : Sub (subsub_int_pred P1 P2)) : Sub (sub_int_pred P1 P2) := exist _ (proj1_sig (proj1_sig x)) (subsub_sub_satisfied x).
+
+  Definition sub_subsub (x: Sub (sub_int_pred P1 P2)) : Sub (subsub_int_pred P1 P2) := exist _ (exist _ (proj1_sig x) (proj1 (proj2_sig x))) (proj2 (proj2_sig x)).
+
+End SUB_SUB.
+
+Class SubSetoid A {Ae : Equiv A} (PA : Pred A) : Prop :=
+  {
+    super_setoid :> Setoid A;
+    pred_proper :> Proper ((=) ==> iff) pred
+  }.
+
+Section SUBSETOID_PROP.
 
   Context `(SS : SubSetoid A).
 
-  Lemma sub_eq_refl : forall (x : Sub PA), x = x. Proof. pose proof super_setoid; intros. unfold sub_equiv. red. auto. Qed.
+  Lemma sub_eq_refl : forall (x : Sub PA), x = x. Proof. intros. unfold sub_equiv. red. auto. Qed.
 
-  Lemma sub_eq_sym : forall (x y : Sub PA), x = y -> y = x. Proof. pose proof super_setoid. intros. hnf in *. symmetry; auto. Qed.
+  Lemma sub_eq_sym : forall (x y : Sub PA), x = y -> y = x. Proof. intros. unfold equiv, sub_equiv. symmetry; auto. Qed.
 
   Lemma sub_eq_trans : forall (x y z : Sub PA), x = y -> y = z -> x = z.
-  Proof. pose proof super_setoid. unfold sub_equiv; intros. hnf in *. transitivity (proj1_sig y); auto. Qed.
+  Proof. unfold sub_equiv; intros. unfold equiv, sub_equiv. transitivity (proj1_sig y); auto. Qed.
 
   Instance sub_equivalence : Equivalence (sub_equiv PA). Proof. constructor; hnf. apply sub_eq_refl. apply sub_eq_sym. apply sub_eq_trans. Qed.
 
   Instance subsetoid_as_setoid : Setoid (Sub PA). Proof. apply sub_equivalence. Qed.
 
-End SUB_SETOID.
+End SUBSETOID_PROP.
+
+Definition pred_impl {A} (P1 P2: Pred A) := pointwise_relation A impl (@pred _ P1) (@pred _ P2).
+
+Lemma pred_equiv_impl {A}: forall (P1 P2: Pred A), pred_equiv P1 P2 <-> (pred_impl P1 P2 /\ pred_impl P2 P1).
+Proof.
+  unfold pred_equiv, pred_impl, pointwise_relation. split; intros; split; intros; [rewrite H; intro | rewrite H; intro | destruct H; apply H | destruct H; apply H1]; auto. 
+Qed.  
+
+Section SUBSETOID_IFF.
+
+  Context `{S : Setoid A} {P1 P2 : Pred A}.
+
+  Lemma pred_equiv_subsetoid_iff : pred_equiv P1 P2 -> SubSetoid A P1 <-> SubSetoid A P2.
+  Proof. unfold pred_equiv, pointwise_relation. intros. split; intros; constructor; auto; repeat intro; [rewrite <- !H | rewrite !H]; rewrite H1; tauto. Qed.
+
+  Lemma setoid_sub_another : pred_equiv P1 P2 -> SubSetoid A P1 -> Setoid (Sub P2).
+  Proof. intros. rewrite pred_equiv_subsetoid_iff in H0; [apply subsetoid_as_setoid |]; auto. Qed.
+
+End SUBSETOID_IFF.
 
 (* Existing Instance subsetoid_as_setoid. *)
 
@@ -166,3 +215,18 @@ Section Jections.
     }.
 
 End Jections.
+
+Section BIJECTIVE_TRANS.
+
+  Context `{Ae : Equiv A} `{Be : Equiv B} `{Ce : Equiv C} (f : A -> B) (g: B -> C).
+  Context `{biAB: !Bijective f} `{biBC: !Bijective g}.
+
+  Instance bijective_trans: Bijective (compose g f).
+  Proof.
+    assert (SM: Setoid_Morphism (compose g f)) by (apply setoid_morphism_trans; [exact (injective_mor f) | exact (injective_mor g)]). constructor; constructor; auto.
+    - intros. unfold compose in H. apply (injective f), (injective g); auto.
+    - intros. unfold compose. destruct (surjective g x) as [fy ?]. destruct (surjective f fy) as [y' ?]. exists y'.
+      pose proof (injective_mor g). destruct H1. rewrite <- H0 in H. auto.
+  Qed.
+  
+End BIJECTIVE_TRANS.
