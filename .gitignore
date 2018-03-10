@@ -1,4 +1,4 @@
 *.vo
 .depend
-*.vo.aux
 *.glob
+*.aux
