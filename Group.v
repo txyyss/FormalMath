@@ -24,47 +24,6 @@ Class Group (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegat
 
 Coercion gr_as_setoid : Group >-> Setoid.
 
-Section GROUP_IFF.
-
-  Context (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegate : Negate A}.
-
-  Definition trivial_pred : Pred A := fun _ => True.
-
-  Lemma setoid_iff : Setoid A <-> Setoid (Sub trivial_pred).
-  Proof.
-    split; intros.
-    - hnf. apply sub_equivalence. constructor; auto. repeat intro. unfold pred; intuition.
-    - hnf. hnf in H. unfold equiv in H. unfold trivial_pred, sub_equiv in H. destruct H. constructor.
-      + unfold Reflexive in *. intros. specialize (Equivalence_Reflexive (exist _ x I)). simpl in *. auto.
-      + unfold Symmetric in *. intros. specialize (Equivalence_Symmetric (exist _ x I) (exist _ y I)). simpl in *. auto.
-      + unfold Transitive in *. intros. specialize (Equivalence_Transitive (exist _ x I) (exist _ y I)(exist _ z I)). simpl in *. auto.
-  Qed.
-
-  Instance trivial_op : BinOp (Sub trivial_pred) := fun x y => exist _ (proj1_sig x & proj1_sig y) I.
-
-  Instance trivial_unit : GrUnit (Sub trivial_pred) := exist _ one I.
-
-  Instance trivial_neg : Negate (Sub trivial_pred) := fun x => exist _ (neg (proj1_sig x)) I.
-
-  Lemma group_iff : Group A <-> Group (Sub trivial_pred).
-  Proof.
-    intros. split; intros; constructor; repeat intro.
-    - rewrite <- setoid_iff. exact H.
-    - destruct x, y, x0, y0. unfold equiv, sub_equiv, proj1_sig, pred, trivial_pred in *. simpl. rewrite H0, H1. auto.
-    - destruct x, y. unfold equiv, sub_equiv, proj1_sig in *. simpl. rewrite H0. auto.
-    - destruct x, y, z. unfold equiv, sub_equiv, proj1_sig in *. simpl. rewrite op_assoc. auto.
-    - destruct x. unfold equiv, sub_equiv, proj1_sig, bi_op, trivial_op in *. simpl. apply one_left.
-    - destruct x. unfold equiv, sub_equiv, bi_op, trivial_op, neg, trivial_neg, proj1_sig in *. simpl. apply neg_left.
-    - rewrite setoid_iff. exact H.
-    - exact (@gr_op_proper _ _ _ _ _ H (exist _ x I) (exist _ y I) H0 (exist _ x0 I) (exist _ y0 I) H1).
-    - exact (@negate_proper _ _ _ _ _ H (exist _ x I) (exist _ y I) H0).
-    - exact (@op_assoc _ _ _ _ _ H (exist _ x I) (exist _ y I) (exist _ z I)).
-    - exact (@one_left _ _ _ _ _ H (exist _ x I)).
-    - exact (@neg_left _ _ _ _ _ H (exist _ x I)).
-Qed.
-
-End GROUP_IFF.
-
 Class AbelianGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegate : Negate A} : Prop :=
   {
     abgroup_as_group :> Group A;
@@ -111,97 +70,6 @@ Section GROUP_PROP.
 
 End GROUP_PROP.
 
-(***************************************** SubGroup *****************************************)
-
-Class SubGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegate : Negate A} (PA : Pred A) : Prop :=
-  {
-    super_group :> Group A;
-    sub_setoid :> SubSetoid A PA;
-    not_empty : exists x, pred x;
-    sub_criteria : forall x y : A, pred x -> pred y -> pred (x & (neg y))
-  }.
-
-Section SUBGROUP_PROP.
-
-  Context `(SA : SubGroup A).
-
-  Lemma one_pred : pred one. Proof. destruct (not_empty) as [x ?H]. generalize (sub_criteria _ _ H H); intro. rewrite (neg_right x) in H0. auto. Qed.
-
-  Lemma op_pred : forall x y : A, pred x -> pred y -> pred (x & y).
-  Proof.
-    intros. generalize one_pred; intro. generalize (sub_criteria _ _ H1 H0); intro. rewrite one_left in H2.
-    generalize (sub_criteria _ _ H H2); intro. rewrite double_neg in H3. auto.
-  Qed.
-
-  Lemma neg_pred : forall x : A, pred x -> pred (neg x). Proof. intros. generalize one_pred; intro. generalize (sub_criteria _ _ H0 H); intro. rewrite one_left in H1. auto. Qed.
-
-  Instance sg_op : BinOp (Sub PA). Proof. intros x y. destruct x as [x ?H]. destruct y as [y ?H]. exists (x & y). apply op_pred; auto. Defined.
-
-  Instance sg_unit : GrUnit (Sub PA) := exist _ _ one_pred.
-
-  Instance sg_negate : Negate (Sub PA). Proof. intro x. destruct x as [x ?H]. exists (neg x). apply neg_pred; auto. Defined.
-
-  Lemma sg_neg_proj : forall (x : Sub PA), neg (proj1_sig x) = proj1_sig (sg_negate x). Proof. intros. destruct x. unfold proj1_sig, sg_negate. auto. Qed.
-
-  Lemma sg_op_proj : forall (x y : Sub PA), proj1_sig x & proj1_sig y = proj1_sig (sg_op x y). Proof. intros; destruct x, y; unfold proj1_sig, sg_op; auto. Qed.
-
-  Instance subgroup_as_group : Group (Sub PA).
-  Proof.
-    constructor.
-    - exact (subsetoid_as_setoid sub_setoid).
-    - repeat intro. destruct x as [x ?H]; destruct y as [y ?H]; destruct x0 as [x0 ?H]; destruct y0 as [y0 ?H].
-      hnf in H, H0 |- *. unfold proj1_sig in H, H0 |- *. simpl. apply gr_op_proper; auto.
-    - repeat intro. destruct x as [x ?H]; destruct y as [y ?H]. hnf in H |- *. unfold proj1_sig in H |- *. simpl. apply negate_proper; auto.
-    - repeat intro. destruct x as [x ?H]; destruct y as [y ?H]; destruct z as [z ?H]. hnf. unfold proj1_sig. simpl. apply op_assoc.
-    - intro. destruct x as [x ?H]. hnf. unfold proj1_sig. simpl. apply one_left.
-    - intro. destruct x as [x ?H]. hnf. unfold proj1_sig. simpl. apply neg_left.
-  Qed.
-
-  Lemma normal_condition_iff_right : (forall x y : A, pred (x & y) -> pred (y & x)) <-> (forall a h, pred h -> exists h', pred h' /\ a & h = h' & a).
-  Proof.
-    split; intros.
-    - specialize (H (h & (neg a)) a). exists (a & h & (neg a)). rewrite op_assoc, neg_left, one_right, <- op_assoc in H.
-      specialize (H H0). split; auto. rewrite op_assoc, neg_left, one_right. auto.
-    - specialize (H (neg x) (x & y) H0). destruct H as [h' [? ?]]. rewrite <- op_assoc, neg_left, one_left in H1. rewrite H1, op_assoc, neg_left, one_right. auto.
-  Qed.
-
-  Lemma normal_condition_iff_left : (forall x y : A, pred (x & y) -> pred (y & x)) <-> (forall a h, pred h -> exists h', pred h' /\ h & a = a & h').
-  Proof.
-    split; intros.
-    - specialize (H a (neg a & h)). exists (neg a & h & a). rewrite <- op_assoc, neg_right, one_left in H.
-      specialize (H H0). split; auto. rewrite op_assoc, <- op_assoc, neg_right, one_left. auto.
-    - specialize (H (neg y) (x & y) H0). destruct H as [h' [? ?]]. rewrite op_assoc, neg_right, one_right in H1. rewrite H1, <- op_assoc, neg_right, one_left. auto.
-  Qed.
-
-  Definition right_coset_rel : relation A := fun x y => pred (x & (neg y)).
-
-  Instance equiv_right_coset : Equivalence right_coset_rel.
-  Proof.
-    constructor; hnf; unfold right_coset_rel; intros.
-    - rewrite neg_right. apply one_pred.
-    - apply neg_pred in H. rewrite neg_op in H. rewrite double_neg in H. auto.
-    - pose proof (op_pred _ _ H H0). rewrite <- op_assoc, (op_assoc x (neg y) y), neg_left, one_right in H1. auto.
-  Qed.
-
-  Instance subrelation_right_coset : subrelation (=) right_coset_rel. Proof. repeat intro. unfold right_coset_rel. rewrite H. rewrite neg_right. apply one_pred. Qed.
-
-  Instance right_coset_quotient_setoid : QuotientSetoid A (=) right_coset_rel.
-  Proof. constructor; [exact super_group | exact equiv_right_coset | exact subrelation_right_coset]. Qed.
-
-End SUBGROUP_PROP.
-
-Existing Instance right_coset_quotient_setoid.
-
-Existing Instance sg_op.
-
-Existing Instance sg_unit.
-
-Existing Instance sg_negate.
-
-Arguments right_coset_rel [_ _ _] _.
-
-(* Coercion subgroup_as_group : SubGroup >-> Group. *)
-
 (***************************************** Group Homomorphism *****************************************)
 
 Section GROUP_HOMOMORPHISM.
@@ -230,348 +98,163 @@ Section GROUP_HOMOMORPHISMS_PROP.
   Lemma preserve_negate : forall x, f (neg x) = neg (f x).
   Proof. intros. destruct GH. rewrite (eq_left (f x)). rewrite <- preserve_gr_op. rewrite 2!neg_right. apply preserve_gr_unit. Qed.
 
-  Instance kernel_pred : Pred A := fun x => f x = one.
-
-  Instance image_pred : Pred B := fun x => exists o, f o = x.
-
-  Instance homm_kernel_subgroup : SubGroup A kernel_pred.
-  Proof.
-    assert (GA: Group A) by (destruct GH; auto). assert (GB: Group B) by (destruct GH; auto). constructor.
-    + exact GA.
-    + constructor. 1 : exact GA. repeat intro. unfold pred, kernel_pred. rewrite H. tauto.
-    + exists one. unfold pred. apply preserve_gr_unit.
-    + unfold pred, kernel_pred. intros. rewrite preserve_gr_op, preserve_negate, H, H0. apply neg_right.
-  Qed.
-
-  Instance homm_image_subgroup : SubGroup B image_pred.
-  Proof.
-    assert (GA: Group A) by (destruct GH; auto). assert (GB: Group B) by (destruct GH; auto). constructor.
-    + exact GB.
-    + constructor. 1 : exact GB. repeat intro. unfold pred, image_pred. split; intros; destruct H0 as [o ?]; exists o; rewrite H0; [|symmetry]; auto.
-    + exists one. exists one. apply preserve_gr_unit.
-    + unfold pred, image_pred. intros. destruct H as [xo ?]. destruct H0 as [yo ?]. exists (xo & neg yo). rewrite <- H, <- H0.
-      rewrite <- preserve_negate. apply preserve_gr_op.
-  Qed.
-
-  Definition image_f : A -> Sub (image_pred). Proof. unfold Sub, image_pred. intro m. exists (f m). unfold pred. exists m. auto. Defined.
-
-  Context {C : Type} {Ce : Equiv C} {Cop : BinOp C} {Cunit : GrUnit C} {Cnegate : Negate C}.
-  Context {g: B -> C} `{GH' : !Group_Homomorphism g}.
-
-  Instance group_homomorphism_trans: Group_Homomorphism (compose g f).
-  Proof.
-    assert (GA: Group A) by (destruct GH; auto). assert (GC: Group C) by (destruct GH'; auto). constructor; [exact GA | exact GC | .. ].
-    - destruct GH, GH'. apply setoid_morphism_trans; auto.
-    - intros. unfold compose. rewrite preserve_gr_op. rewrite preserve_gr_op. auto.
-  Qed.
-
 End GROUP_HOMOMORPHISMS_PROP.
 
-Arguments kernel_pred [_ _ _ _] _.
+(***************************************** SubGroup *****************************************)
 
-Arguments image_pred [_ _ _] _.
-
-Section GROUP_ISOMORPHISM.
-
-  Context `{Group A} `{Group B} (f : A -> B).
-
-  Class Group_Isomorphism :=
-    {
-      giso_homo :> Group_Homomorphism f;
-      giso_f_bij :> Bijective f
-    }.
-
-End GROUP_ISOMORPHISM.
-
-Section GROUP_ISOMORPHISM_PROP.
-
-    Context {A : Type} {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegate : Negate A}.
-    Context {B : Type} {Be : Equiv B} {Bop : BinOp B} {Bunit : GrUnit B} {Bnegate : Negate B}.
-    Context {C : Type} {Ce : Equiv C} {Cop : BinOp C} {Cunit : GrUnit C} {Cnegate : Negate C}.
-    Context {f: A -> B} {g: B -> C} `{GH: !Group_Isomorphism f} `{GH': !Group_Isomorphism g}.
-
-    Instance group_isomorphism_trans: Group_Isomorphism (compose g f). Proof. constructor; [apply group_homomorphism_trans | destruct GH, GH'; apply bijective_trans; auto]. Qed.
-
-End GROUP_ISOMORPHISM_PROP.
-
-Section SUBGROUP_IFF.
-
-  Context `{G : Group A} {P1 P2 : Pred A}.
-
-  Lemma pred_equiv_subgroup_iff : pred_equiv P1 P2 -> SubGroup A P1 <-> SubGroup A P2.
-  Proof.
-    unfold pred_equiv, pointwise_relation. intros. split; intros; constructor; auto.
-    - rewrite <- (pred_equiv_subsetoid_iff H). exact sub_setoid.
-    - destruct not_empty as [x ?]. exists x. rewrite <- H. auto.
-    - intros. rewrite <- H in H1. rewrite <- H in H2. rewrite <- H. apply sub_criteria; auto.
-    - rewrite (pred_equiv_subsetoid_iff H). exact sub_setoid.
-    - destruct not_empty as [x ?]. exists x. rewrite H. auto.
-    - intros. rewrite H in H1. rewrite H in H2. rewrite H. apply sub_criteria; auto.
-  Qed.
-
-  Context (G1: SubGroup A P1) (G2: SubGroup A P2).
-
-  Hypothesis (H: pred_equiv P1 P2).
-
-  Lemma iff_sub_map_ok: forall x : Sub P1, @pred A P2 (proj1_sig x). Proof. intros. destruct x as [x ?H]. hnf in H. simpl. destruct (H x). apply H1. auto. Qed.
-
-  Definition iff_sub_map (x: Sub P1) : (Sub P2) := exist _ (proj1_sig x) (iff_sub_map_ok x).
-
-  Lemma iff_sub_inv_ok: forall x : Sub P2, @pred A P1 (proj1_sig x). Proof. intros. destruct x as [x ?H]. hnf in H. simpl. destruct (H x). apply H2. auto. Qed.
-  
-  Definition iff_sub_inv (x: Sub P2) : (Sub P1) := exist _ (proj1_sig x) (iff_sub_inv_ok x).
-
-  Lemma iff_setoid_morphism: Setoid_Morphism iff_sub_map.
-  Proof. constructor; [exact (subgroup_as_group G1) | exact (subgroup_as_group G2) | repeat intro; unfold iff_sub_map; unfold equiv, sub_equiv in *; simpl; auto]. Qed.
-  
-  Lemma iff_group_isomorphism: Group_Isomorphism iff_sub_map.
-  Proof.
-    constructor; constructor; [exact (subgroup_as_group G1) | exact (subgroup_as_group G2) | exact iff_setoid_morphism | | |].
-    - intros. unfold iff_sub_map. unfold bi_op at 3. unfold equiv, sub_equiv. simpl. destruct x as [x ?]. destruct y as [y ?]. simpl. auto.
-    - constructor. 2: exact iff_setoid_morphism. intros x y. unfold iff_sub_map. unfold equiv, sub_equiv. unfold sub_equiv. simpl. auto.
-    - constructor. 2: exact iff_setoid_morphism. intros x. exists (iff_sub_inv x). unfold iff_sub_map, iff_sub_inv, equiv, sub_equiv. simpl. auto.
-  Qed.
-
-End SUBGROUP_IFF.
-
-(***************************************** Normal SubGroup *****************************************)
-
-Class NormalSubGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegate : Negate A} (PA : Pred A) : Prop :=
+Class SubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
   {
-    normal_subgroup_as_subgroup :> SubGroup A PA;
-    normal_comm : forall (x y : A), pred (x & y) -> pred (y & x);
+    pred_proper :> Proper ((=) ==> iff) P;
+    non_empty: exists x, P x;
+    sub_criteria: forall x y: A, P x -> P y -> P (x & (neg y));
   }.
 
-Section NORMAL_SUBGROUP.
+Definition Subpart (A: Type) (P: A -> Prop) := {x: A | P x}.
 
-  Context `{NSG : NormalSubGroup A}.
+Instance subgroup_rep {A P}: Cast (Subpart A P) A := fun x => proj1_sig x.
 
-  Instance quotient_group_by_normal_subgroup : @Group A (right_coset_rel PA) _ _ _.
+Section SUBGROUP.
+
+  Context `{SA : SubGroupCondition A P}.
+
+  Lemma one_pred: P one. Proof. destruct (non_empty) as [x ?H]. generalize (sub_criteria _ _ H0 H0). rewrite (neg_right x). auto. Qed.
+  Lemma neg_pred: forall x: A, P x -> P (neg x). Proof. intros. pose proof one_pred. pose proof (sub_criteria _ _ H1 H0). rewrite one_left in H2. auto. Qed.
+  Lemma op_pred: forall x y: A, P x -> P y -> P (x & y). Proof. intros. pose proof (neg_pred _ H1). pose proof (sub_criteria _ _ H0 H2). rewrite double_neg in H3. auto. Qed.
+
+  Global Instance subgroup_equiv: Equiv (Subpart A P) := fun x y => ('x) = ('y).
+  Global Instance subgroup_binop: BinOp (Subpart A P). Proof. intros x y. destruct x as [x ?H]. destruct y as [y ?H]. exists (x & y). apply op_pred; auto. Defined.
+  Global Instance subgroup_gunit: GrUnit (Subpart A P) := exist _ _ one_pred.
+  Global Instance subgroup_neg: Negate (Subpart A P). Proof. intro x. destruct x as [x ?H]. exists (neg x). apply neg_pred; auto. Defined.
+
+  Lemma sg_neg_proj : forall (x : Subpart A P), neg ('x) =  '(neg x). Proof. intros. destruct x. unfold cast, subgroup_rep, proj1_sig. simpl. auto. Qed.
+  Lemma sg_op_proj : forall (x y : Subpart A P), ('x) & ('y) = '(x & y). Proof. intros; destruct x, y. unfold cast, subgroup_rep, proj1_sig. simpl. auto. Qed.
+
+  Instance: Setoid (Subpart A P).
   Proof.
-    pose proof normal_subgroup_as_subgroup. pose proof (@super_group _ _ _ _ _ _ normal_subgroup_as_subgroup).
-    constructor; [ | repeat intro; unfold equiv, right_coset_rel in * ..].
-    - apply equiv_right_coset; auto.
-    - rewrite neg_op, <- op_assoc. apply normal_comm. rewrite <- !op_assoc, (op_assoc (neg y & x)). apply normal_comm, op_pred; auto. apply normal_comm. auto.
-    - rewrite double_neg, <- (double_neg (neg x & y)). apply neg_pred; auto. rewrite neg_op, double_neg. apply normal_comm. auto.
-    - rewrite <- op_assoc. rewrite neg_right. apply one_pred; auto.
-    - rewrite op_assoc, neg_right, one_right. apply one_pred; auto.
-    - rewrite neg_left, neg_right. apply one_pred; auto.
+    constructor; unfold equiv, subgroup_equiv, cast, subgroup_rep, proj1_sig; [intros [x]; auto | intros [x] [y] ?; now symmetry | intros [x] [y] [z] ? ?; now transitivity y].
   Qed.
 
-  Instance normal_subgroup_natural_homm : @Group_Homomorphism A Ae _ _ _ _ (right_coset_rel PA) _ _ _ id.
-  Proof. constructor; [exact super_group | exact quotient_group_by_normal_subgroup | exact quotient_setoid_natural_morph | intros; unfold id; auto]. Qed.
+  Instance: Proper ((=) ==> (=) ==> (=)) subgroup_binop.
+  Proof. intros [x] [y] ? [x0] [y0] ?. hnf in H0, H1 |- *. unfold cast, subgroup_rep, proj1_sig in H0, H1 |-* . simpl. apply gr_op_proper; auto. Qed.
 
-  Lemma normal_subgroup_op_right: forall (h: Sub PA) (a: A), exists h': Sub PA, a & proj1_sig h = proj1_sig h' & a.
+  Instance: Proper ((=) ==> (=)) subgroup_neg. Proof. intros [x] [y] ?. hnf in H0 |-* . unfold cast, subgroup_rep, proj1_sig in H0 |-* . simpl. apply negate_proper; auto. Qed.
+
+  Global Instance subGroup: Group (Subpart A P).
   Proof.
-    intros. destruct h as [h ?H]. pose proof normal_comm. rewrite normal_condition_iff_right in H0. 2: exact normal_subgroup_as_subgroup. specialize (H0 a h H).
-    destruct H0 as [h' [? ?]]. simpl. exists (exist _ h' H0). simpl; auto.
+    repeat (constructor; try apply _); repeat intros [?];
+      unfold bi_op, neg, subgroup_binop, subgroup_neg, one, equiv, subgroup_equiv, subgroup_gunit, cast, subgroup_rep,
+      proj1_sig; [apply op_assoc | apply one_left | apply neg_left].
   Qed.
 
-  Lemma normal_subgroup_op_left: forall (h: Sub PA) (a: A), exists h': Sub PA, proj1_sig h & a = a & proj1_sig h'.
+End SUBGROUP.
+
+Class NormalSubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
+  {
+    still_subgroup :> SubGroupCondition A P;
+    normal_comm: forall (x y: A), P (x & y) -> P (y & x)
+  }.
+
+Inductive Quotient A (P: A -> Prop) := quotient_inject: A -> Quotient A P.
+Arguments quotient_inject {A P} _.
+
+Instance quotient_rep {A P}: Cast (Quotient A P) A := fun x => match x with quotient_inject x => x end.
+
+Section QUOTIENT_GROUP.
+
+  Context `{NSA: NormalSubGroupCondition A P}.
+
+  Global Instance quotient_equiv: Equiv (Quotient A P) := fun x y => P (' x & (neg ('y))).
+  Global Instance quotient_binop: BinOp (Quotient A P) := fun x y => quotient_inject (' x & ' y).
+  Global Instance quotient_gunit: GrUnit (Quotient A P) := quotient_inject one.
+  Global Instance quotient_neg: Negate (Quotient A P) := fun x => quotient_inject (neg (' x)).
+
+  Instance: Setoid (Quotient A P).
   Proof.
-    intros. destruct h as [h ?H]. pose proof normal_comm. rewrite normal_condition_iff_left in H0. 2: exact normal_subgroup_as_subgroup. specialize (H0 a h H).
-    destruct H0 as [h' [? ?]]. simpl. exists (exist _ h' H0). simpl; auto.
-  Qed.
-  
-End NORMAL_SUBGROUP.
-
-Section FIRST_ISOMORPHISM_THEOREM.
-
-  Context `{GA : Group A} `{GB : Group B} {f : A -> B} `{GH : !Group_Homomorphism f}.
-
-  Instance homm_kernel_normal_subgroup : NormalSubGroup A (kernel_pred f).
-  Proof.
-    constructor; [exact homm_kernel_subgroup | unfold pred, kernel_pred; intros x y; rewrite !preserve_gr_op; intros; apply neg_unique in H; rewrite H; apply neg_left].
-  Qed.
-
-  Notation iso_a := (@quotient_group_by_normal_subgroup A _ _ _ _ _ homm_kernel_normal_subgroup).
-
-  Notation iso_b := (subgroup_as_group homm_image_subgroup).
-
-  Theorem image_f_setoid_morph : @Setoid_Morphism A (right_coset_rel (kernel_pred f)) (Sub (image_pred f)) (sub_equiv (image_pred f)) image_f.
-  Proof.
-    constructor.
-    - exact iso_a.
-    - exact iso_b.
-    - repeat intro. unfold image_f, equiv, sub_equiv, proj1_sig. unfold equiv, right_coset_rel, pred, kernel_pred in H.
-      rewrite preserve_gr_op in H. rewrite preserve_negate in H. rewrite (eq_right (neg (f y))), neg_right. auto.
-  Qed.
-
-  Theorem first_isomorphism_theorem : @Group_Isomorphism
-                                       A (right_coset_rel (kernel_pred f)) _ _ _
-                                       (Sub (image_pred f)) _ (sg_op homm_image_subgroup) (sg_unit homm_image_subgroup) (sg_negate homm_image_subgroup) image_f.
-  Proof.
-    constructor; constructor.
-    - exact iso_a.
-    - exact iso_b.
-    - exact image_f_setoid_morph.
-    - intros x y. unfold image_f, equiv, sub_equiv, proj1_sig. simpl. apply preserve_gr_op.
-    - constructor.
-      + unfold image_f, equiv, sub_equiv, proj1_sig, right_coset_rel, pred, kernel_pred. intros. rewrite preserve_gr_op, preserve_negate, H, neg_right; auto.
-      + exact image_f_setoid_morph.
-    - constructor.
-      + intros x. destruct x as [x ?H]. unfold image_f, equiv, sub_equiv, proj1_sig. unfold pred, image_pred in H. destruct H as [o ?]. exists o; auto.
-      + exact image_f_setoid_morph.
+    constructor; unfold equiv, quotient_equiv, cast, quotient_rep.
+    - intros [x]. rewrite neg_right. apply one_pred.
+    - intros [x] [y] ?. apply neg_pred in H0. rewrite neg_op, double_neg in H0. auto.
+    - intros [x] [y] [z] ? ?. pose proof (op_pred _ _ H0 H1). rewrite <- op_assoc, (op_assoc x (neg y) y), neg_left, one_right in H2. auto.
   Qed.
 
-End FIRST_ISOMORPHISM_THEOREM.
-
-Definition sub_prod_pred {A} {Ae : Equiv A} {Aop : BinOp A} (P1 P2 : Pred A) : Pred A := fun m => exists (a1 : Sub P1) (a2 : Sub P2), m = (proj1_sig a1) & (proj1_sig a2).
-
-Section SUBGROUP_CONSTRUNCTION.
-
-  Context {A : Type} {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A} {Anegate : Negate A}.
-  Context `(S1 : !SubGroup A P1) `(S2 : !SubGroup A P2).
-
-  Lemma fst_in_sub_prod : forall (x : Sub P1), sub_prod_pred P1 P2 (proj1_sig x).
-  Proof. intros. exists x, (sg_unit S2). destruct x. unfold sg_unit, proj1_sig. rewrite one_right; auto. Qed.
-
-  Lemma snd_in_sub_prod : forall (x : Sub P2), sub_prod_pred P1 P2 (proj1_sig x).
-  Proof. intros. exists (sg_unit S1), x. destruct x. unfold sg_unit, proj1_sig. rewrite one_left; auto. Qed.
-
-  Lemma sub_prod_is_subgroup : pred_impl (sub_prod_pred P2 P1) (sub_prod_pred P1 P2) -> SubGroup A (sub_prod_pred P1 P2).
+  Instance: Proper ((=) ==> (=) ==> (=)) quotient_binop.
   Proof.
-    unfold pred_impl, pointwise_relation, sub_prod_pred. intros. constructor; auto.
-    - exact super_group.
-    - constructor. 1: exact super_group. repeat intro. unfold pred. split; intros.
-      + destruct H1 as [a1 [a2 ?]]. rewrite H0 in H1. exists a1, a2. auto.
-      + destruct H1 as [a1 [a2 ?]]. rewrite <- H0 in H1. exists a1, a2. auto.
-    - unfold pred. exists one, (sg_unit S1), (sg_unit S2). unfold sg_unit. simpl. rewrite one_left; auto.
-    - unfold pred. intros. destruct H0 as [x1 [x2 ?]]. destruct H1 as [y1 [y2 ?]]. rewrite neg_iff, neg_op in H1. rewrite (sg_neg_proj S1), (sg_neg_proj S2) in H1.
-      assert (exists (ny1 : Sub P1) (ny2 : Sub P2), neg y = proj1_sig ny1 & proj1_sig ny2) by (apply H; exists (sg_negate S2 y2), (sg_negate S1 y1); auto).
-      destruct H2 as [ny1 [ny2 ?]]. assert (exists (nny1 : Sub P1) (nx2 : Sub P2), proj1_sig x2 & proj1_sig ny1 = proj1_sig nny1 & proj1_sig nx2) by
-          (apply H; exists x2, ny1; auto). destruct H3 as [nny1 [nx2 ?]]. exists (sg_op S1 x1 nny1), (sg_op S2 nx2 ny2). rewrite H0, H2.
-      rewrite <- op_assoc, (op_assoc (proj1_sig x1)), H3, <- (sg_op_proj S1), <- (sg_op_proj S2), <- !op_assoc. auto.
+    intros [x] [y] ? [x0] [y0] ?. hnf in H0, H1 |- *. unfold quotient_binop, cast, quotient_rep in H0, H1 |-* .
+    rewrite neg_op, <- op_assoc. apply normal_comm. rewrite <- !op_assoc, (op_assoc (neg y & x)). apply normal_comm, op_pred; auto. apply normal_comm. auto.
   Qed.
 
-  Lemma sub_prod_is_subgroup_necessary : SubGroup A (sub_prod_pred P1 P2) -> pred_equiv (sub_prod_pred P1 P2) (sub_prod_pred P2 P1).
+  Instance: Proper ((=) ==> (=)) quotient_neg.
   Proof.
-    intros. unfold pointwise_relation. intros. split; intros.
-    - apply (neg_pred H) in H0. destruct H0 as [a1 [a2 ?]]. rewrite neg_iff, double_neg, neg_op, (sg_neg_proj S1), (sg_neg_proj S2) in H0.
-      exists (sg_negate S2 a2), (sg_negate S1 a1). auto.
-    - destruct H0 as [a2 [a1 ?]]. pose proof (op_pred H _ _ (snd_in_sub_prod a2) (fst_in_sub_prod a1)). unfold pred, sub_prod_pred in H1. destruct H1 as [b1 [b2 ?]].
-      rewrite <- H0 in H1. exists b1, b2. auto.
+    intros [x] [y] ?. hnf in H0 |-* . unfold quotient_binop, quotient_neg, cast, quotient_rep in H0 |-* .
+    rewrite double_neg, <- (double_neg (neg x & y)). apply neg_pred; auto. rewrite neg_op, double_neg. apply normal_comm. auto.
   Qed.
 
-  Lemma sub_prod_is_subgroup_iff : SubGroup A (sub_prod_pred P1 P2) <-> pred_equiv (sub_prod_pred P1 P2) (sub_prod_pred P2 P1).
-  Proof. split; intros; [apply sub_prod_is_subgroup_necessary | apply sub_prod_is_subgroup; rewrite pred_equiv_impl in H; destruct H]; auto. Qed.
-
-  Instance sub_int_subgroup : SubGroup A (sub_int_pred P1 P2).
+  Global Instance quotientGroup: Group (Quotient A P).
   Proof.
-    constructor; auto.
-    - exact super_group.
-    - constructor. 1 : exact super_group. repeat intro. unfold pred, sub_int_pred. rewrite H. intuition.
-    - exists one. unfold pred, sub_int_pred. split. apply (one_pred S1). apply (one_pred S2).
-    - intros x y. unfold pred, sub_int_pred. intros. destruct H, H0. split; apply sub_criteria; auto.
+    constructor; try apply _; unfold bi_op, neg, one, equiv, quotient_equiv, quotient_binop, quotient_neg, quotient_gunit, quotient_rep, cast.
+    - intros [x] [y] [z]. rewrite <- op_assoc. rewrite neg_right. apply one_pred; auto.
+    - intros [x]. rewrite op_assoc, neg_right, one_right. apply one_pred; auto.
+    - intros [x]. rewrite neg_left, neg_right. apply one_pred; auto.
   Qed.
 
-  Instance subsub_int_subgroup : SubGroup (Sub P1) (subsub_int_pred P1 P2).
+End QUOTIENT_GROUP.
+
+Section NORMAL_GENERATION.
+
+  Context `{Group A}.
+
+  Lemma fold_left_op_one: forall l i, fold_left (&) l i = i & fold_left (&) l one.
   Proof.
-    constructor.
-    - exact (subgroup_as_group S1).
-    - constructor. 1 : exact (subgroup_as_group S1). repeat intro. unfold equiv, sub_equiv in H. unfold pred, subsub_int_pred. rewrite H. tauto.
-    - exists (sg_unit S1). unfold pred, subsub_int_pred, sg_unit. simpl. apply one_pred; auto.
-    - unfold pred, subsub_int_pred. intros. destruct x as [x ?]. destruct y as [y ?]. simpl in *. apply sub_criteria; auto.
+    intros l. remember (length l). assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto). clear Heqn. revert l H0.
+    induction n; intros; destruct l; simpl in *; try (rewrite one_right; reflexivity). 1: inversion H0.
+    assert (length l <= n) by (now apply le_S_n). rewrite (IHn l H1 (i & a)). rewrite (IHn l H1 (one & a)). rewrite <- op_assoc, one_left. reflexivity.
   Qed.
 
-  Notation iso_a := (subgroup_as_group sub_int_subgroup).
-
-  Notation iso_b := (subgroup_as_group subsub_int_subgroup).
-
-  Lemma subgroup_setoid_morphism : Setoid_Morphism (sub_subsub P1 P2).
+  Lemma fold_left_neg: forall x l, x = fold_left (&) l one -> neg x = fold_left (&) (map neg (rev l)) one.
   Proof.
-    constructor; [exact iso_a | exact iso_b |]. intros x y. unfold equiv, sub_equiv, sub_subsub.
-    destruct x as [x [?H ?H]]. destruct y as [y [?H ?H]]. simpl. intros. unfold equiv. simpl. auto.
+    intros x l. remember (length l). assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto). clear Heqn. revert x l H0.
+    induction n; intros; destruct l; simpl in *; try (rewrite H1; apply neg_one). 1: inversion H0. rewrite map_app, fold_left_app. simpl.
+    assert (length l <= n) by (now apply le_S_n). rewrite fold_left_op_one, one_left in H1. assert (fold_left bi_op l one = fold_left bi_op l one) by auto.
+    specialize (IHn _ _ H2 H3). rewrite H1, neg_op, IHn. reflexivity.
   Qed.
 
-  Lemma subgroup_has_isomorphism : Group_Isomorphism (sub_subsub P1 P2).
+  Lemma fold_left_conjugate: forall l x, fold_left (&) (map (fun i => x & i & neg x) l) one = x & (fold_left (&) l one) & neg x.
   Proof.
-    constructor; constructor.
-    - exact iso_a.
-    - exact iso_b.
-    - exact subgroup_setoid_morphism.
-    - intros. destruct x as [x [?H ?H]]. destruct y as [y [?H ?H]]. unfold sub_subsub. unfold bi_op. simpl. unfold equiv, sub_equiv. simpl. unfold equiv. simpl. reflexivity.
-    - constructor. 2 : exact subgroup_setoid_morphism. intros x y. destruct x as [x [?H ?H]]. destruct y as [y [?H ?H]].
-      unfold sub_subsub. unfold equiv, sub_equiv. simpl. unfold equiv. simpl. intuition.
-    - constructor. 2 : exact subgroup_setoid_morphism. intros. exists (subsub_sub P1 P2 x). destruct x as [[x ?H] ?H]. unfold pred, subsub_int_pred in H0. simpl in H0.
-      unfold sub_subsub, equiv, sub_equiv. simpl. unfold equiv. simpl. reflexivity.
+    intro l. remember (length l). assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto). clear Heqn. revert l H0.
+    induction n; intros; destruct l; simpl in *; try (rewrite one_right, neg_right; reflexivity). 1: inversion H0. assert (length l <= n) by (now apply le_S_n).
+    specialize (IHn _ H1). clear H1. rewrite fold_left_op_one, (fold_left_op_one _ (one & a)), !one_left, !op_assoc, <- !eq_left, IHn, <- !op_assoc, neg_left, one_left; auto.
   Qed.
 
-End SUBGROUP_CONSTRUNCTION.
+  Variable P: A -> Prop.
 
-Section SECOND_ISOMORPHISM_THEOREM.
+  Definition normal_gen : A -> Prop :=
+    fun x => exists l, x = fold_left (&) l one /\ forall i, In i l -> exists (g s: A), P s /\ (i = g & s & (neg g) \/ i = g & (neg s) & (neg g)).
 
-  Context `{G : Group A} `(H : !SubGroup A PH) `(N : !NormalSubGroup A PN).
-
-  Notation N_SG := (@normal_subgroup_as_subgroup _ _ _ _ _ _ N).
-  
-  Instance normal_subsub_int_subgroup : NormalSubGroup (Sub PH) (subsub_int_pred PH PN).
+  Lemma normal_gen_neg: forall x, normal_gen x -> normal_gen (neg x).
   Proof.
-    constructor. 1 : exact (subsub_int_subgroup H N_SG). intros x y. destruct x as [x ?H]. destruct y as [y ?H].
-    unfold pred, subsub_int_pred. simpl. intros. destruct N. apply normal_comm0; auto.
+    intros x [l [? ?]]. exists (map neg (rev l)). split. 1: apply fold_left_neg in H0; assumption.
+    intros. rewrite in_map_iff in H2. destruct H2 as [pi [? ?]]. rewrite <- in_rev in H3. specialize (H1 _ H3). destruct H1 as [gp [sp [? ?]]]. exists gp, sp.
+    split; auto; destruct H4; [right | left]; rewrite <- H2, H4, !neg_op, !double_neg, op_assoc; reflexivity.
   Qed.
 
-  Lemma normal_subgroup_comm_impl : pred_impl (sub_prod_pred PN PH) (sub_prod_pred PH PN).
+  Lemma normal_gen_op: forall x y, normal_gen x -> normal_gen y -> normal_gen (x & y).
   Proof.
-    hnf. intros. cut ((@pred A (sub_prod_pred PN PH) a) -> (@pred A (sub_prod_pred PH PN) a)); auto. unfold pred, sub_prod_pred. intros. destruct H0 as [a1 [a2 ?]].
-    destruct (normal_subgroup_op_left a1 (proj1_sig a2)) as [h' ?]. rewrite <- H0 in H1. exists a2, h'; auto.
+    intros x y [xl [? ?]] [yl [? ?]]. exists (xl ++ yl). split.
+    - rewrite fold_left_app, fold_left_op_one, H0, H2. reflexivity.
+    - intros. rewrite in_app_iff in H4. destruct H4; [apply H1 | apply H3]; auto.
   Qed.
 
-  Instance HN_SUB : SubGroup A (sub_prod_pred PH PN) := sub_prod_is_subgroup H N_SG normal_subgroup_comm_impl.
-
-  Notation HN := (subgroup_as_group HN_SUB).
-
-  Notation NsHN := (sub_int_subgroup HN_SUB N_SG).
-
-  Instance NssHN : SubGroup (Sub (sub_prod_pred PH PN)) (subsub_int_pred (sub_prod_pred PH PN) PN) := (subsub_int_subgroup HN_SUB N_SG).
-  
-  Lemma N_is_HN_int_N: pred_equiv PN (sub_int_pred (sub_prod_pred PH PN) PN).
+  Lemma normal_gen_op_comm: forall x y, normal_gen (x & y) -> normal_gen (y & x).
   Proof.
-    hnf. intros. unfold pred at 2. unfold sub_int_pred, sub_prod_pred. intuition. unfold pred. exists (sg_unit H), (exist _ a H0). unfold sg_unit. simpl. rewrite one_left. auto.
+    intros x y [l [? ?]]. exists (map (fun i => y & i & neg y) l). split. 1: rewrite fold_left_conjugate, <- H0, !op_assoc, neg_right, one_right; reflexivity.
+    intros. rewrite in_map_iff in H2. destruct H2 as [pi [? ?]]. specialize (H1 _ H3). destruct H1 as [gp [sp [? ?]]].
+    exists (y & gp), sp. split; auto. rewrite <- H2, neg_op. destruct H4; [left | right]; rewrite H4; rewrite <- !op_assoc; reflexivity.
   Qed.
 
-  Instance N_HN_in_N_isomorphism: Group_Isomorphism (compose (sub_subsub (sub_prod_pred PH PN) PN) (iff_sub_map N_is_HN_int_N)).
-  Proof.
-    apply @group_isomorphism_trans with (Be := (sub_equiv (sub_int_pred (sub_prod_pred PH PN) PN))) (Bop := sg_op NsHN) (Bunit := sg_unit NsHN) (Bnegate := sg_negate NsHN).
-    - apply iff_group_isomorphism.
-    - apply (subgroup_has_isomorphism HN_SUB N_SG).
-  Qed.
+  Instance: Proper ((=) ==> iff) normal_gen. Proof. constructor; unfold normal_gen; intros [l [? ?]]; exists l; split; auto. now rewrite <- H0. Qed.
 
-  Instance N_is_normal_subgroup_of_HN : NormalSubGroup (Sub (sub_prod_pred PH PN)) (subsub_int_pred (sub_prod_pred PH PN) PN).
-  Proof. constructor; [exact NssHN |]. intros x y. destruct x as [x ?H]. destruct y as [y ?H]. unfold pred, subsub_int_pred, sub_prod_pred. simpl. apply normal_comm. Qed.
+  Instance: SubGroupCondition A normal_gen.
+  Proof. constructor; [apply _ | exists one, nil; simpl; intuition | intros; apply normal_gen_op; auto; apply normal_gen_neg; auto]. Qed.
 
-  Lemma second_f_ok: forall (x : Sub PH), (@pred _ (sub_prod_pred PH PN)) (proj1_sig x).
-  Proof. intros; exists x, (sg_unit N_SG). unfold sg_unit. simpl. rewrite one_right. auto. Qed.
+  Global Instance normal_gen_normalcond: NormalSubGroupCondition A normal_gen. Proof. constructor; [apply _ | apply normal_gen_op_comm]. Qed.
 
-  Definition second_f (x : Sub PH) : Sub (sub_prod_pred PH PN) := exist _ (proj1_sig x) (second_f_ok x).
-
-  Notation iso_a := (@quotient_group_by_normal_subgroup _ _ _ _ _ _ normal_subsub_int_subgroup).
-
-  Notation iso_b := (@quotient_group_by_normal_subgroup _ _ _ _ _ _ N_is_normal_subgroup_of_HN).
-
-  Theorem second_f_setoid_morph : @Setoid_Morphism (Sub PH) (right_coset_rel (subsub_int_pred PH PN))
-                                                   (Sub (sub_prod_pred PH PN)) (right_coset_rel (subsub_int_pred (sub_prod_pred PH PN) PN))
-                                                   second_f.
-  Proof.
-    constructor.
-    - exact iso_a.
-    - exact iso_b.
-    - intros x y. destruct x as [x ?H]. destruct y as [y ?H]. unfold second_f, equiv, right_coset_rel, bi_op, neg, sg_op, sg_negate, pred, subsub_int_pred. simpl; auto.
-  Qed.
-
-  Theorem second_isomorphism_theorem : @Group_Isomorphism (Sub PH) (right_coset_rel (subsub_int_pred PH PN)) (sg_op H) (sg_unit H) (sg_negate H)
-                                                          (Sub (sub_prod_pred PH PN)) (right_coset_rel (subsub_int_pred (sub_prod_pred PH PN) PN))
-                                                          (sg_op HN_SUB) (sg_unit HN_SUB) (sg_negate HN_SUB) second_f.
-  Proof.
-    constructor; constructor.
-    - exact iso_a.
-    - exact iso_b.
-    - exact second_f_setoid_morph.
-    - intros x y. destruct x as [x ?H]. destruct y as [y ?H]. unfold second_f, equiv, right_coset_rel, bi_op, neg, sg_op, sg_negate, pred, subsub_int_pred. simpl; auto.
-      rewrite neg_op, <- op_assoc, (op_assoc x y (neg y)), neg_right, one_right, neg_right. apply one_pred. destruct N. auto.
-    - constructor. 2: exact second_f_setoid_morph. intros x y. destruct x as [x ?H]. destruct y as [y ?H]. unfold second_f, equiv, right_coset_rel, subsub_int_pred. simpl; auto.
-    - constructor. 2: exact second_f_setoid_morph. intros x. destruct x as [x [x1 [x2 ?]]]. exists x1. unfold second_f, equiv, right_coset_rel, pred, subsub_int_pred.
-      simpl; auto. apply normal_comm. rewrite e, neg_op, op_assoc, neg_left, one_right. destruct N. apply neg_pred; auto.
-  Qed.
-  
-End SECOND_ISOMORPHISM_THEOREM.
+End NORMAL_GENERATION.
