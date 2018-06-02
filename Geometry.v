@@ -1,5 +1,4 @@
 Require Import Coq.Reals.Reals.
-Require Import FormalMath.Infra.
 Require Import FormalMath.Group.
 
 Definition Point := (R * R)%type.
@@ -55,3 +54,10 @@ Proof.
   - destruct x; intros; simpl; reflexivity.
   - destruct x. intros; simpl. apply (injective x). rewrite surjective; reflexivity.
 Qed.
+
+Class DiscreteIsometryCondition (P: Isometry -> Prop) :=
+  {
+    discrete_sub :> SubGroupCondition Isometry P;
+    discrete_cond : forall (O: Point) (radius: R), exists (l: list Point), forall (g: Subpart Isometry P) (Og: Point),
+            Og == projT1 (proj1_sig g) O -> (distance O Og <= radius)%R -> In Og l; 
+  }.

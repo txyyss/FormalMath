@@ -1,5 +1,4 @@
-Require Import FormalMath.Infra.
-Require Import FormalMath.Group.
+Require Export FormalMath.Group.
 
 Section FREE_GROUP.
 
@@ -69,10 +68,12 @@ Section FREE_GROUP.
       rewrite <- (double_opposite a) at 2. symmetry. constructor.
   Qed.
 
-  Variable P: Word -> Prop.
+  Definition fp_condition (l: list Word) := normal_gen (fun w => In w l).
 
-  Goal Group (Quotient Word (normal_gen P)).
+  Goal forall l: list Word, Group (Quotient Word (fp_condition l)).
   Proof. apply _. Qed.
-  
 
 End FREE_GROUP.
+
+Arguments intro_gen [_] _.
+Arguments intro_inv [_] _.

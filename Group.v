@@ -1,4 +1,4 @@
-Require Import FormalMath.Infra.
+Require Export FormalMath.Infra.
 
 (***************************************** Group *****************************************)
 
