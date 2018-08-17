@@ -2,6 +2,7 @@ Require Import Coq.Classes.EquivDec.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.PArith.PArith.
 Require Import Coq.omega.Omega.
+Require Import Coq.Program.Program.
 Require Import FormalMath.FreeGroup.
 Import ListNotations.
 
@@ -30,12 +31,83 @@ Tactic Notation "if_tac" :=
     end end.
 
 Tactic Notation "if_tac" "in" hyp(H0)
- := match type of H0 with context [if ?a then _ else _] =>
+  := match type of H0 with context [if ?a then _ else _] =>
     lazymatch type of a with
     | sumbool _ _ => destruct a
     | bool => destruct a eqn: ?
     | ?t => fail "Use if_tac only for sumbool; your expression"a" has type" t
-   end end.
+    end end.
+
+Section COSET_MAP.
+
+  Definition coset_map_prop (t: PM.tree positive) : Prop :=
+    forall i j, PM.find i t == Some j -> j <= i.
+
+  Lemma coset_map_prop_empty: coset_map_prop (PM.empty _).
+  Proof. red. intros. rewrite PM.gempty in H. discriminate. Qed.
+
+  Definition CosetMap := {cm : PM.tree positive | coset_map_prop cm}.
+
+  Definition empty_coset_map : CosetMap := exist _ (PM.empty _) coset_map_prop_empty.
+
+  Lemma cm_add_preserve_cmp: forall i j : positive,
+      j <= i -> forall cm : CosetMap, coset_map_prop (PM.add i j (` cm)).
+  Proof.
+    intros. destruct cm. simpl. red. intros p q ?. destruct (Pos.eq_dec p i).
+    - subst. rewrite PM.gss in H0. inversion H0. subst. assumption.
+    - rewrite PM.gso in H0 by assumption. red in c. apply c in H0. assumption.
+  Qed.
+
+  Definition cm_add (i j: positive) (H: j <= i) (cm: CosetMap) : CosetMap :=
+    exist _ (PM.add i j (` cm)) (cm_add_preserve_cmp i j H cm).
+
+  Definition cm_add_id (i: positive) (cm: CosetMap) := cm_add i i (Pos.le_refl i) cm.
+
+  Check (proj1 (Pos.leb_le 1 1) eq_refl).
+
+  Compute (PM.find 1
+                   (` (cm_add 1 1 (proj1 (Pos.leb_le 1 1) eq_refl) empty_coset_map))).
+
+  Compute (PM.find 2 (` (cm_add_id 2 empty_coset_map))).
+
+  Lemma Pos_lt_wf': forall x y : positive, x < y -> Acc Pos.lt x.
+  Proof.
+    intros. rewrite Pos2Nat.inj_lt in H.
+    remember (Pos.to_nat y) as n. clear y Heqn. revert x H. induction n; intros.
+    - pose proof (Pos2Nat.is_pos x). exfalso; intuition.
+    - apply lt_n_Sm_le, le_lt_or_eq in H. destruct H; auto.
+      constructor. intros. rewrite Pos2Nat.inj_lt, H in H0. apply IHn. assumption.
+  Qed.  
+
+  Theorem Pos_lt_wf: well_founded Pos.lt.
+  Proof. red; intro; constructor; intros. eapply Pos_lt_wf'; eauto. Defined.
+
+  Lemma ctr_ok: forall (x : positive) (cm : CosetMap) (p : positive),
+        p =/= x -> PM.find x (` cm) == Some p -> p < x.
+  Proof.
+    intros. destruct cm. simpl in *. red in c. apply c in H0.
+    rewrite Pos.le_lteq in H0. destruct H0; [assumption | contradiction].
+  Qed.
+
+  Definition cm_trace_root: positive -> CosetMap -> option positive :=
+    Fix Pos_lt_wf (fun _ => CosetMap -> option positive)
+        (fun (x: positive)
+             (ctr: forall y: positive, y < x -> CosetMap -> option positive)
+             (cm: CosetMap) =>
+           match PM.find x (` cm) as y
+                 return (PM.find x (` cm) == y -> option positive) with
+           | None => fun _ => None
+           | Some p => match (Pos.eq_dec p x) with
+                       | left _ => fun _ => Some p
+                       | right Hneq => fun Heq => ctr p (ctr_ok x cm p Hneq Heq) cm
+                       end
+           end eq_refl).
+
+  Compute (cm_trace_root 1 (cm_add_id 1 empty_coset_map)).
+
+  (* TODO: path compression in find root. *)
+
+End COSET_MAP.
 
 Section TODD_COXETER_ALGORITHM.
 
@@ -257,19 +329,22 @@ Section TODD_COXETER_ALGORITHM.
       num_coset_upper_bound: positive;
       num_coset: positive;
       coset_rep: PM.tree (list positive);
-      coset_map: PM.tree positive;
+      coset_map: CosetMap;
       table: PM.tree positive;
+      (* The "table" is actually a map from [1..n] * (Alphabet A) to
+      [1..n]. It is flatten into a one-dimensional map by mapping the
+      key (a, x) to "a * sizeOfAlphabet + x - sizeOfAlphabet". *)
     }.
+
+  Definition tableKey (a x: positive) : positive := a * fg_size~0 + x - fg_size~0.
 
   Definition initCosetTable (upper_bound: positive) :=
     Build_CosetTable
       upper_bound
       1
       (PM.add 1 nil (PM.empty (list positive)))
-      (PM.add 1 1 (PM.empty positive))
+      (cm_add_id 1 empty_coset_map)
       (PM.empty positive).
-
-  Definition tableKey (a x: positive) : positive := a * fg_size~0 + x - fg_size~0.
 
   Definition negRep (x: positive) : positive := fg_size~1 - x.
 
@@ -280,7 +355,7 @@ Section TODD_COXETER_ALGORITHM.
     then ct
     else let b := n + 1 in
          let p := coset_map ct in
-         let newP := PM.add b b p in
+         let newP := cm_add_id b p in
          let tab := table ct in
          let newTab := PM.add (tableKey b (negRep x)) a
                               (PM.add (tableKey a x) b tab) in
@@ -301,44 +376,6 @@ Section TODD_COXETER_ALGORITHM.
                  | Some v => iterScan repf t v w' (Pos.succ index)
                  end
     end.
-
-  Definition coset_map_prop (t: PM.tree positive) : Prop :=
-    forall i j, PM.find i t == Some j -> j <= i.
-
-  Theorem Pos_lt_well_founded : well_founded Pos.lt.
-  Proof.
-    red; intro. constructor. intros. rewrite Pos2Nat.inj_lt in H.
-    remember (Pos.to_nat a) as n. clear a Heqn. revert y H. induction n; intros.
-    - pose proof (Pos2Nat.is_pos y). exfalso; intuition.
-    - apply lt_n_Sm_le, le_lt_or_eq in H. destruct H; auto.
-      constructor. intros. rewrite Pos2Nat.inj_lt, H in H0. apply IHn. assumption.
-  Defined.
-
-  Fixpoint findRHelper (x: positive) (t: PM.tree positive) (step: nat) :=
-    match step with
-    | O => (x, t)
-    | S n => match PM.find x t with
-             | None => (x, t)
-             | Some p => if (p =? x)
-                         then (x, t)
-                         else let (p0, t') := findRHelper p t n in
-                              (p0, PM.add x p0 t')
-             end
-    end.
-
-  Definition findRoot (x: positive) (t: PM.tree positive) :=
-    findRHelper x t (Pos.to_nat x).
-
-  Definition joinSets (x y: positive) (t r: PM.tree positive) (l: positive) :=
-    let (rootX, t1) := findRoot x t in
-    let (rootY, t2) := findRoot y t1 in
-    if (rootX =? rootY)
-    then (t, r, l)
-    else let mi := Pos.min rootX rootY in
-         let ma := Pos.max rootX rootY in
-         let t3 := PM.add ma mi t2 in
-         let r' := PM.add l ma r in
-         (t3, r', l + 1).
 
   Instance: EqDec (Alphabet A) eq.
   Proof.
@@ -375,11 +412,15 @@ Section TEST_COSET_ENUM.
 
   Compute fg_size.
 
+  Compute (negRep 3).
+
+  Compute (tableKey 1 1).
+
   Compute (a2p_helper C (A :: B :: nil) 2).
 
   Compute (positive_to_alphabet (alphabet_to_positive (intro_inv A))).
 
-  Compute (alphabet_to_positive (positive_to_alphabet 6)).
+  Compute (alphabet_to_positive (positive_to_alphabet 3)).
 
   Compute fg_size~0.
 
