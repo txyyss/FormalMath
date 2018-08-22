@@ -16,7 +16,7 @@ Class Isometric (f: Point -> Point) :=
 Arguments inverse _ {_} _.
 Arguments injective _ {_} _ _.
 Arguments surjective _ {_} _.
-  
+
 Definition Isometry := sigT (fun func => Isometric func).
 
 Global Instance iso_equiv: Equiv Isometry := fun f1 f2 => forall x, (projT1 f1) x == (projT1 f2) x.
@@ -49,7 +49,7 @@ Proof. repeat intro. unfold iso_neg. destruct x, y. unfold equiv, iso_equiv in H
 
 Global Instance isometryGroup: Group Isometry.
 Proof.
-  constructor; try apply _; intros; unfold bi_op, iso_binop, one, iso_gunit, neg, iso_neg, equiv, iso_equiv. 
+  constructor; try apply _; intros; unfold bi_op, iso_binop, one, iso_gunit, neg, iso_neg, equiv, iso_equiv.
   - destruct x, y, z; intros; simpl. reflexivity.
   - destruct x; intros; simpl; reflexivity.
   - destruct x. intros; simpl. apply (injective x). rewrite surjective; reflexivity.
@@ -59,5 +59,5 @@ Class DiscreteIsometryCondition (P: Isometry -> Prop) :=
   {
     discrete_sub :> SubGroupCondition Isometry P;
     discrete_cond : forall (O: Point) (radius: R), exists (l: list Point), forall (g: Subpart Isometry P) (Og: Point),
-            Og == projT1 (proj1_sig g) O -> (distance O Og <= radius)%R -> In Og l; 
+            Og == projT1 (proj1_sig g) O -> (distance O Og <= radius)%R -> In Og l;
   }.

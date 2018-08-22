@@ -66,7 +66,7 @@ Notation "(=/= x )" := (fun y => y =/= x) (only parsing) : math_scope.
 Class Setoid A {Ae : Equiv A} : Prop := setoid_eq :> Equivalence (@equiv A Ae).
 
 Section SETOID_MORPHISM.
-  
+
   Context `{Ae : Equiv A} `{Be : Equiv B} (f : A -> B).
 
   Class Setoid_Morphism :=
@@ -84,7 +84,7 @@ Section SETOID_MORPHISM_PROP.
 
   Lemma setoid_morphism_trans: Setoid_Morphism (compose g f).
   Proof. constructor; [exact (setoidmor_a f) | exact (setoidmor_b g) | repeat intro; unfold compose; apply sm_proper; auto; apply sm_proper; auto]. Qed.
-  
+
 End SETOID_MORPHISM_PROP.
 
 Arguments sm_proper {A Ae B Be f Setoid_Morphism} _ _ _.

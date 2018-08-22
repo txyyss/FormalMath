@@ -40,76 +40,100 @@ Tactic Notation "if_tac" "in" hyp(H0)
 
 Section COSET_MAP.
 
-  Definition coset_map_prop (t: PM.tree positive) : Prop :=
-    forall i j, PM.find i t == Some j -> j <= i.
+  Definition CosetMap := PM.tree positive.
 
-  Lemma coset_map_prop_empty: coset_map_prop (PM.empty _).
-  Proof. red. intros. rewrite PM.gempty in H. discriminate. Qed.
+  Fixpoint ctr_helper (x: positive) (cm: CosetMap) (steps: nat): list positive :=
+    match steps with
+    | O => nil (* It will not happen. *)
+    | S n => match PM.find x cm with
+             | None => nil (* It will not happen. *)
+             | Some p => if (p =? x)
+                         then x :: nil
+                         else x :: ctr_helper p cm n
+             end
+    end.
 
-  Definition CosetMap := {cm : PM.tree positive | coset_map_prop cm}.
+  Definition cm_trace_root (x: positive) (cm: CosetMap) :=
+    rev (ctr_helper x cm (Pos.to_nat x)).
 
-  Definition empty_coset_map : CosetMap := exist _ (PM.empty _) coset_map_prop_empty.
+  Definition test_map :=
+    fold_right (fun x t => PM.add (fst x) (snd x) t) (PM.empty _)
+               [(1, 1); (2, 1); (3, 2); (4, 2); (5, 4)].
 
-  Lemma cm_add_preserve_cmp: forall i j : positive,
-      j <= i -> forall cm : CosetMap, coset_map_prop (PM.add i j (` cm)).
-  Proof.
-    intros. destruct cm. simpl. red. intros p q ?. destruct (Pos.eq_dec p i).
-    - subst. rewrite PM.gss in H0. inversion H0. subst. assumption.
-    - rewrite PM.gso in H0 by assumption. red in c. apply c in H0. assumption.
-  Qed.
+  Compute (cm_trace_root 5 test_map).
 
-  Definition cm_add (i j: positive) (H: j <= i) (cm: CosetMap) : CosetMap :=
-    exist _ (PM.add i j (` cm)) (cm_add_preserve_cmp i j H cm).
+  Definition find_rep (x: positive) (cm: CosetMap): (positive * CosetMap) :=
+    let trace := cm_trace_root x cm in
+    let root := hd xH trace in
+    (root, fold_right (fun x => PM.add x root) cm (tl (tl trace))).
 
-  Definition cm_add_id (i: positive) (cm: CosetMap) := cm_add i i (Pos.le_refl i) cm.
+  Compute (PM.find 4 (snd (find_rep 1 test_map))).
 
-  Check (proj1 (Pos.leb_le 1 1) eq_refl).
-
-  Compute (PM.find 1
-                   (` (cm_add 1 1 (proj1 (Pos.leb_le 1 1) eq_refl) empty_coset_map))).
-
-  Compute (PM.find 2 (` (cm_add_id 2 empty_coset_map))).
-
-  Lemma Pos_lt_wf': forall x y : positive, x < y -> Acc Pos.lt x.
-  Proof.
-    intros. rewrite Pos2Nat.inj_lt in H.
-    remember (Pos.to_nat y) as n. clear y Heqn. revert x H. induction n; intros.
-    - pose proof (Pos2Nat.is_pos x). exfalso; intuition.
-    - apply lt_n_Sm_le, le_lt_or_eq in H. destruct H; auto.
-      constructor. intros. rewrite Pos2Nat.inj_lt, H in H0. apply IHn. assumption.
-  Qed.  
-
-  Theorem Pos_lt_wf: well_founded Pos.lt.
-  Proof. red; intro; constructor; intros. eapply Pos_lt_wf'; eauto. Defined.
-
-  Lemma ctr_ok: forall (x : positive) (cm : CosetMap) (p : positive),
-        p =/= x -> PM.find x (` cm) == Some p -> p < x.
-  Proof.
-    intros. destruct cm. simpl in *. red in c. apply c in H0.
-    rewrite Pos.le_lteq in H0. destruct H0; [assumption | contradiction].
-  Qed.
-
-  Definition cm_trace_root: positive -> CosetMap -> option positive :=
-    Fix Pos_lt_wf (fun _ => CosetMap -> option positive)
-        (fun (x: positive)
-             (ctr: forall y: positive, y < x -> CosetMap -> option positive)
-             (cm: CosetMap) =>
-           match PM.find x (` cm) as y
-                 return (PM.find x (` cm) == y -> option positive) with
-           | None => fun _ => None
-           | Some p => match (Pos.eq_dec p x) with
-                       | left _ => fun _ => Some p
-                       | right Hneq => fun Heq => ctr p (ctr_ok x cm p Hneq Heq) cm
-                       end
-           end eq_refl).
-
-  Compute (cm_trace_root 1 (cm_add_id 1 empty_coset_map)).
-
-  (* TODO: path compression in find root. *)
+  Definition merge (x y: positive) (cm: CosetMap) (to_be_del: list positive):
+    (CosetMap * list positive) :=
+    let (x_root, cm1) := find_rep x cm in
+    let (y_root, cm2) := find_rep y cm1 in
+    if x_root =? y_root
+    then (cm2, to_be_del)
+    else let min_root := Pos.min x_root y_root in
+         let max_root := Pos.max x_root y_root in
+         (PM.add max_root min_root cm2, max_root :: to_be_del).
 
 End COSET_MAP.
 
-Section TODD_COXETER_ALGORITHM.
+Section GEN_POS_LIST.
+
+  Fixpoint nat_seq (s: nat) (total: nat): list nat :=
+    match total with
+    | O => nil
+    | S n => s :: nat_seq (S s) n
+    end.
+
+  Lemma nat_seq_length: forall s n, length (nat_seq s n) == n.
+  Proof.
+    intros. revert s. induction n; intros; simpl; [|rewrite IHn]; reflexivity.
+  Qed.
+
+  Lemma nat_seq_S: forall i num, nat_seq i (S num) == nat_seq i num ++ [(num + i)%nat].
+  Proof.
+    intros. revert i. induction num; intros. 1: simpl; reflexivity. remember (S num).
+    simpl. rewrite (IHnum (S i)). subst. simpl. repeat f_equal. omega.
+  Qed.
+
+  Lemma nat_seq_In_iff: forall s n i, In i (nat_seq s n) <-> (s <= i < s + n)%nat.
+  Proof. intros. revert s. induction n; intros; simpl; [|rewrite IHn]; omega. Qed.
+
+  Lemma nat_seq_NoDup: forall s n, NoDup (nat_seq s n).
+  Proof.
+    intros. revert s. induction n; intros; simpl; constructor. 2: apply IHn.
+    intro. rewrite nat_seq_In_iff in H. omega.
+  Qed.
+
+  Lemma nat_seq_nth: forall s num n a, (n < num)%nat ->
+                                       nth n (nat_seq s num) a == (s + n)%nat.
+  Proof.
+    intros. revert s n H. induction num; intros. 1: exfalso; omega. simpl. destruct n.
+    1: omega. specialize (IHnum (S s) n).
+    replace (s + S n)%nat with (S s + n)%nat by omega.
+    rewrite IHnum; [reflexivity | omega].
+  Qed.
+
+  Lemma nat_seq_app: forall s n m,
+      nat_seq s (n + m) == nat_seq s n ++ nat_seq (s + n) m.
+  Proof.
+    intros. revert s; induction n; simpl; intros.
+    - rewrite Nat.add_0_r. reflexivity.
+    - f_equal. rewrite IHn. replace (S s + n)%nat with (s + S n)%nat by omega.
+      reflexivity.
+  Qed.
+
+  Compute (nat_seq 1 5).
+
+  Definition gen_pos_list (p: positive) := map Pos.of_nat (nat_seq 1 (Pos.to_nat p)).
+
+End GEN_POS_LIST.
+
+Section FIN_GEN_REP.
 
   Context `{FG: FiniteGenerators A}.
 
@@ -125,8 +149,8 @@ Section TODD_COXETER_ALGORITHM.
 
   Definition positive_to_alphabet (n: positive) : Alphabet A :=
     if (n <=? fg_size)
-    then intro_gen (nth (pred (Pos.to_nat n)) fg_gens anyA)
-    else intro_inv (nth (pred (Pos.to_nat (n - fg_size))) (rev fg_gens) anyA).
+    then Pe (nth (pred (Pos.to_nat n)) fg_gens anyA)
+    else Ne (nth (pred (Pos.to_nat (n - fg_size))) (rev fg_gens) anyA).
 
   Fixpoint a2p_helper (x: A) (l: list A) (n: positive): positive :=
     match l with
@@ -223,8 +247,8 @@ Section TODD_COXETER_ALGORITHM.
 
   Definition alphabet_to_positive (x: Alphabet A) : positive :=
     match x with
-    | intro_gen y => a2p_helper y fg_gens xH
-    | intro_inv y => (xI fg_size) - (a2p_helper y fg_gens xH)
+    | Pe y => a2p_helper y fg_gens xH
+    | Ne y => (xI fg_size) - (a2p_helper y fg_gens xH)
     end.
 
   Lemma a2p2a_the_same: forall x, positive_to_alphabet (alphabet_to_positive x) == x.
@@ -324,6 +348,24 @@ Section TODD_COXETER_ALGORITHM.
         rewrite Pos2Nat.inj_add, Pos2Nat.inj_1. rewrite Pos2Nat.inj_lt in Heqb. omega.
   Qed.
 
+  Record CosetEnumInput :=
+    {
+      group_relator: list (Word A);
+      subgroup_generator: list (Word A);
+    }.
+
+  Instance: EqDec (Alphabet A) eq.
+  Proof.
+    repeat intro. destruct x, y.
+    2, 3: right; intro; inversion H.
+    1, 2: destruct (equiv_dec a a0);
+      [left; rewrite e | right; intro; apply c; inversion H]; reflexivity.
+  Defined.
+
+End FIN_GEN_REP.
+
+Section TODD_COXETER_ALGORITHM.
+
   Record CosetTable :=
     {
       num_coset_upper_bound: positive;
@@ -336,26 +378,29 @@ Section TODD_COXETER_ALGORITHM.
       key (a, x) to "a * sizeOfAlphabet + x - sizeOfAlphabet". *)
     }.
 
-  Definition tableKey (a x: positive) : positive := a * fg_size~0 + x - fg_size~0.
-
-  Definition initCosetTable (upper_bound: positive) :=
+  Definition init_coset_table (upper_bound: positive) :=
     Build_CosetTable
       upper_bound
       1
-      (PM.add 1 nil (PM.empty (list positive)))
-      (cm_add_id 1 empty_coset_map)
-      (PM.empty positive).
+      (PM.add 1 nil (PM.empty _))
+      (PM.add 1 1 (PM.empty _))
+      (PM.empty _).
+
+  Context `{FG: FiniteGenerators A}.
+
+  Definition tableKey (a x: positive) : positive := a * fg_size~0 + x - fg_size~0.
 
   Definition negRep (x: positive) : positive := fg_size~1 - x.
 
-  Definition defineNewCoset (ct: CosetTable) (a x: positive): CosetTable :=
-    let M := num_coset_upper_bound ct in
-    let n := num_coset ct in
-    if (n =? M)
+  Definition should_stop (ct: CosetTable): bool :=
+    num_coset_upper_bound ct <=? num_coset ct.
+
+  Definition define_new_coset (ct: CosetTable) (a x: positive): CosetTable :=
+    if should_stop ct
     then ct
-    else let b := n + 1 in
+    else let b := num_coset ct + 1 in
          let p := coset_map ct in
-         let newP := cm_add_id b p in
+         let newP := PM.add b b p in
          let tab := table ct in
          let newTab := PM.add (tableKey b (negRep x)) a
                               (PM.add (tableKey a x) b tab) in
@@ -364,66 +409,211 @@ Section TODD_COXETER_ALGORITHM.
          match aSeq with
          | None => ct
          | Some taua => let newTau := PM.add b (x :: taua) tau in
-                        Build_CosetTable M b newTau newP newTab
+                        Build_CosetTable (num_coset_upper_bound ct)
+                                         b newTau newP newTab
          end.
 
-  Fixpoint iterScan (repf: positive -> positive) (t: PM.tree positive)
-           (a: positive) (w: list positive) (index: positive) :=
+  Definition remove_cs (gamma: positive) (x: positive)
+             (pa: list positive * CosetTable) :=
+    let (to_be_del, ct) := pa in
+    let tbl := table ct in
+    match PM.find (tableKey gamma x) tbl with
+    | None => pa
+    | Some dlta => let newTbl := PM.remove (tableKey dlta (negRep x)) tbl in
+                   let ctm := coset_map ct in
+                   let (u, ctm1) := find_rep gamma ctm in
+                   let (v, ctm2) := find_rep dlta ctm1 in
+                   let (ctml, ntbl) :=
+                       match PM.find (tableKey u x) newTbl with
+                       | Some ux => (merge v ux ctm2 to_be_del, newTbl)
+                       | None => match PM.find (tableKey v (negRep x)) newTbl with
+                                 | Some vx => (merge u vx ctm2 to_be_del, newTbl)
+                                 | None => ((ctm2, to_be_del),
+                                            PM.add (tableKey v (negRep x)) u
+                                                   (PM.add (tableKey u x) v newTbl))
+                                 end
+                       end in
+                   (snd ctml, Build_CosetTable (num_coset_upper_bound ct)
+                                               (num_coset ct)
+                                               (coset_rep ct)
+                                               (fst ctml) ntbl)
+    end.
+
+  Fixpoint remove_coset (pa: list positive * CosetTable) (steps: nat): CosetTable :=
+    let (to_be_del, ct) := pa in
+    match steps with
+    | O => ct
+    | S n => match to_be_del with
+             | nil => ct
+             | gamma :: rest =>
+               remove_coset (fold_right (remove_cs gamma) (rest, ct)
+                                        (gen_pos_list fg_size~0)) n
+             end
+    end.
+
+  Definition update_coset_map (ct: CosetTable) (cm: CosetMap): CosetTable :=
+    Build_CosetTable (num_coset_upper_bound ct) (num_coset ct)
+                     (coset_rep ct) cm (table ct).
+
+  Definition coincidence (a b: positive) (ct: CosetTable): CosetTable :=
+    let (newCm, to_be_del) := merge a b (coset_map ct) nil in
+    remove_coset (to_be_del, update_coset_map ct newCm) (Pos.to_nat (num_coset ct)).
+
+  Fixpoint iter_scan (repf: positive -> positive) (t: PM.tree positive)
+           (a: positive) (w: list positive) :=
     match w with
-    | nil => (a, index)
+    | nil => (a, nil)
     | x :: w' => match PM.find (tableKey a (repf x)) t with
-                 | None => (a, index)
-                 | Some v => iterScan repf t v w' (Pos.succ index)
+                 | None => (a, w)
+                 | Some v => iter_scan repf t v w'
                  end
     end.
 
-  Instance: EqDec (Alphabet A) eq.
-  Proof.
-    repeat intro. destruct x, y.
-    2, 3: right; intro; inversion H.
-    1, 2: destruct (equiv_dec a a0);
-      [left; rewrite e | right; intro; apply c; inversion H]; reflexivity.
-  Defined.
+  Compute (skipn 1 [1;2;3;4;5]).
 
-  Record CosetEnumInput :=
-    {
-      group_relator: list (Word A);
-      subgroup_generator: list (Word A);
-    }.
+  Definition update_coset_table (ct: CosetTable) (tbl: PM.tree positive): CosetTable :=
+    Build_CosetTable (num_coset_upper_bound ct) (num_coset ct)
+                     (coset_rep ct) (coset_map ct) tbl.
+
+  Fixpoint scan_and_fill_loop (a f_init: positive) (w: list positive)
+           (ct: CosetTable) (steps: nat): CosetTable :=
+    match steps with
+    | O => ct
+    | S n => let (f, new_w) := iter_scan id (table ct) f_init w in
+             match new_w with
+             | nil => if f =? a
+                      then ct
+                      else coincidence f a ct
+             | xi :: _  => let (b, w2) := iter_scan negRep (table ct) a (rev new_w) in
+                           match w2 with
+                           | nil => coincidence f b ct
+                           | xj :: nil => update_coset_table
+                                            ct
+                                            (PM.add (tableKey b (negRep xi)) f
+                                                    (PM.add (tableKey f xi) b
+                                                            (table ct)))
+                           | _ => let new_ct := define_new_coset ct f xi in
+                                  scan_and_fill_loop a f new_w new_ct n
+                    end
+             end
+    end.
+
+  Definition max_steps (ct: CosetTable): nat :=
+    Pos.to_nat (num_coset_upper_bound ct) - Pos.to_nat (num_coset ct).
+
+  Definition is_live (a: positive) (ct: CosetTable) :=
+    match PM.find a (coset_map ct) with
+    | None => false
+    | Some p => p =? a
+    end.
+
+  Definition scan_and_fill (a: positive) (w: list positive) (ct: CosetTable) :=
+    if is_live a ct
+    then scan_and_fill_loop a a w ct (max_steps ct)
+    else ct.
+
+  Definition define_loop (a x: positive) (ct: CosetTable): CosetTable :=
+    match PM.find (tableKey a x) (table ct) with
+    | None => define_new_coset ct a x
+    | _ => ct
+    end.
+
+  Fixpoint cer_loop (a: positive) (ct: CosetTable) (group_rep: list (list positive))
+           (steps: nat): CosetTable :=
+    match steps with
+    | O => ct
+    | S n => let ct2 := if is_live a ct
+                        then let ct1 := fold_right (scan_and_fill a) ct group_rep in
+                             if is_live a ct1
+                             then fold_right (define_loop a) ct1
+                                             (gen_pos_list fg_size~0)
+                             else ct1
+                        else ct in
+             cer_loop (Pos.succ a) ct2 group_rep n
+    end.
+
+  Definition coset_enumration_r (group_rep sub_grp: list (list positive))
+             (upper_bound: positive): CosetTable :=
+    let ct := fold_right (scan_and_fill 1) (init_coset_table upper_bound) sub_grp in
+    cer_loop 1 ct group_rep (Pos.to_nat upper_bound).
+
+  Definition print_coset_table (ct: CosetTable) :=
+    map (fun x => map (fun y => PM.find (tableKey x y) (table ct))
+                      (gen_pos_list fg_size~0))
+        (gen_pos_list (num_coset ct)).
+
+  Definition print_coset_map (ct: CosetTable) :=
+    map (fun x => (x, PM.find x (coset_map ct))) (gen_pos_list (num_coset ct)).
+
+  Definition good_pair (x: positive * option positive) :=
+    let (a, b) := x in
+    match b with
+    | None => false
+    | Some c => a =? c
+    end.
+
+  Fixpoint good_row (l: list (option positive)) :=
+    match l with
+    | nil => true
+    | p :: l => match p with
+                | None => false
+                | Some _ => good_row l
+                end
+    end.
 
 End TODD_COXETER_ALGORITHM.
 
 Section TEST_COSET_ENUM.
 
-  Inductive ThreeT := A | B | C.
+  Inductive GenT := X | Y.
 
-  Instance ThreeTEqDec: EqDec ThreeT eq.
+  Instance GenTEqDec: EqDec GenT eq.
   Proof.
-    intros x y. destruct x, y; [left | right | right | right | left | right | right | right | left]; intuition; unfold complement; intros; inversion H.
+    intros x y. unfold complement, Equivalence.equiv.
+    change (x == y -> False) with (~ x == y). decide equality.
   Defined.
 
-  Instance FG_ThreeT: FiniteGenerators ThreeT.
+  Instance FG_GenT: FiniteGenerators GenT.
   Proof.
-    apply (Build_FiniteGenerators ThreeT ThreeTEqDec (A :: B :: C :: nil) 3); intros.
-    - repeat constructor; intuition; simpl in H; intuition; [inversion H0 | inversion H | inversion H0].
+    apply (Build_FiniteGenerators GenT GenTEqDec [X ; Y] 2); intros.
+    - repeat constructor; intuition; simpl in H; intuition. discriminate.
     - destruct x; intuition.
     - simpl. reflexivity.
   Defined.
 
-  Compute fg_size.
+  Compute (fg_size~0).
 
-  Compute (negRep 3).
+  Compute (map positive_to_alphabet [1; 2; 3; 4]).
 
-  Compute (tableKey 1 1).
+  Definition gen_grp_a := [[Pe X; Pe X; Pe X];
+                             [Pe Y; Pe Y; Pe Y];
+                             [Ne X; Ne Y; Pe X; Pe Y]].
 
-  Compute (a2p_helper C (A :: B :: nil) 2).
+  Compute (map (map alphabet_to_positive) gen_grp_a).
 
-  Compute (positive_to_alphabet (alphabet_to_positive (intro_inv A))).
+  Definition gen_grp := [[1; 1; 1]; [2; 2; 2]; [4; 3; 1; 2]].
 
-  Compute (alphabet_to_positive (positive_to_alphabet 3)).
+  Definition gen_sub: list (list positive) := [[]].
 
-  Compute fg_size~0.
+  Definition gen_ct := coset_enumration_r gen_grp gen_sub 20.
 
-  Compute (a2p_helper (nth (Init.Nat.pred (Pos.to_nat 3)) fg_gens anyA) fg_gens 1).
+  Compute (rev gen_grp).
+
+  Compute (print_coset_table gen_ct).
+
+  Compute (print_coset_map gen_ct).
+
+  Definition gen_grp_b := [[Pe X; Pe Y; Pe X; Pe Y; Ne X; Ne X; Ne X];
+                             [Pe X; Pe X; Pe X; Ne Y; Ne Y; Ne Y]].
+
+  Compute (map (map alphabet_to_positive) gen_grp_b).
+
+  Definition gen_grp2 := [[1; 2; 1; 2; 4; 4; 4]; [1; 1; 1; 3; 3; 3]].
+
+  Definition ct2 := coset_enumration_r gen_grp2 nil 150.
+
+  Compute (filter good_row (print_coset_table ct2)).
+
+  Compute (length (filter good_pair (print_coset_map ct2))).
 
 End TEST_COSET_ENUM.

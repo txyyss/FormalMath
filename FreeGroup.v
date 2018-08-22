@@ -5,15 +5,15 @@ Section FREE_GROUP.
   Variable A : Type.
 
   Inductive Alphabet : Type :=
-  | intro_gen: A -> Alphabet
-  | intro_inv: A -> Alphabet.
+  | Pe: A -> Alphabet
+  | Ne: A -> Alphabet.
 
   Definition Word := list Alphabet.
 
   Definition opposite (letter: Alphabet) : Alphabet :=
     match letter with
-    | intro_gen x => intro_inv x
-    | intro_inv x => intro_gen x
+    | Pe x => Ne x
+    | Ne x => Pe x
     end.
 
   Lemma double_opposite: forall a, opposite (opposite a) == a.
@@ -75,5 +75,5 @@ Section FREE_GROUP.
 
 End FREE_GROUP.
 
-Arguments intro_gen [_] _.
-Arguments intro_inv [_] _.
+Arguments Pe [_] _.
+Arguments Ne [_] _.
