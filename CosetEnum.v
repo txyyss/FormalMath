@@ -439,6 +439,8 @@ Section TODD_COXETER_ALGORITHM.
                                                (fst ctml) ntbl)
     end.
 
+  Definition all_gen_reps: list positive := gen_pos_list fg_size~0.
+
   Fixpoint remove_coset (pa: list positive * CosetTable) (steps: nat): CosetTable :=
     let (to_be_del, ct) := pa in
     match steps with
@@ -446,8 +448,7 @@ Section TODD_COXETER_ALGORITHM.
     | S n => match to_be_del with
              | nil => ct
              | gamma :: rest =>
-               remove_coset (fold_right (remove_cs gamma) (rest, ct)
-                                        (gen_pos_list fg_size~0)) n
+               remove_coset (fold_right (remove_cs gamma) (rest, ct) all_gen_reps) n
              end
     end.
 
@@ -468,8 +469,6 @@ Section TODD_COXETER_ALGORITHM.
                  | Some v => iter_scan repf t v w'
                  end
     end.
-
-  Compute (skipn 1 [1;2;3;4;5]).
 
   Definition update_coset_table (ct: CosetTable) (tbl: PM.tree positive): CosetTable :=
     Build_CosetTable (num_coset_upper_bound ct) (num_coset ct)
@@ -501,14 +500,14 @@ Section TODD_COXETER_ALGORITHM.
   Definition max_steps (ct: CosetTable): nat :=
     Pos.to_nat (num_coset_upper_bound ct) - Pos.to_nat (num_coset ct).
 
-  Definition is_live (a: positive) (ct: CosetTable) :=
+  Definition is_live (ct: CosetTable) (a: positive) :=
     match PM.find a (coset_map ct) with
     | None => false
     | Some p => p =? a
     end.
 
   Definition scan_and_fill (a: positive) (w: list positive) (ct: CosetTable) :=
-    if is_live a ct
+    if is_live ct a
     then scan_and_fill_loop a a w ct (max_steps ct)
     else ct.
 
@@ -522,11 +521,10 @@ Section TODD_COXETER_ALGORITHM.
            (steps: nat): CosetTable :=
     match steps with
     | O => ct
-    | S n => let ct2 := if is_live a ct
+    | S n => let ct2 := if is_live ct a
                         then let ct1 := fold_right (scan_and_fill a) ct group_rep in
-                             if is_live a ct1
-                             then fold_right (define_loop a) ct1
-                                             (gen_pos_list fg_size~0)
+                             if is_live ct1 a
+                             then fold_right (define_loop a) ct1 all_gen_reps
                              else ct1
                         else ct in
              cer_loop (Pos.succ a) ct2 group_rep n
@@ -537,10 +535,40 @@ Section TODD_COXETER_ALGORITHM.
     let ct := fold_right (scan_and_fill 1) (init_coset_table upper_bound) sub_grp in
     cer_loop 1 ct group_rep (Pos.to_nat upper_bound).
 
-  Definition print_coset_table (ct: CosetTable) :=
-    map (fun x => map (fun y => PM.find (tableKey x y) (table ct))
-                      (gen_pos_list fg_size~0))
-        (gen_pos_list (num_coset ct)).
+  Definition replace_loop (a r: positive) (tbl: PM.tree positive) (x: positive) :=
+    match PM.find (tableKey a x) tbl with
+    | None => tbl
+    | Some bb => let b := if bb =? a then r else bb in
+                 PM.add (tableKey b (negRep x)) r
+                        (PM.add (tableKey r x) b tbl)
+    end.
+
+  Definition compress_loop (tbl: PM.tree positive) (live_pair: positive * positive):=
+    let (a, r) := live_pair in
+    if a =? r
+    then tbl
+    else fold_left (replace_loop a r) all_gen_reps tbl.
+
+  Definition compress (ct: CosetTable) :=
+    let live_gens := filter (is_live ct) (gen_pos_list (num_coset ct)) in
+    let num_live_gens := Pos.of_nat (length live_gens) in
+    let new_live_gens := gen_pos_list num_live_gens in
+    let live_pairs := combine live_gens new_live_gens in
+    let new_table := fold_left compress_loop live_pairs (table ct)in
+    let new_cm := fold_left (fun x y => PM.add y y x) new_live_gens (PM.empty _) in
+    Build_CosetTable (num_coset_upper_bound ct) num_live_gens (coset_rep ct)
+                     new_cm new_table.
+
+  Definition generator_permutations (ct: CosetTable) :=
+    map (fun x => map (fun a => match PM.find (tableKey a x) (table ct) with
+                                | None => xH | Some p => p end)
+                      (gen_pos_list (num_coset ct))) (gen_pos_list fg_size).
+
+  (* TODO: implement SWITCH *)
+
+End TODD_COXETER_ALGORITHM.
+
+Section TEST_COSET_ENUM.
 
   Definition print_coset_map (ct: CosetTable) :=
     map (fun x => (x, PM.find x (coset_map ct))) (gen_pos_list (num_coset ct)).
@@ -561,10 +589,6 @@ Section TODD_COXETER_ALGORITHM.
                 end
     end.
 
-End TODD_COXETER_ALGORITHM.
-
-Section TEST_COSET_ENUM.
-
   Inductive GenT := X | Y.
 
   Instance GenTEqDec: EqDec GenT eq.
@@ -581,6 +605,10 @@ Section TEST_COSET_ENUM.
     - simpl. reflexivity.
   Defined.
 
+  Definition print_coset_table (ct: CosetTable) :=
+    map (fun x => map (fun y => PM.find (tableKey x y) (table ct)) all_gen_reps)
+        (gen_pos_list (num_coset ct)).
+
   Compute (fg_size~0).
 
   Compute (map positive_to_alphabet [1; 2; 3; 4]).
@@ -591,17 +619,13 @@ Section TEST_COSET_ENUM.
 
   Compute (map (map alphabet_to_positive) gen_grp_a).
 
-  Definition gen_grp := [[1; 1; 1]; [2; 2; 2]; [4; 3; 1; 2]].
+  Definition gen_grp1 := [[1; 1; 1]; [2; 2; 2]; [4; 3; 1; 2]].
 
-  Definition gen_sub: list (list positive) := [[]].
+  Definition ct1 := coset_enumration_r gen_grp1 nil 20.
 
-  Definition gen_ct := coset_enumration_r gen_grp gen_sub 20.
+  Compute (print_coset_table ct1).
 
-  Compute (rev gen_grp).
-
-  Compute (print_coset_table gen_ct).
-
-  Compute (print_coset_map gen_ct).
+  Compute (print_coset_map ct1).
 
   Definition gen_grp_b := [[Pe X; Pe Y; Pe X; Pe Y; Ne X; Ne X; Ne X];
                              [Pe X; Pe X; Pe X; Ne Y; Ne Y; Ne Y]].
@@ -614,6 +638,30 @@ Section TEST_COSET_ENUM.
 
   Compute (filter good_row (print_coset_table ct2)).
 
-  Compute (length (filter good_pair (print_coset_map ct2))).
+  Compute (filter good_pair (print_coset_map ct2)).
+
+  Definition cct2 := compress ct2.
+
+  Compute ( (print_coset_table cct2)).
+
+  Compute (print_coset_map cct2).
+
+  Definition gen_grp_c := [[Pe X; Pe X]; [Pe Y; Pe Y; Pe Y];
+                             [Pe X; Pe Y; Pe X; Pe Y;
+                                Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y]].
+
+  Compute (map (map alphabet_to_positive) gen_grp_c).
+
+  Definition gen_grp3 := [[1; 1]; [2; 2; 2]; [1; 2; 1; 2; 1; 2; 1; 2; 1; 2]].
+
+  Definition ct3 := coset_enumration_r gen_grp3 nil 100.
+
+  Compute (filter good_row (print_coset_table ct3)).
+
+  Definition cct3 := compress ct3.
+
+  Compute (print_coset_table cct3).
+
+  Compute (generator_permutations cct2).
 
 End TEST_COSET_ENUM.
