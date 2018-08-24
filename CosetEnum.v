@@ -2,7 +2,6 @@ Require Import Coq.Classes.EquivDec.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.PArith.PArith.
 Require Import Coq.omega.Omega.
-Require Import Coq.Program.Program.
 Require Import FormalMath.FreeGroup.
 Import ListNotations.
 
@@ -65,7 +64,7 @@ Section COSET_MAP.
   Definition find_rep (x: positive) (cm: CosetMap): (positive * CosetMap) :=
     let trace := cm_trace_root x cm in
     let root := hd xH trace in
-    (root, fold_right (fun x => PM.add x root) cm (tl (tl trace))).
+    (root, fold_left (fun x y => PM.add y root x) (tl (tl trace)) cm).
 
   Compute (PM.find 4 (snd (find_rep 1 test_map))).
 
@@ -413,8 +412,8 @@ Section TODD_COXETER_ALGORITHM.
                                          b newTau newP newTab
          end.
 
-  Definition remove_cs (gamma: positive) (x: positive)
-             (pa: list positive * CosetTable) :=
+  Definition remove_cs (gamma: positive) (pa: list positive * CosetTable)
+             (x: positive) :=
     let (to_be_del, ct) := pa in
     let tbl := table ct in
     match PM.find (tableKey gamma x) tbl with
@@ -448,7 +447,7 @@ Section TODD_COXETER_ALGORITHM.
     | S n => match to_be_del with
              | nil => ct
              | gamma :: rest =>
-               remove_coset (fold_right (remove_cs gamma) (rest, ct) all_gen_reps) n
+               remove_coset (fold_left (remove_cs gamma) all_gen_reps (rest, ct)) n
              end
     end.
 
@@ -506,12 +505,12 @@ Section TODD_COXETER_ALGORITHM.
     | Some p => p =? a
     end.
 
-  Definition scan_and_fill (a: positive) (w: list positive) (ct: CosetTable) :=
+  Definition scan_and_fill (a: positive) (ct: CosetTable) (w: list positive) :=
     if is_live ct a
     then scan_and_fill_loop a a w ct (max_steps ct)
     else ct.
 
-  Definition define_loop (a x: positive) (ct: CosetTable): CosetTable :=
+  Definition define_loop (a: positive) (ct: CosetTable) (x: positive) : CosetTable :=
     match PM.find (tableKey a x) (table ct) with
     | None => define_new_coset ct a x
     | _ => ct
@@ -522,9 +521,9 @@ Section TODD_COXETER_ALGORITHM.
     match steps with
     | O => ct
     | S n => let ct2 := if is_live ct a
-                        then let ct1 := fold_right (scan_and_fill a) ct group_rep in
+                        then let ct1 := fold_left (scan_and_fill a) group_rep ct in
                              if is_live ct1 a
-                             then fold_right (define_loop a) ct1 all_gen_reps
+                             then fold_left (define_loop a) all_gen_reps ct1
                              else ct1
                         else ct in
              cer_loop (Pos.succ a) ct2 group_rep n
@@ -532,7 +531,7 @@ Section TODD_COXETER_ALGORITHM.
 
   Definition coset_enumration_r (group_rep sub_grp: list (list positive))
              (upper_bound: positive): CosetTable :=
-    let ct := fold_right (scan_and_fill 1) (init_coset_table upper_bound) sub_grp in
+    let ct := fold_left (scan_and_fill 1) sub_grp (init_coset_table upper_bound) in
     cer_loop 1 ct group_rep (Pos.to_nat upper_bound).
 
   Definition replace_loop (a r: positive) (tbl: PM.tree positive) (x: positive) :=
@@ -543,7 +542,7 @@ Section TODD_COXETER_ALGORITHM.
                         (PM.add (tableKey r x) b tbl)
     end.
 
-  Definition compress_loop (tbl: PM.tree positive) (live_pair: positive * positive):=
+  Definition compress_loop (tbl: PM.tree positive) (live_pair: positive * positive) :=
     let (a, r) := live_pair in
     if a =? r
     then tbl
@@ -564,7 +563,58 @@ Section TODD_COXETER_ALGORITHM.
                                 | None => xH | Some p => p end)
                       (gen_pos_list (num_coset ct))) (gen_pos_list fg_size).
 
-  (* TODO: implement SWITCH *)
+  Definition swap_single (b r x: positive) (tbl: PM.tree positive) (a: positive) :=
+    match PM.find (tableKey a x) tbl with
+    | None => tbl
+    | Some p => if p =? b
+                then PM.add (tableKey a x) r tbl
+                else if p =? r
+                     then PM.add (tableKey a x) b tbl
+                     else tbl
+    end.
+
+  Definition switch_loop (b r: positive) (ol: list positive)
+             (tbl: PM.tree positive) (x: positive) :=
+    let z := PM.find (tableKey r x) tbl in
+    let tbl1 := match PM.find (tableKey b x) tbl with
+                | None => PM.remove (tableKey r x) tbl
+                | Some p => PM.add (tableKey r x) p tbl
+                end in
+    let tbl2 := match z with
+                | None => PM.remove (tableKey b x) tbl1
+                | Some p => PM.add (tableKey b x) p tbl1
+                end in
+    fold_left (swap_single b r x) ol tbl2.
+
+
+  Definition switch (tbl: PM.tree positive) (b r: positive) (ol: list positive) :=
+    fold_left (switch_loop b r ol) all_gen_reps tbl.
+
+  Fixpoint standardize_loop (num: positive) (ol tbl_keys: list positive)
+             (r: positive) (tbl: PM.tree positive) :=
+    if r =? num
+    then tbl
+    else match tbl_keys with
+         | nil => tbl
+         | tk :: rest_tks =>
+           match PM.find tk tbl with
+           | None => standardize_loop num ol rest_tks r tbl
+           | Some b => if r <=? b
+                       then let new_tbl := if r <? b
+                                           then switch tbl b r ol
+                                           else tbl in
+                            standardize_loop num ol rest_tks (Pos.succ r) new_tbl
+                       else standardize_loop num ol rest_tks r tbl
+           end
+         end.
+
+  Definition standardize (ct: CosetTable): CosetTable :=
+    let omega_list := gen_pos_list (num_coset ct) in
+    let tbl_keys := flat_map (fun a => (map (tableKey a) all_gen_reps)) omega_list in
+    let new_tbl := standardize_loop (num_coset ct) omega_list tbl_keys 2 (table ct) in
+    update_coset_table ct new_tbl.
+
+  (* TODO: Prove something *)
 
 End TODD_COXETER_ALGORITHM.
 
@@ -642,7 +692,7 @@ Section TEST_COSET_ENUM.
 
   Definition cct2 := compress ct2.
 
-  Compute ( (print_coset_table cct2)).
+  Compute (length (print_coset_table cct2)).
 
   Compute (print_coset_map cct2).
 
@@ -656,12 +706,12 @@ Section TEST_COSET_ENUM.
 
   Definition ct3 := coset_enumration_r gen_grp3 nil 100.
 
-  Compute (filter good_row (print_coset_table ct3)).
-
   Definition cct3 := compress ct3.
 
-  Compute (print_coset_table cct3).
+  Compute (generator_permutations cct3).
 
-  Compute (generator_permutations cct2).
+  Definition sct3 := standardize cct3.
+
+  Compute (generator_permutations sct3).
 
 End TEST_COSET_ENUM.
