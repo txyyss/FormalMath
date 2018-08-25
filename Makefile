@@ -1,7 +1,7 @@
 COQC = coqc
 COQDEP = coqdep
 
-COQ_FLAG = -Q "." FormalMath
+COQ_FLAG = -Q "." FormalMath -native-compiler
 
 SOURCE := $(shell find "." -type f -name '*.v')
 VO_FILE := $(shell find "." -type f -name '*.vo')

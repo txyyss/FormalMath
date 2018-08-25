@@ -94,6 +94,21 @@ Section TWO_GEN_COSET_ENUM.
 
   Definition F4_grp := standardize (compress (coset_enumration_r F4_gens nil 1500)).
 
-  Lemma F4_group_size: num_coset F4_grp == 1152. Proof. vm_compute. reflexivity. Qed.
+  Lemma F4_group_size: num_coset F4_grp == 1152.
+  Proof. native_compute. reflexivity. Qed.
+
+  Definition H4_gens_a :=
+    [[Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X];
+       [Pe Y; Pe Y; Pe Y; Pe Y; Pe Y; Pe Y];
+       [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y];
+       [Pe X; Pe X; Pe X; Pe X; Pe X; Pe Y; Pe X; Pe X; Pe X; Pe X; Pe X; Pe Y];
+       [Pe X; Pe Y; Pe Y; Pe Y; Pe X; Pe Y; Pe Y; Pe Y]].
+
+  Definition H4_gens := Eval vm_compute in (map (map alphabet_to_positive) H4_gens_a).
+
+  Definition H4_grp := (compress (coset_enumration_r H4_gens nil 19000)).
+
+  Lemma H4_group_size: num_coset H4_grp == 14400.
+  Proof. Time native_compute. reflexivity. Qed.
 
 End TWO_GEN_COSET_ENUM.
