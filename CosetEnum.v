@@ -158,7 +158,7 @@ Section TODD_COXETER_ALGORITHM.
          let p := coset_map ct in
          let newP := PM.add b b p in
          let tab := table ct in
-         let newTab := table_add b (negRep x) a (table_add  a x b tab) in
+         let newTab := table_add b (negRep x) a (table_add a x b tab) in
          let tau := coset_rep ct in
          let aSeq := PM.find a tau in
          match aSeq with

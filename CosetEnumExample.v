@@ -9,9 +9,6 @@ Local Open Scope positive_scope.
 
 Section TWO_GEN_COSET_ENUM.
 
-  Definition print_coset_map (ct: CosetTable) :=
-    map (fun x => (x, PM.find x (coset_map ct))) (gen_pos_list (num_coset ct)).
-
   Inductive GenT := X | Y.
 
   Instance GenTEqDec: EqDec GenT eq.
@@ -36,79 +33,102 @@ Section TWO_GEN_COSET_ENUM.
 
   Compute (map positive_to_alphabet [1; 2; 3; 4]).
 
-  Definition gen_grp_a := [[Pe X; Pe X; Pe X];
-                             [Pe Y; Pe Y; Pe Y];
-                             [Ne X; Ne Y; Pe X; Pe Y]].
+  (* The Roration Group of a Regular Tetrahedron *)
+  Definition T_gens := [[Pe X; Pe X; Pe X]; [Pe Y; Pe Y];
+                          [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y]].
 
-  Compute (map (map alphabet_to_positive) gen_grp_a).
+  Definition T_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) T_gens).
 
-  Definition gen_grp1 := [[1; 1; 1]; [2; 2; 2]; [4; 3; 1; 2]].
+  Definition T_group := standardize (compress (coset_enumration_r T_gens_rep nil 15)).
 
-  Definition ct1 := coset_enumration_r gen_grp1 nil 20.
+  Lemma T_group_size: num_coset T_group == 12.
+  Proof. native_compute. reflexivity. Qed.
 
-  Compute (print_coset_table ct1).
+  Compute (print_coset_table T_group).
 
-  Compute (print_coset_map ct1).
+  (* The Roration Group of a Regular Octahedron *)
+  Definition O_gens := [[Pe X; Pe X; Pe X; Pe X]; [Pe Y; Pe Y];
+                          [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y]].
 
-  Definition gen_grp_b := [[Pe X; Pe Y; Pe X; Pe Y; Ne X; Ne X; Ne X];
-                             [Pe X; Pe X; Pe X; Ne Y; Ne Y; Ne Y]].
+  Definition O_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) O_gens).
 
-  Compute (map (map alphabet_to_positive) gen_grp_b).
+  Definition O_group := standardize (compress (coset_enumration_r O_gens_rep nil 30)).
 
-  Definition gen_grp2 := [[1; 2; 1; 2; 4; 4; 4]; [1; 1; 1; 3; 3; 3]].
+  Compute (num_coset O_group).
 
-  Definition ct2 := coset_enumration_r gen_grp2 nil 150.
+  Lemma O_group_size: num_coset O_group == 24.
+  Proof. native_compute. reflexivity. Qed.
 
-  Definition cct2 := compress ct2.
+  Compute (generator_permutations O_group).
 
-  Compute (length (print_coset_table cct2)).
+  (* The Roration Group of a Regular Icosahedron *)
+  Definition I_gens := [[Pe X; Pe X; Pe X; Pe X; Pe X]; [Pe Y; Pe Y];
+                          [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y]].
 
-  Compute (print_coset_map cct2).
+  Definition I_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) I_gens).
 
-  Definition gen_grp_c := [[Pe X; Pe X]; [Pe Y; Pe Y; Pe Y];
-                             [Pe X; Pe Y; Pe X; Pe Y;
-                                Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y]].
+  Definition I_group := standardize (compress (coset_enumration_r I_gens_rep nil 72)).
 
-  Compute (map (map alphabet_to_positive) gen_grp_c).
+  Compute (num_coset I_group).
 
-  Definition gen_grp3 := [[1; 1]; [2; 2; 2]; [1; 2; 1; 2; 1; 2; 1; 2; 1; 2]].
+  Lemma I_group_size: num_coset I_group == 60.
+  Proof. native_compute. reflexivity. Qed.
 
-  Definition ct3 := coset_enumration_r gen_grp3 nil 100.
+  Compute (generator_permutations I_group).
 
-  Definition cct3 := compress ct3.
-
-  Compute (generator_permutations cct3).
-
-  Definition sct3 := standardize cct3.
-
-  Compute (generator_permutations sct3).
-
-  Definition F4_gens_a :=
+  (* The Symmetry Group of the 24-Cell *)
+  Definition F4_gens :=
     [[Pe X; Pe X; Pe X; Pe X; Pe X; Pe X];
        [Pe Y; Pe Y; Pe Y; Pe Y; Pe Y; Pe Y];
        [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y];
        [Pe X; Pe X; Pe X; Pe Y; Pe X; Pe X; Pe X; Pe Y];
        [Pe X; Pe Y; Pe Y; Pe Y; Pe X; Pe Y; Pe Y; Pe Y]].
 
-  Definition F4_gens := Eval compute in (map (map alphabet_to_positive) F4_gens_a).
+  Definition F4_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) F4_gens).
 
-  Definition F4_grp := standardize (compress (coset_enumration_r F4_gens nil 1500)).
+  Definition F4_group :=
+    standardize (compress (coset_enumration_r F4_gens_rep nil 1500)).
 
-  Lemma F4_group_size: num_coset F4_grp == 1152.
+  Lemma F4_group_size: num_coset F4_group == 1152.
   Proof. native_compute. reflexivity. Qed.
 
-  Definition H4_gens_a :=
+  (* The Symmetry Group of the 600-Cell *)
+  Definition H4_gens :=
     [[Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X; Pe X];
        [Pe Y; Pe Y; Pe Y; Pe Y; Pe Y; Pe Y];
        [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y];
        [Pe X; Pe X; Pe X; Pe X; Pe X; Pe Y; Pe X; Pe X; Pe X; Pe X; Pe X; Pe Y];
        [Pe X; Pe Y; Pe Y; Pe Y; Pe X; Pe Y; Pe Y; Pe Y]].
 
-  Definition H4_gens := Eval vm_compute in (map (map alphabet_to_positive) H4_gens_a).
+  Definition H4_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) H4_gens).
 
-  Definition H4_grp := (compress (coset_enumration_r H4_gens nil 19000)).
+  Definition H4_group := compress (coset_enumration_r H4_gens_rep nil 19000).
 
-  Lemma H4_group_size: num_coset H4_grp == 14400.
-  Proof. Time native_compute. reflexivity. Qed.
+  Lemma H4_group_size: num_coset H4_group == 14400.
+  Proof. idtac "Computing H4 group...". Time native_compute. reflexivity. Qed.
+
+  (* Mathieu group M11 *)
+  Definition M11_gens :=
+    [[Pe X; Pe X]; [Pe Y; Pe Y; Pe Y; Pe Y];
+       [Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X;
+          Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y; Pe X; Pe Y];
+       [Pe X; Pe Y; Pe Y; Pe X; Pe Y; Pe Y; Pe X; Pe Y; Pe Y; Pe X; Pe Y; Pe Y; Pe X;
+          Pe Y; Pe Y; Pe X; Pe Y; Pe Y];
+       [Pe X; Pe Y; Pe X; Pe Y; Pe X; Ne Y; Pe X; Pe Y; Pe X; Pe Y; Pe Y; Pe X; Ne Y;
+          Pe X; Pe Y; Pe X; Ne Y; Pe X; Ne Y]].
+
+  Definition M11_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) M11_gens).
+
+  (* 385465 cosets will be generated *)
+  Definition M11_group := compress (coset_enumration_r M11_gens_rep nil 385500).
+
+  Lemma M11_group_size: num_coset M11_group == 7920.
+  Proof. idtac "Computing M11 group...". Time native_compute. reflexivity. Qed.
 
 End TWO_GEN_COSET_ENUM.
