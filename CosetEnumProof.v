@@ -65,7 +65,7 @@ Section FIN_GEN_REP_PROOFS.
 
   Context `{FG: FiniteGenerators A}.
 
-    Lemma a2p_helper_low: forall x l n, n <= a2p_helper x l n.
+  Lemma a2p_helper_low: forall x l n, n <= a2p_helper x l n.
   Proof.
     intro x. induction l; intros; simpl. 1: intuition. if_tac.
     - intuition.
@@ -74,23 +74,17 @@ Section FIN_GEN_REP_PROOFS.
   Qed.
 
   Lemma pos_add_succ: forall n m, n + Pos.succ m == Pos.succ n + m.
-  Proof.
-    intros. rewrite <- (Pos.add_1_l m), Pos.add_assoc, Pos.add_1_r. reflexivity.
-  Qed.
+  Proof. intros. zify. omega. Qed.
 
   Lemma pos_succ_add_sub: forall n m, Pos.succ n + m - 1 == n + m.
-  Proof.
-    intros. rewrite <- Pos.add_1_r, <- Pos.add_assoc, (Pos.add_comm 1),
-            Pos.add_assoc, Pos.add_sub. reflexivity.
-  Qed.
+  Proof. intros. zify. omega. Qed.
 
   Lemma a2p_helper_In:
     forall x l n, In x l <-> a2p_helper x l n < n + Pos.of_succ_nat (length l) - 1.
   Proof.
-    intros x l. induction l; intros; simpl.
-    1: rewrite Pos.add_sub; intuition; apply Pos.lt_irrefl in H; auto.
+    intros x l. induction l; intros; simpl. 1: zify; omega.
     rewrite pos_add_succ. split; intros; [if_tac | if_tac in H].
-    - rewrite pos_succ_add_sub. apply Pos.lt_add_r.
+    - zify. omega.
     - rewrite <- IHl. destruct H; auto. compute in c. exfalso; auto.
     - left; auto.
     - right. rewrite (IHl (Pos.succ n)); auto.
@@ -107,8 +101,7 @@ Section FIN_GEN_REP_PROOFS.
       rewrite Pos2Nat.inj_succ. simpl.
       destruct ((Pos.to_nat (a2p_helper x l (Pos.succ n)) - Pos.to_nat n)%nat) eqn: ?.
       + rewrite PeanoNat.Nat.sub_0_le in Heqn0. exfalso.
-        pose proof (a2p_helper_low x l (Pos.succ n)).
-        rewrite Pos2Nat.inj_le, Pos2Nat.inj_succ in H0. intuition.
+        pose proof (a2p_helper_low x l (Pos.succ n)). zify. omega.
       + rewrite PeanoNat.Nat.sub_succ_r, Heqn0, PeanoNat.Nat.pred_succ. reflexivity.
   Qed.
 
@@ -117,28 +110,23 @@ Section FIN_GEN_REP_PROOFS.
       a2p_helper (nth (Init.Nat.pred (Pos.to_nat x)) l a) l n == x + n - 1.
   Proof.
     intros x l. revert x. induction l; intros.
-    - simpl in *. exfalso. pose proof (Pos2Nat.is_pos x). intuition.
+    - simpl in *. exfalso. zify. omega.
     - Opaque nth. simpl. if_tac. Transparent nth.
       + simpl in e. destruct (pred (Pos.to_nat x)) eqn: ?.
-        * clear -Heqn0. rewrite Nat.eq_pred_0 in Heqn0. destruct Heqn0.
-          -- exfalso. pose proof (Pos2Nat.is_pos x). intuition.
-          -- rewrite <- Pos2Nat.inj_1, Pos2Nat.inj_iff in H. subst.
-             rewrite Pos.add_comm, Pos.add_sub. reflexivity.
+        * clear -Heqn0. rewrite Nat.eq_pred_0 in Heqn0. zify. omega.
         * exfalso. rewrite NoDup_cons_iff in H0. destruct H0 as [? _]. apply H0.
           rewrite <- e. apply nth_In. simpl in H.
           pose proof (Pos2Nat.is_pos x). omega.
       + simpl in *. destruct (pred (Pos.to_nat x)) eqn: ?.
         * exfalso. compute in c. apply c. auto.
         * rewrite NoDup_cons_iff in H0. destruct H0 as [_ ?].
-          assert (1 < x) by (rewrite Pos2Nat.inj_lt, Pos2Nat.inj_1; omega).
-          assert ((Pos.to_nat (x - 1) <= length l)%nat) by
-              (rewrite Pos2Nat.inj_sub; auto; rewrite Pos2Nat.inj_1; omega).
+          assert (1 < x) by (zify; omega).
+          assert ((Pos.to_nat (x - 1) <= length l)%nat) by (zify; omega).
           specialize (IHl (x - 1) (n + 1) a0 H2 H0).
           rewrite <- Nat.sub_1_r in *. rewrite Pos2Nat.inj_sub in *; auto.
           rewrite Pos2Nat.inj_1 in *. rewrite <- Pos.add_1_r.
           assert (n0 == (Pos.to_nat x - 1 - 1)%nat) by omega. rewrite H3.
-          rewrite IHl. rewrite Pos.add_assoc, Pos.add_sub, (Pos.add_comm x n),
-                       <- Pos.add_sub_assoc; auto. rewrite Pos.add_comm. reflexivity.
+          rewrite IHl. zify; omega.
   Qed.
 
   Lemma a2p_helper_not_In:
@@ -157,11 +145,9 @@ Section FIN_GEN_REP_PROOFS.
     intros. unfold positive_to_alphabet, alphabet_to_positive.
     assert (forall x, x <= fg_size <->
                         x < 1 + Pos.of_succ_nat (length fg_gens) - 1). {
-      intro. rewrite Pos.add_comm, Pos.add_sub, fg_gens_size, Pos2SuccNat.id_succ,
-             Pos.lt_succ_r. apply iff_refl.
-    } assert (forall a, a2p_helper a fg_gens 1 <= fg_size). {
-      intros. rewrite H, <- a2p_helper_In. apply fg_gens_all.
-    } destruct x.
+      intro. rewrite fg_gens_size. zify; omega. }
+    assert (forall a, a2p_helper a fg_gens 1 <= fg_size). {
+      intros. rewrite H, <- a2p_helper_In. apply fg_gens_all. } destruct x.
     - if_tac.
       + rewrite Pos.leb_le, H, <- a2p_helper_In in Heqb.
         rewrite Minus.pred_of_minus, nth_a2p_helper; auto.
@@ -170,29 +156,23 @@ Section FIN_GEN_REP_PROOFS.
       rewrite !Pos.mul_1_l, <- Pos.add_diag, Pos.add_assoc in H1.
       assert (a2p_helper a fg_gens 1 < 1 + fg_size). {
           apply Pos.le_lt_trans with fg_size; auto. rewrite Pos.add_comm.
-          apply Pos.lt_add_r.
-      } assert (1 + fg_size + fg_size - a2p_helper a fg_gens 1 ==
-                1 + fg_size - a2p_helper a fg_gens 1 + fg_size). {
-        rewrite (Pos.add_comm 1) at 1.
-        rewrite <- Pos.add_assoc,  <- Pos.add_sub_assoc, Pos.add_comm; auto.
-      } if_tac.
+          apply Pos.lt_add_r. }
+      assert (1 + fg_size + fg_size - a2p_helper a fg_gens 1 ==
+              1 + fg_size - a2p_helper a fg_gens 1 + fg_size) by (zify; omega).
+      if_tac.
       + rewrite Pos.leb_le in Heqb. specialize (H0 a). exfalso.
         rewrite H1 in Heqb. clear H1. rewrite H3 in Heqb. clear H3.
-        apply (Pos.lt_irrefl fg_size).
-        eapply Pos.lt_le_trans; eauto. rewrite Pos.add_comm. apply Pos.lt_add_r.
+        apply (Pos.lt_irrefl fg_size). zify; omega.
       + rewrite H1 in *. clear H1. rewrite Pos.leb_gt in Heqb. specialize (H0 a).
         assert ((Pos.to_nat (1 + fg_size - a2p_helper a fg_gens 1) <=
-                 Pos.to_nat fg_size)%nat). {
-          rewrite <- Pos2Nat.inj_le, <- Pos.lt_succ_r, <- Pos.add_1_l.
-          apply Pos.sub_decr; auto.
-        } rewrite H3, Pos.add_sub, rev_nth; rewrite fg_gens_size.
+                 Pos.to_nat fg_size)%nat) by (zify; omega).
+        rewrite H3, Pos.add_sub, rev_nth; rewrite fg_gens_size.
         * rewrite <- (Lt.S_pred _ O). 2: apply Pos2Nat.is_pos.
           rewrite Pos2Nat.inj_sub; auto.
           assert (forall (n m p : nat),
                      (p < m)%nat ->
                      ((m - p)%nat <= n)%nat -> (n - (m - p) == n + p - m)%nat). {
-            clear. intros. omega.
-          } rewrite H4. clear H4.
+            clear. intros. omega. } rewrite H4. clear H4.
           -- rewrite Pos2Nat.inj_add.
              replace (Pos.to_nat fg_size + Pos.to_nat (a2p_helper a fg_gens 1) -
                                           (Pos.to_nat 1 + Pos.to_nat fg_size))%nat
@@ -224,13 +204,10 @@ Section FIN_GEN_REP_PROOFS.
       replace n with (pred (n + 1)) by omega.
       rewrite <- (Nat2Pos.id (n + 1)) by omega.
       pose proof (Pos2Nat.is_pos fg_size). pose proof (Pos2Nat.is_pos x).
-      assert (1 < x) by (rewrite Pos2Nat.inj_lt in Heqb;
-                         rewrite Pos2Nat.inj_lt, Pos2Nat.inj_1; omega).
-      assert (x - 1 < fg_size + fg_size). {
-        rewrite Pos2Nat.inj_lt, Pos2Nat.inj_add, Pos2Nat.inj_sub; auto.
-        rewrite Pos2Nat.inj_1. rewrite Pos2Nat.inj_le, Pos2Nat.inj_add in H. omega.
-      } assert (length fg_gens - S (Pos.to_nat (x - fg_size) - 1) + 1 ==
-                Pos.to_nat (fg_size + fg_size - (x - 1)))%nat. {
+      assert (1 < x) by (zify; omega).
+      assert (x - 1 < fg_size + fg_size) by (zify; omega).
+      assert (length fg_gens - S (Pos.to_nat (x - fg_size) - 1) + 1 ==
+              Pos.to_nat (fg_size + fg_size - (x - 1)))%nat. {
         replace (S (Pos.to_nat (x - fg_size) - 1)) with (Pos.to_nat (x - fg_size)) by
             (pose proof (Pos2Nat.is_pos (x - fg_size)); omega).
         rewrite fg_gens_size, Pos2Nat.inj_sub; auto.
@@ -240,13 +217,26 @@ Section FIN_GEN_REP_PROOFS.
           by omega. rewrite <- Pos2Nat.inj_add, <- Pos2Nat.inj_1.
         rewrite <- !Pos2Nat.inj_sub; auto.
       } rewrite a2p_heler_nth; [ subst; rewrite H5.. | apply fg_gens_nodup].
-      + rewrite Pos2Nat.id, Pos.add_sub. rewrite Pos.sub_sub_distr; auto.
-        * rewrite Pos.add_comm, <- Pos.add_assoc, Pos.add_assoc, Pos.add_sub,
-          Pos.sub_add; auto.
-        * transitivity (fg_size + fg_size). 1: apply Pos.sub_decr; auto.
-          rewrite <- Pos.add_assoc, (Pos.add_comm 1); apply Pos.lt_add_r.
-      + rewrite Pos2Nat.id, fg_gens_size. rewrite !Pos2Nat.inj_sub; auto.
-        rewrite Pos2Nat.inj_add, Pos2Nat.inj_1. rewrite Pos2Nat.inj_lt in Heqb. omega.
+      + rewrite Pos2Nat.id, Pos.add_sub. rewrite Pos.sub_sub_distr; auto; zify; omega.
+      + rewrite Pos2Nat.id, fg_gens_size. zify; omega.
   Qed.
 
 End FIN_GEN_REP_PROOFS.
+
+Section TODD_COXETER_PROOFS.
+
+  Context `{FG: FiniteGenerators A}.
+
+  Definition coset_map_prop (cm: CosetMap): Prop :=
+    forall i j, PM.find i cm == Some j -> j <= i.
+
+  Definition coset_table_prop (tbl: TableMap): Prop :=
+    forall a x b, table_find a x tbl == Some b <->
+                  table_find b (negRep x) tbl == Some a.
+
+  Definition valid_gen_rep (x: positive): Prop := x < fg_size~1.
+
+  Lemma double_neg_rep: forall x, valid_gen_rep x -> negRep (negRep x) == x.
+  Proof. intros. unfold valid_gen_rep in H. unfold negRep. zify. omega. Qed.
+
+End TODD_COXETER_PROOFS.
