@@ -119,7 +119,6 @@ Section TODD_COXETER_ALGORITHM.
     {
       num_coset_upper_bound: positive;
       num_coset: positive;
-      coset_rep: PM.tree (list positive);
       coset_map: CosetMap;
       table: TableMap;
       (* The "table" is actually a map from [1..n] * (Alphabet A) to
@@ -131,7 +130,6 @@ Section TODD_COXETER_ALGORITHM.
     Build_CosetTable
       upper_bound
       1
-      (PM.add 1 nil (PM.empty _))
       (PM.add 1 1 (PM.empty _))
       (PM.empty _).
 
@@ -161,14 +159,7 @@ Section TODD_COXETER_ALGORITHM.
          let newP := PM.add b b p in
          let tab := table ct in
          let newTab := table_add b (negRep x) a (table_add a x b tab) in
-         let tau := coset_rep ct in
-         let aSeq := PM.find a tau in
-         match aSeq with
-         | None => ct
-         | Some taua => let newTau := PM.add b (x :: taua) tau in
-                        Build_CosetTable (num_coset_upper_bound ct)
-                                         b newTau newP newTab
-         end.
+         Build_CosetTable (num_coset_upper_bound ct) b newP newTab.
 
   Definition remove_cs (gamma: positive) (pa: list positive * CosetTable)
              (x: positive) :=
@@ -192,7 +183,6 @@ Section TODD_COXETER_ALGORITHM.
                        end in
                    (snd ctml, Build_CosetTable (num_coset_upper_bound ct)
                                                (num_coset ct)
-                                               (coset_rep ct)
                                                (fst ctml) ntbl)
     end.
 
@@ -210,8 +200,7 @@ Section TODD_COXETER_ALGORITHM.
     end.
 
   Definition update_coset_map (ct: CosetTable) (cm: CosetMap): CosetTable :=
-    Build_CosetTable (num_coset_upper_bound ct) (num_coset ct)
-                     (coset_rep ct) cm (table ct).
+    Build_CosetTable (num_coset_upper_bound ct) (num_coset ct) cm (table ct).
 
   Definition coincidence (a b: positive) (ct: CosetTable): CosetTable :=
     let (newCm, to_be_del) := merge a b (coset_map ct) nil in
@@ -228,8 +217,7 @@ Section TODD_COXETER_ALGORITHM.
     end.
 
   Definition update_coset_table (ct: CosetTable) (tbl: TableMap): CosetTable :=
-    Build_CosetTable (num_coset_upper_bound ct) (num_coset ct)
-                     (coset_rep ct) (coset_map ct) tbl.
+    Build_CosetTable (num_coset_upper_bound ct) (num_coset ct) (coset_map ct) tbl.
 
   Fixpoint scan_and_fill_loop (a f_init: positive) (w: list positive)
            (ct: CosetTable) (steps: nat): CosetTable :=
@@ -312,8 +300,7 @@ Section TODD_COXETER_ALGORITHM.
     let live_pairs := combine live_gens new_live_gens in
     let new_table := fold_left compress_loop live_pairs (table ct)in
     let new_cm := fold_left (fun x y => PM.add y y x) new_live_gens (PM.empty _) in
-    Build_CosetTable (num_coset_upper_bound ct) num_live_gens (coset_rep ct)
-                     new_cm new_table.
+    Build_CosetTable (num_coset_upper_bound ct) num_live_gens new_cm new_table.
 
   Definition generator_permutations (ct: CosetTable) :=
     map (fun x => map (fun a => match table_find a x (table ct) with

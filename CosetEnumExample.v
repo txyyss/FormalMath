@@ -102,7 +102,6 @@ Section TWO_GEN_COSET_ENUM.
   Proof. native_compute. reflexivity. Qed.
 
   (* The Symmetry Group of the 600-Cell *)
-
   Definition H4_gens :=
     [repeat (Pe X) 10; repeat (Pe Y) 6; flatten (repeat [Pe X; Pe Y] 3);
        flatten (repeat (repeat (Pe X) 5 ++ [Pe Y]) 2);
@@ -115,22 +114,6 @@ Section TWO_GEN_COSET_ENUM.
 
   Lemma H4_group_size: num_coset H4_group = 14400.
   Proof. idtac "Computing H4 group...". Time native_compute. reflexivity. Qed.
-
-  (* Mathieu group M11 *)
-  Definition M11_gens :=
-    [repeat (Pe X) 2; repeat (Pe Y) 4; flatten (repeat [Pe X; Pe Y] 11);
-       flatten (repeat [Pe X; Pe Y; Pe Y] 6);
-       [Pe X; Pe Y; Pe X; Pe Y; Pe X; Ne Y; Pe X; Pe Y; Pe X; Pe Y; Pe Y; Pe X; Ne Y;
-          Pe X; Pe Y; Pe X; Ne Y; Pe X; Ne Y]].
-
-  Definition M11_gens_rep :=
-    Eval vm_compute in (map (map alphabet_to_positive) M11_gens).
-
-  (* 385465 cosets will be generated *)
-  Definition M11_group := compress (coset_enumration_r M11_gens_rep nil 385500).
-
-  Lemma M11_group_size: num_coset M11_group = 7920.
-  Proof. idtac "Computing M11 group...". Time native_compute. reflexivity. Qed.
 
 End TWO_GEN_COSET_ENUM.
 
@@ -152,6 +135,29 @@ Section THREE_GEN_COSET_ENUM.
     - simpl. reflexivity.
   Defined.
 
+  (* Full symmetry group of icosahedron *)
+  Definition Ih_gens := [repeat (Pe A) 2; repeat (Pe C) 2; repeat (Pe D) 2;
+                           flatten (repeat [Pe A; Pe C] 3);
+                           flatten (repeat [Pe A; Pe D] 2);
+                           flatten (repeat [Pe C; Pe D] 5)].
+
+  Definition Ih_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) Ih_gens).
+
+  Definition Ih_group := compress (coset_enumration_r Ih_gens_rep nil 210).
+
+  Eval native_compute in (num_coset Ih_group).
+
+  Definition Ih_sub_gens := [[Pe A]; [Pe D]].
+
+  Definition Ih_sub_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) Ih_sub_gens).
+
+  Definition Ih_sub_group :=
+    compress (coset_enumration_r Ih_gens_rep Ih_sub_gens_rep 210).
+
+  Eval native_compute in (num_coset Ih_sub_group).
+  
   (* Linear Group L_2(27) *)
   Definition L_2_27_gens :=
     [repeat (Pe A) 3; repeat (Pe D) 13; repeat (Pe C) 2;
@@ -167,21 +173,5 @@ Section THREE_GEN_COSET_ENUM.
 
   Lemma L_2_27_group_size: num_coset L_2_27_group = 9828.
   Proof. idtac "Compute L_2(27) group...". Time native_compute. reflexivity. Qed.
-
-  (* Mathieu Group M12 *)
-  Definition M12_gens :=
-    [repeat (Pe A) 11; repeat (Pe C) 2; repeat (Pe D) 2;
-       flatten (repeat [Pe A; Pe C] 3); flatten (repeat [Pe A; Pe D] 3);
-         flatten (repeat [Pe C; Pe D] 10);
-         [Pe A; Pe A; Pe C; Pe D; Pe C; Pe D; Pe A; Ne D; Ne C; Ne D; Ne C]].
-
-  Definition M12_gens_rep :=
-    Eval vm_compute in (map (map alphabet_to_positive) M12_gens).
-
-  (* 573191 cosets will be generated *)
-  Definition M12_group := compress (coset_enumration_r M12_gens_rep nil 573200).
-
-  Lemma M12_group_size: num_coset M12_group = 95040.
-  Proof. idtac "Computing M12 group...". Time native_compute. reflexivity. Qed.
 
 End THREE_GEN_COSET_ENUM.
