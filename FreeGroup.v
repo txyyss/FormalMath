@@ -1,37 +1,23 @@
+Require Export FormalMath.Word.
 Require Export FormalMath.Group.
 
 Section FREE_GROUP.
 
   Variable A : Type.
 
-  Inductive Alphabet : Type :=
-  | Pe: A -> Alphabet
-  | Ne: A -> Alphabet.
-
-  Definition Word := list Alphabet.
-
-  Definition opposite (letter: Alphabet) : Alphabet :=
-    match letter with
-    | Pe x => Ne x
-    | Ne x => Pe x
-    end.
-
-  Lemma double_opposite: forall a, opposite (opposite a) == a.
-  Proof. intros. destruct a; simpl; auto. Qed.
-
-  Inductive word_equiv: relation Word :=
-  | word_equiv_pair: forall (x y: Word) s,
-      word_equiv (x ++ y) (x ++ s :: opposite s :: y)
+  Inductive word_equiv: relation (Word A):=
+  | word_equiv_pair: forall (x y: Word A) s,
+      word_equiv (x ++ y) (x ++ s :: opposite A s :: y)
   | word_equiv_refl: forall x, word_equiv x x
   | word_equiv_symm: forall x y, word_equiv x y -> word_equiv y x
   | word_equiv_trans: forall x y z, word_equiv x y -> word_equiv y z -> word_equiv x z.
 
-  Global Instance free_equiv: Equiv Word := word_equiv.
-  Global Instance free_binop: BinOp Word := fun x y => x ++ y.
-  Global Instance free_gunit: GrUnit Word := nil.
-  Global Instance free_neg: Negate Word := fun x => map opposite (rev x).
+  Global Instance free_equiv: Equiv (Word A) := word_equiv.
+  Global Instance free_binop: BinOp (Word A):= fun x y => x ++ y.
+  Global Instance free_gunit: GrUnit (Word A) := nil.
+  Global Instance free_neg: Negate (Word A) := fun x => map (opposite A) (rev x).
 
-  Instance: Setoid Word.
+  Instance: Setoid (Word A).
   Proof.
     constructor; unfold equiv, free_equiv; repeat intro;
       [apply word_equiv_refl | now apply word_equiv_symm |
@@ -51,12 +37,12 @@ Section FREE_GROUP.
   Proof.
     constructor. unfold free_neg.
     induction H; [| reflexivity | now symmetry |
-                  now transitivity (map opposite (rev y))]. rewrite !rev_app_distr.
+                  now transitivity (map (opposite A) (rev y))]. rewrite !rev_app_distr.
     simpl. rewrite !app_ass, <- !app_comm_cons, !app_nil_l, !map_app. simpl.
     rewrite double_opposite. symmetry. apply word_equiv_pair.
   Qed.
 
-  Global Instance freeGroup: Group Word.
+  Global Instance freeGroup: Group (Word A).
   Proof.
     constructor; try apply _; intros;
       unfold bi_op, free_binop, one, free_gunit, neg, free_neg.
@@ -64,16 +50,13 @@ Section FREE_GROUP.
     - now rewrite app_nil_l.
     - induction x; simpl; auto. rewrite map_app. simpl.
       rewrite app_ass, <- app_comm_cons, app_nil_l.
-      transitivity (map opposite (rev x) ++ x); auto.
-      rewrite <- (double_opposite a) at 2. symmetry. constructor.
+      transitivity (map (opposite A) (rev x) ++ x); auto.
+      rewrite <- (double_opposite A a) at 2. symmetry. constructor.
   Qed.
 
-  Definition fp_condition (l: list Word) := normal_gen (fun w => In w l).
+  Definition fp_condition (l: list (Word A)) := normal_gen (fun w => In w l).
 
-  Goal forall l: list Word, Group (Quotient Word (fp_condition l)).
+  Goal forall l: list (Word A), Group (Quotient (Word A) (fp_condition l)).
   Proof. apply _. Qed.
 
 End FREE_GROUP.
-
-Arguments Pe [_] _.
-Arguments Ne [_] _.

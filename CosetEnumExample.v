@@ -1,7 +1,8 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.PArith.PArith.
 Require Import Coq.omega.Omega.
-Require Import FormalMath.FreeGroup.
+Require Import Coq.Lists.List.
+Require Import FormalMath.Word.
 Require Import FormalMath.CosetEnum.
 Import ListNotations.
 
@@ -20,7 +21,7 @@ Section TWO_GEN_COSET_ENUM.
   Instance TwoGenTEqDec: EqDec TwoGenT eq.
   Proof.
     intros x y. unfold complement, Equivalence.equiv.
-    change (x == y -> False) with (~ x == y). decide equality.
+    change (x = y -> False) with (~ x = y). decide equality.
   Defined.
 
   Instance FG_TwoGenT: FiniteGenerators TwoGenT.
@@ -48,7 +49,7 @@ Section TWO_GEN_COSET_ENUM.
 
   Definition T_group := (compress (coset_enumration_r T_gens_rep nil 16)).
 
-  Lemma T_group_size: num_coset T_group == 12.
+  Lemma T_group_size: num_coset T_group = 12.
   Proof. native_compute. reflexivity. Qed.
 
   Compute (print_coset_table T_group).
@@ -64,7 +65,7 @@ Section TWO_GEN_COSET_ENUM.
 
   Compute (num_coset O_group).
 
-  Lemma O_group_size: num_coset O_group == 24.
+  Lemma O_group_size: num_coset O_group = 24.
   Proof. native_compute. reflexivity. Qed.
 
   Compute (generator_permutations O_group).
@@ -80,7 +81,7 @@ Section TWO_GEN_COSET_ENUM.
 
   Compute (num_coset I_group).
 
-  Lemma I_group_size: num_coset I_group == 60.
+  Lemma I_group_size: num_coset I_group = 60.
   Proof. native_compute. reflexivity. Qed.
 
   Compute (generator_permutations I_group).
@@ -97,7 +98,7 @@ Section TWO_GEN_COSET_ENUM.
   Definition F4_group :=
     standardize (compress (coset_enumration_r F4_gens_rep nil 1500)).
 
-  Lemma F4_group_size: num_coset F4_group == 1152.
+  Lemma F4_group_size: num_coset F4_group = 1152.
   Proof. native_compute. reflexivity. Qed.
 
   (* The Symmetry Group of the 600-Cell *)
@@ -112,7 +113,7 @@ Section TWO_GEN_COSET_ENUM.
 
   Definition H4_group := compress (coset_enumration_r H4_gens_rep nil 19000).
 
-  Lemma H4_group_size: num_coset H4_group == 14400.
+  Lemma H4_group_size: num_coset H4_group = 14400.
   Proof. idtac "Computing H4 group...". Time native_compute. reflexivity. Qed.
 
   (* Mathieu group M11 *)
@@ -128,7 +129,7 @@ Section TWO_GEN_COSET_ENUM.
   (* 385465 cosets will be generated *)
   Definition M11_group := compress (coset_enumration_r M11_gens_rep nil 385500).
 
-  Lemma M11_group_size: num_coset M11_group == 7920.
+  Lemma M11_group_size: num_coset M11_group = 7920.
   Proof. idtac "Computing M11 group...". Time native_compute. reflexivity. Qed.
 
 End TWO_GEN_COSET_ENUM.
@@ -140,7 +141,7 @@ Section THREE_GEN_COSET_ENUM.
   Instance ThreeGenTEqDec: EqDec ThreeGenT eq.
   Proof.
     intros x y. unfold complement, Equivalence.equiv.
-    change (x == y -> False) with (~ x == y). decide equality.
+    change (x = y -> False) with (~ x = y). decide equality.
   Defined.
 
   Instance FG_ThreeGenT: FiniteGenerators ThreeGenT.
@@ -164,7 +165,7 @@ Section THREE_GEN_COSET_ENUM.
   (* 21743 cosets will be generated *)
   Definition L_2_27_group := compress (coset_enumration_r L_2_27_gens_rep nil 21750).
 
-  Lemma L_2_27_group_size: num_coset L_2_27_group == 9828.
+  Lemma L_2_27_group_size: num_coset L_2_27_group = 9828.
   Proof. idtac "Compute L_2(27) group...". Time native_compute. reflexivity. Qed.
 
   (* Mathieu Group M12 *)
@@ -180,7 +181,7 @@ Section THREE_GEN_COSET_ENUM.
   (* 573191 cosets will be generated *)
   Definition M12_group := compress (coset_enumration_r M12_gens_rep nil 573200).
 
-  Lemma M12_group_size: num_coset M12_group == 95040.
+  Lemma M12_group_size: num_coset M12_group = 95040.
   Proof. idtac "Computing M12 group...". Time native_compute. reflexivity. Qed.
 
 End THREE_GEN_COSET_ENUM.

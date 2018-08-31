@@ -1,8 +1,10 @@
+Global Generalizable All Variables.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.PArith.PArith.
 Require Import Coq.omega.Omega.
-Require Import FormalMath.FreeGroup.
+Require Import Coq.Lists.List.
+Require Import FormalMath.Word.
 Import ListNotations.
 
 Module PM := PositiveMap.
@@ -16,7 +18,7 @@ Class FiniteGenerators (A: Type) :=
     fg_size: positive;
     fg_gens_nodup: NoDup fg_gens;
     fg_gens_all: forall x : A, In x fg_gens;
-    fg_gens_size: length fg_gens == Pos.to_nat fg_size;
+    fg_gens_size: length fg_gens = Pos.to_nat fg_size;
   }.
 
 Existing Instance fg_decidable.
@@ -80,7 +82,7 @@ Section FIN_GEN_REP.
 
   Context `{FG: FiniteGenerators A}.
 
-  Lemma fg_gens_not_nil: fg_gens == nil -> False.
+  Lemma fg_gens_not_nil: fg_gens = nil -> False.
   Proof.
     intros. pose proof fg_gens_size. rewrite H in H0.
     simpl in H0. pose proof (Pos2Nat.is_pos fg_size). exfalso. intuition.
