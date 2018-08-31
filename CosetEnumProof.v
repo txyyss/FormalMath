@@ -239,4 +239,22 @@ Section TODD_COXETER_PROOFS.
   Lemma double_neg_rep: forall x, valid_gen_rep x -> negRep (negRep x) == x.
   Proof. intros. unfold valid_gen_rep in H. unfold negRep. zify. omega. Qed.
 
+  Lemma init_coset_map_good: forall ub,
+      coset_map_prop (coset_map (init_coset_table ub)).
+  Proof.
+    Opaque PM.add PM.empty.
+    intros. unfold init_coset_table. simpl. red. intros.
+    destruct (Pos.eq_dec i 1).
+    - subst. rewrite PM.gss in H. inversion H. subst. apply Pos.le_refl.
+    - rewrite PM.gso in H by assumption. rewrite PM.gempty in H. discriminate.
+    Transparent PM.add PM.empty.
+  Qed.
+
+  Lemma init_table_map_good: forall ub,
+      coset_table_prop (table (init_coset_table ub)).
+  Proof.
+    intros. unfold init_coset_table. simpl. red. unfold table_find. intros.
+    rewrite !PM.gempty. split; intros; discriminate.
+  Qed.
+
 End TODD_COXETER_PROOFS.
