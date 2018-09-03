@@ -1,8 +1,6 @@
 Global Generalizable All Variables.
 Global Set Warnings "-notation-overridden".
 
-Require Export Coq.Classes.Morphisms.
-Require Export Coq.Setoids.Setoid.
 Require Export Coq.Lists.List.
 Require Export Coq.Lists.SetoidList.
 
@@ -96,3 +94,6 @@ Arguments cast _ _ {Cast} _.
 Notation "' x" := (cast _ _ x) (at level 20) : math_scope.
 Instance: Params (@cast) 3.
 Typeclasses Transparent Cast.
+
+Definition Cardinals `{Ae: Equiv A} (s: Setoid A) (n: nat) : Prop :=
+  exists l, NoDupA Ae l /\ length l == n /\ forall x: A, InA Ae x l.

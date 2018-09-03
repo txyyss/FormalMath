@@ -214,6 +214,53 @@ Section SUBGROUP.
 
 End SUBGROUP.
 
+(****************************** Coset ******************************)
+
+Inductive RightCoset A (P: A -> Prop) := right_coset_inject: A -> RightCoset A P.
+Arguments right_coset_inject {A P} _.
+
+Instance right_coset_rep {A P}: Cast (RightCoset A P) A :=
+  fun x => match x with right_coset_inject x => x end.
+
+Inductive LeftCoset A (P: A -> Prop) := left_coset_inject: A -> LeftCoset A P.
+Arguments left_coset_inject {A P} _.
+
+Instance left_coset_rep {A P}: Cast (LeftCoset A P) A :=
+  fun x => match x with left_coset_inject x => x end.
+
+Section COSET.
+
+  Context `{SA: SubGroupCondition A P}.
+
+  Global Instance right_coset_equiv: Equiv (RightCoset A P) :=
+    fun x y => P ('x & (neg ('y))).
+
+  Global Instance rightCosetoid: Setoid (RightCoset A P).
+  Proof.
+    constructor; unfold equiv, right_coset_equiv, cast, right_coset_rep.
+    - intros [x]. rewrite neg_right. apply one_pred.
+    - intros [x] [y] ?. apply neg_pred in H0. rewrite neg_op, double_neg in H0. auto.
+    - intros [x] [y] [z] ? ?. pose proof (op_pred _ _ H0 H1).
+      rewrite <- op_assoc, (op_assoc x (neg y) y), neg_left, one_right in H2. auto.
+  Qed.
+
+  Global Instance left_coset_equiv: Equiv (LeftCoset A P) :=
+    fun x y => P ((neg ('x)) & 'y).
+
+  Global Instance leftCosetoid: Setoid (LeftCoset A P).
+  Proof.
+    constructor; unfold equiv, left_coset_equiv, cast, left_coset_rep.
+    - intros [x]. rewrite neg_left. apply one_pred.
+    - intros [x] [y] ?. apply neg_pred in H0. rewrite neg_op, double_neg in H0. auto.
+    - intros [x] [y] [z] ? ?. pose proof (op_pred _ _ H0 H1).
+      rewrite <- op_assoc, (op_assoc (neg x) y (neg y)), neg_right, one_right in H2.
+      assumption.
+  Qed.
+  
+End COSET.
+
+(****************************** QuotientGroup ******************************)
+
 Class NormalSubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
   {
     still_subgroup :> SubGroupCondition A P;

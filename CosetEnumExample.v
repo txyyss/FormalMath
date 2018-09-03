@@ -137,9 +137,9 @@ Section THREE_GEN_COSET_ENUM.
 
   (* Full symmetry group of icosahedron *)
   Definition Ih_gens := [repeat (Pe A) 2; repeat (Pe C) 2; repeat (Pe D) 2;
-                           flatten (repeat [Pe A; Pe C] 3);
-                           flatten (repeat [Pe A; Pe D] 2);
-                           flatten (repeat [Pe C; Pe D] 5)].
+                           flatten (repeat [Pe A; Pe C] 2);
+                           flatten (repeat [Pe C; Pe D] 3);
+                           flatten (repeat [Pe A; Pe D] 5)].
 
   Definition Ih_gens_rep :=
     Eval vm_compute in (map (map alphabet_to_positive) Ih_gens).
@@ -148,7 +148,7 @@ Section THREE_GEN_COSET_ENUM.
 
   Eval native_compute in (num_coset Ih_group).
 
-  Definition Ih_sub_gens := [[Pe A]; [Pe D]].
+  Definition Ih_sub_gens := [[Pe A]].
 
   Definition Ih_sub_gens_rep :=
     Eval vm_compute in (map (map alphabet_to_positive) Ih_sub_gens).
