@@ -256,6 +256,36 @@ Section COSET.
       rewrite <- op_assoc, (op_assoc (neg x) y (neg y)), neg_right, one_right in H2.
       assumption.
   Qed.
+
+  Definition left2right_coset (x: LeftCoset A P): RightCoset A P :=
+    right_coset_inject (neg (' x)).
+
+  Instance inv_left2right: Inverse left2right_coset :=
+    fun x => left_coset_inject (neg (' x)).
+
+  Instance left2right_Setoid_Morphism: Setoid_Morphism left2right_coset.
+  Proof.
+    constructor; [apply _ ..|]. intros [x] [y] ?.
+    unfold left2right_coset, cast, equiv, right_coset_equiv, cast. simpl.
+    unfold equiv, left_coset_equiv, cast in H0. simpl in H0. rewrite double_neg.
+    assumption.
+  Qed.
+
+  Instance left2right_bijection: Bijective left2right_coset.
+  Proof.
+    constructor; constructor; try apply _.
+    - intros [x] [y]. unfold left2right_coset, cast, equiv, left_coset_equiv,
+                      right_coset_equiv, cast. simpl. intros.
+      rewrite double_neg in H0. assumption.
+    - intros [x]. unfold left2right_coset, inverse, cast, equiv, right_coset_equiv,
+                  inv_left2right, cast. simpl. rewrite double_neg, neg_right.
+      apply one_pred.
+  Qed.
+
+  Lemma coset_cardinals_the_same:
+    forall (sl: Setoid (LeftCoset A P)) (sr: Setoid (RightCoset A P)) n,
+      Cardinals sl n <-> Cardinals sr n.
+  Proof. intros. apply (bijective_the_same_cardinals _ _ left2right_coset). Qed.
   
 End COSET.
 
