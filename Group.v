@@ -286,7 +286,7 @@ Section COSET.
     forall (sl: Setoid (LeftCoset A P)) (sr: Setoid (RightCoset A P)) n,
       Cardinals sl n <-> Cardinals sr n.
   Proof. intros. apply (bijective_the_same_cardinals _ _ left2right_coset). Qed.
-  
+
 End COSET.
 
 (****************************** QuotientGroup ******************************)

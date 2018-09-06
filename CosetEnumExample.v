@@ -157,7 +157,7 @@ Section THREE_GEN_COSET_ENUM.
     compress (coset_enumration_r Ih_gens_rep Ih_sub_gens_rep 210).
 
   Eval native_compute in (num_coset Ih_sub_group).
-  
+
   (* Linear Group L_2(27) *)
   Definition L_2_27_gens :=
     [repeat (Pe A) 3; repeat (Pe D) 13; repeat (Pe C) 2;
