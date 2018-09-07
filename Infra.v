@@ -103,6 +103,17 @@ Typeclasses Transparent Cast.
 Definition Cardinals `(s: Setoid A) (n: nat) : Prop :=
   exists l, NoDupA Ae l /\ length l == n /\ forall x: A, InA Ae x l.
 
+Lemma cardinals_unique: forall `(s: Setoid A) (n m: nat),
+    Cardinals s n -> Cardinals s m -> n == m.
+Proof.
+  intros ? ? ? ? ? [l1 [? [? ?]]] [l2 [? [? ?]]].
+  assert (equivlistA Ae l1 l2) by (intro; split; intro; [apply H4 | apply H1]).
+  assert (forall {M} (l: list M), length l == fold_right (fun x s => S s) O l) by
+      (intros; induction l; simpl; [| rewrite <- IHl]; reflexivity).
+  rewrite <- H0, <- H3, !H6. rewrite fold_right_equivlistA; eauto. 1: apply _.
+  red. intros. reflexivity.
+Qed.
+
 Class Inverse `(A -> B) : Type := inverse: B -> A.
 Arguments inverse {A B} _ {Inverse} _.
 Typeclasses Transparent Inverse.
