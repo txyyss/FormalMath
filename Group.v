@@ -90,6 +90,46 @@ Section GROUP_PROP.
        rewrite H, neg_left]; auto.
   Qed.
 
+  Lemma fold_left_op_one: forall l i, fold_left (&) l i = i & fold_left (&) l one.
+  Proof.
+    intros l. remember (length l).
+    assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto).
+    clear Heqn. revert l H.
+    induction n; intros; destruct l; simpl in *; try (rewrite one_right; reflexivity).
+    1: inversion H.
+    assert (length l <= n) by (now apply le_S_n). rewrite (IHn l H0 (i & a)).
+    rewrite (IHn l H0 (one & a)). rewrite <- op_assoc, one_left. reflexivity.
+  Qed.
+
+  Lemma fold_left_neg: forall x l, x = fold_left (&) l one ->
+                                   neg x = fold_left (&) (map neg (rev l)) one.
+  Proof.
+    intros x l. remember (length l).
+    assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto).
+    clear Heqn. revert x l H.
+    induction n; intros; destruct l; simpl in *; try (rewrite H0; apply neg_one).
+    1: inversion H. rewrite map_app, fold_left_app. simpl.
+    assert (length l <= n) by (now apply le_S_n).
+    rewrite fold_left_op_one, one_left in H0.
+    assert (fold_left bi_op l one = fold_left bi_op l one) by auto.
+    specialize (IHn _ _ H1 H2). rewrite H0, neg_op, IHn. reflexivity.
+  Qed.
+
+  Lemma fold_left_conjugate: forall l x,
+      fold_left (&) (map (fun i => x & i & neg x) l) one =
+      x & (fold_left (&) l one) & neg x.
+  Proof.
+    intro l. remember (length l).
+    assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto).
+    clear Heqn. revert l H.
+    induction n; intros; destruct l; simpl in *;
+      try (rewrite one_right, neg_right; reflexivity). 1: inversion H.
+    assert (length l <= n) by (now apply le_S_n).
+    specialize (IHn _ H0). clear H0.
+    rewrite fold_left_op_one, (fold_left_op_one _ (one & a)),
+    !one_left, !op_assoc, <- !eq_left, IHn, <- !op_assoc, neg_left, one_left; auto.
+  Qed.
+
 End GROUP_PROP.
 
 (****************************** Group Homomorphism ******************************)
@@ -356,49 +396,77 @@ Section QUOTIENT_GROUP.
 
 End QUOTIENT_GROUP.
 
+Section SUBGROUP_GEN.
+
+  Context `{Group A}.
+
+  Variable P : A -> Prop.
+
+  Definition subgroup_gen : A -> Prop :=
+    fun x => exists l,
+        x = fold_left (&) l one /\
+        forall i, In i l -> exists s: A, P s /\ (i = s \/ i = neg s).
+
+  Instance: Proper ((=) ==> iff) subgroup_gen.
+  Proof.
+    constructor; unfold subgroup_gen; intros [l [? ?]];
+      exists l; split; auto. now rewrite <- H0.
+  Qed.
+
+  Lemma subgroup_gen_neg: forall x, subgroup_gen x -> subgroup_gen (neg x).
+  Proof.
+    intros x [l [? ?]]. exists (map neg (rev l)). split.
+    1: apply fold_left_neg in H0; assumption.
+    intros. rewrite in_map_iff in H2. destruct H2 as [pi [? ?]].
+    rewrite <- in_rev in H3. specialize (H1 _ H3). destruct H1 as [sp [? ?]].
+    exists sp. split; auto; destruct H4; [right | left];
+                 rewrite <- H2, H4; [|rewrite double_neg]; reflexivity.
+  Qed.
+
+  Lemma subgroup_gen_op: forall x y,
+      subgroup_gen x -> subgroup_gen y -> subgroup_gen (x & y).
+  Proof.
+    intros x y [xl [? ?]] [yl [? ?]]. exists (xl ++ yl). split.
+    - rewrite fold_left_app, fold_left_op_one, H0, H2. reflexivity.
+    - intros. rewrite in_app_iff in H4. destruct H4; [apply H1 | apply H3]; auto.
+  Qed.
+
+  Global Instance: SubGroupCondition A subgroup_gen.
+  Proof.
+    constructor; [apply _ | exists one, nil; simpl; intuition |
+                  intros; apply subgroup_gen_op; auto; apply subgroup_gen_neg; auto].
+  Qed.
+
+End SUBGROUP_GEN.
+
+Section QUOTIENT_SUB_GROUP.
+
+  Context `{NSA: NormalSubGroupCondition A P} `{SA: !SubGroupCondition A Q}.
+
+  Hypothesis (P_in_Q: forall x, P x -> Q x).
+
+  Definition QSG_Cond: Quotient A P -> Prop := fun x => Q (' x).
+
+  Global Instance quotientSubGroupCond: SubGroupCondition (Quotient A P) QSG_Cond.
+  Proof.
+    constructor.
+    - intros [x] [y]. unfold equiv, quotient_equiv, QSG_Cond, cast. simpl. intros.
+      split; intros.
+      + apply P_in_Q, neg_pred in H0. rewrite neg_op, double_neg in H0.
+        pose proof (op_pred _ _ H0 H1). rewrite op_assoc, neg_left, one_right in H2.
+        assumption.
+      + apply P_in_Q in H0. pose proof (op_pred _ _ H0 H1).
+        rewrite op_assoc, neg_left, one_right in H2. assumption.
+    - exists one. red. unfold cast. simpl. apply one_pred.
+    - unfold QSG_Cond. intros [x] [y]. do 3 (unfold cast; simpl). apply sub_criteria.
+  Qed.
+
+End QUOTIENT_SUB_GROUP.
+
 Section NORMAL_GENERATION.
 
   Context `{Group A}.
 
-  Lemma fold_left_op_one: forall l i, fold_left (&) l i = i & fold_left (&) l one.
-  Proof.
-    intros l. remember (length l).
-    assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto).
-    clear Heqn. revert l H0.
-    induction n; intros; destruct l; simpl in *; try (rewrite one_right; reflexivity).
-    1: inversion H0.
-    assert (length l <= n) by (now apply le_S_n). rewrite (IHn l H1 (i & a)).
-    rewrite (IHn l H1 (one & a)). rewrite <- op_assoc, one_left. reflexivity.
-  Qed.
-
-  Lemma fold_left_neg: forall x l, x = fold_left (&) l one ->
-                                   neg x = fold_left (&) (map neg (rev l)) one.
-  Proof.
-    intros x l. remember (length l).
-    assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto).
-    clear Heqn. revert x l H0.
-    induction n; intros; destruct l; simpl in *; try (rewrite H1; apply neg_one).
-    1: inversion H0. rewrite map_app, fold_left_app. simpl.
-    assert (length l <= n) by (now apply le_S_n).
-    rewrite fold_left_op_one, one_left in H1.
-    assert (fold_left bi_op l one = fold_left bi_op l one) by auto.
-    specialize (IHn _ _ H2 H3). rewrite H1, neg_op, IHn. reflexivity.
-  Qed.
-
-  Lemma fold_left_conjugate: forall l x,
-      fold_left (&) (map (fun i => x & i & neg x) l) one =
-      x & (fold_left (&) l one) & neg x.
-  Proof.
-    intro l. remember (length l).
-    assert (length l <= n) by (symmetry in Heqn; apply PeanoNat.Nat.eq_le_incl; auto).
-    clear Heqn. revert l H0.
-    induction n; intros; destruct l; simpl in *;
-      try (rewrite one_right, neg_right; reflexivity). 1: inversion H0.
-    assert (length l <= n) by (now apply le_S_n).
-    specialize (IHn _ H1). clear H1.
-    rewrite fold_left_op_one, (fold_left_op_one _ (one & a)),
-    !one_left, !op_assoc, <- !eq_left, IHn, <- !op_assoc, neg_left, one_left; auto.
-  Qed.
 
   Variable P: A -> Prop.
 

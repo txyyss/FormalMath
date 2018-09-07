@@ -54,9 +54,13 @@ Section FREE_GROUP.
       rewrite <- (double_opposite A a) at 2. symmetry. constructor.
   Qed.
 
-  Definition fp_condition (l: list (Word A)) := normal_gen (fun w => In w l).
-
-  Goal forall l: list (Word A), Group (Quotient (Word A) (fp_condition l)).
-  Proof. apply _. Qed.
-
 End FREE_GROUP.
+
+Section FINITELY_PRESENTED_GROUP.
+
+  Variable A : Type.
+  
+  Definition FP_Cond (relators : list (Word A)) :=
+    normal_gen (fun w => In w relators).
+  
+End FINITELY_PRESENTED_GROUP.
