@@ -56,11 +56,15 @@ Section FREE_GROUP.
 
 End FREE_GROUP.
 
-Section FINITELY_PRESENTED_GROUP.
+Section GROUP_PRESENTATION.
 
-  Variable A : Type.
-  
+  Context {A : Type}.
+
   Definition FP_Cond (relators : list (Word A)) :=
-    normal_gen (fun w => In w relators).
-  
-End FINITELY_PRESENTED_GROUP.
+    normal_gen (fun w => InA (word_equiv A) w relators).
+
+  Definition FP_Sub_Cond (relators generators: list (Word A)):
+    Quotient (Word A) (FP_Cond relators) -> Prop :=
+    subgroup_gen (fun x => InA (word_equiv A) (' x) generators).
+
+End GROUP_PRESENTATION.

@@ -323,8 +323,7 @@ Section COSET.
   Qed.
 
   Lemma coset_cardinals_the_same:
-    forall (sl: Setoid (LeftCoset A P)) (sr: Setoid (RightCoset A P)) n,
-      Cardinals sl n <-> Cardinals sr n.
+    forall n, Cardinals (LeftCoset A P) n <-> Cardinals (RightCoset A P) n.
   Proof. intros. apply (bijective_the_same_cardinals _ _ left2right_coset). Qed.
 
 End COSET.
@@ -438,30 +437,6 @@ Section SUBGROUP_GEN.
   Qed.
 
 End SUBGROUP_GEN.
-
-Section QUOTIENT_SUB_GROUP.
-
-  Context `{NSA: NormalSubGroupCondition A P} `{SA: !SubGroupCondition A Q}.
-
-  Hypothesis (P_in_Q: forall x, P x -> Q x).
-
-  Definition QSG_Cond: Quotient A P -> Prop := fun x => Q (' x).
-
-  Global Instance quotientSubGroupCond: SubGroupCondition (Quotient A P) QSG_Cond.
-  Proof.
-    constructor.
-    - intros [x] [y]. unfold equiv, quotient_equiv, QSG_Cond, cast. simpl. intros.
-      split; intros.
-      + apply P_in_Q, neg_pred in H0. rewrite neg_op, double_neg in H0.
-        pose proof (op_pred _ _ H0 H1). rewrite op_assoc, neg_left, one_right in H2.
-        assumption.
-      + apply P_in_Q in H0. pose proof (op_pred _ _ H0 H1).
-        rewrite op_assoc, neg_left, one_right in H2. assumption.
-    - exists one. red. unfold cast. simpl. apply one_pred.
-    - unfold QSG_Cond. intros [x] [y]. do 3 (unfold cast; simpl). apply sub_criteria.
-  Qed.
-
-End QUOTIENT_SUB_GROUP.
 
 Section NORMAL_GENERATION.
 

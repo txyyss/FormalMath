@@ -100,11 +100,11 @@ Notation "' x" := (cast _ _ x) (at level 20) : math_scope.
 Instance: Params (@cast) 3.
 Typeclasses Transparent Cast.
 
-Definition Cardinals `(s: Setoid A) (n: nat) : Prop :=
+Definition Cardinals (A : Type) `{s : Setoid A} (n: nat) : Prop :=
   exists l, NoDupA Ae l /\ length l == n /\ forall x: A, InA Ae x l.
 
-Lemma cardinals_unique: forall `(s: Setoid A) (n m: nat),
-    Cardinals s n -> Cardinals s m -> n == m.
+Lemma cardinals_unique: forall (A : Type) `{s : Setoid A} (n m: nat),
+    Cardinals A n -> Cardinals A m -> n == m.
 Proof.
   intros ? ? ? ? ? [l1 [? [? ?]]] [l2 [? [? ?]]].
   assert (equivlistA Ae l1 l2) by (intro; split; intro; [apply H4 | apply H1]).
@@ -143,9 +143,9 @@ Section JECTIONS.
 End JECTIONS.
 
 Lemma bijective_the_same_cardinals_forward:
-  forall `{Ae: Equiv A} `{Be: Equiv B} (sa: Setoid A) (sb: Setoid B) (f: A -> B)
+  forall A B `{sa: Setoid A} `{sb: Setoid B} (f: A -> B)
          `{inv: !Inverse f} `{Bi: !Bijective f} n,
-    Cardinals sa n -> Cardinals sb n.
+    Cardinals A n -> Cardinals B n.
 Proof.
   unfold Cardinals. intros. destruct H as [l [? [? ?]]]. exists (map f l).
   split; [|split]. 2: rewrite map_length; assumption. destruct Bi as [Binj Bsur].
@@ -166,9 +166,9 @@ Proof.
 Qed.
 
 Lemma bijective_the_same_cardinals_backward:
-  forall `{Ae: Equiv A} `{Be: Equiv B} (sa: Setoid A) (sb: Setoid B) (f: A -> B)
+  forall A B `{sa: Setoid A} `{sb: Setoid B} (f: A -> B)
          `{inv: !Inverse f} `{Bi: !Bijective f} n,
-    Cardinals sb n -> Cardinals sa n.
+    Cardinals B n -> Cardinals A n.
 Proof.
   intros. remember (inverse f) as g. destruct Bi as [[?H ?H] [?H _]].
   assert (Setoid_Morphism g). {
@@ -180,14 +180,14 @@ Proof.
       rewrite H4 in H5. rewrite H5 in H6. assumption.
     - assert (@inverse _ _ g f == f) by reflexivity.
       rewrite H4. subst g. apply H0, H2. }
-  apply (@bijective_the_same_cardinals_forward _ _ _ _ sb sa g f); assumption.
+  apply (@bijective_the_same_cardinals_forward B A _ _ _ _ g f); assumption.
 Qed.
 
 Lemma bijective_the_same_cardinals:
-  forall `{Ae: Equiv A} `{Be: Equiv B} (sa: Setoid A) (sb: Setoid B) (f: A -> B)
-         `{inv: !Inverse f} `{Bi: !Bijective f} n, Cardinals sa n <-> Cardinals sb n.
+  forall A B `{sa: Setoid A} `{sb: Setoid B} (f: A -> B)
+         `{inv: !Inverse f} `{Bi: !Bijective f} n, Cardinals A n <-> Cardinals B n.
 Proof.
   intros. split; intros.
-  - apply (bijective_the_same_cardinals_forward sa sb f); assumption.
-  - apply (bijective_the_same_cardinals_backward sa sb f); assumption.
+  - apply (bijective_the_same_cardinals_forward A B f); assumption.
+  - apply (bijective_the_same_cardinals_backward A B f); assumption.
 Qed.

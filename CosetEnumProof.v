@@ -257,4 +257,17 @@ Section TODD_COXETER_PROOFS.
     rewrite !PM.gempty. split; intros; discriminate.
   Qed.
 
+  Theorem todd_coxeter_is_right: forall
+      (relators generators: list (Word A))
+      relator_rep generator_rep bound coset_table,
+      relator_rep == map (map alphabet_to_positive) relators ->
+      generator_rep == map (map alphabet_to_positive) generators ->
+      coset_table == coset_enumration_r relator_rep generator_rep bound ->
+      num_coset coset_table < bound ->
+      Cardinals (RightCoset (Quotient (Word A) (FP_Cond relators))
+                            (FP_Sub_Cond relators generators))
+                (Pos.to_nat (num_coset (compress coset_table))).
+  Proof.
+  Abort.
+
 End TODD_COXETER_PROOFS.
