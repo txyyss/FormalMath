@@ -56,7 +56,7 @@ Section FREE_GROUP.
 
 End FREE_GROUP.
 
-Section GROUP_PRESENTATION.
+Section FINITELY_PRESENTED_GROUP.
 
   Context {A : Type}.
 
@@ -67,4 +67,4 @@ Section GROUP_PRESENTATION.
     Quotient (Word A) (FP_Cond relators) -> Prop :=
     subgroup_gen (fun x => InA (word_equiv A) (' x) generators).
 
-End GROUP_PRESENTATION.
+End FINITELY_PRESENTED_GROUP.

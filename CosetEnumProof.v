@@ -230,7 +230,7 @@ Section TODD_COXETER_PROOFS.
   Definition coset_map_prop (cm: CosetMap): Prop :=
     forall i j, PM.find i cm == Some j -> j <= i.
 
-  Definition coset_table_prop (tbl: TableMap): Prop :=
+  Definition coset_table_prop (tbl: CosetTable): Prop :=
     forall a x b, table_find a x tbl == Some b <->
                   table_find b (negRep x) tbl == Some a.
 
@@ -251,7 +251,7 @@ Section TODD_COXETER_PROOFS.
   Qed.
 
   Lemma init_table_map_good: forall ub,
-      coset_table_prop (table (init_coset_table ub)).
+      coset_table_prop (coset_table (init_coset_table ub)).
   Proof.
     intros. unfold init_coset_table. simpl. red. unfold table_find. intros.
     rewrite !PM.gempty. split; intros; discriminate.

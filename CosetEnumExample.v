@@ -32,8 +32,8 @@ Section TWO_GEN_COSET_ENUM.
     - simpl. reflexivity.
   Defined.
 
-  Definition print_coset_table (ct: CosetTable) :=
-    map (fun x => map (fun y => PM.find (tableKey x y) (table ct)) all_gen_reps)
+  Definition print_coset_table (ct: CosetEnum) :=
+    map (fun x => map (fun y => PM.find (tableKey x y) (coset_table ct)) all_gen_reps)
         (gen_pos_list (num_coset ct)).
 
   Compute (fg_size~0).

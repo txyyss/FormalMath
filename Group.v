@@ -438,10 +438,18 @@ Section SUBGROUP_GEN.
 
 End SUBGROUP_GEN.
 
+Lemma subgroup_gen_false: forall `{Group A} x,
+    subgroup_gen (fun _ => False) x -> x = one.
+Proof.
+  intros. red in H0. destruct H0 as [l [? ?]]. destruct l.
+  - simpl in H0. assumption.
+  - assert (In a (a :: l)) by (simpl; left; reflexivity). specialize (H1 _ H2).
+    destruct H1 as [s [? ?]]. exfalso; assumption.
+Qed.
+
 Section NORMAL_GENERATION.
 
   Context `{Group A}.
-
 
   Variable P: A -> Prop.
 
