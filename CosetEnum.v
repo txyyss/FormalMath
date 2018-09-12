@@ -127,7 +127,7 @@ Section TODD_COXETER_ALGORITHM.
       sizeOfAlphabet". *)
     }.
 
-  Definition init_coset_table (upper_bound: positive) :=
+  Definition init_coset_enum (upper_bound: positive) :=
     Build_CosetEnum
       upper_bound
       1
@@ -136,21 +136,21 @@ Section TODD_COXETER_ALGORITHM.
 
   Context `{FG: FiniteGenerators A}.
 
-  Definition tableKey (a x: positive) : positive := a * fg_size~0 + x - fg_size~0.
+  Definition table_key (a x: positive) : positive := a * fg_size~0 + x - fg_size~0.
 
-  Definition negRep (x: positive) : positive := fg_size~1 - x.
+  Definition neg_rep (x: positive) : positive := fg_size~1 - x.
 
   Definition should_stop (ct: CosetEnum): bool :=
     num_coset_upper_bound ct <=? num_coset ct.
 
   Definition table_add (a x v: positive) (t: CosetTable): CosetTable :=
-    PM.add (tableKey a x) v t.
+    PM.add (table_key a x) v t.
 
   Definition table_find (a x: positive) (t: CosetTable): option positive :=
-    PM.find (tableKey a x) t.
+    PM.find (table_key a x) t.
 
   Definition table_remove (a x: positive) (t: CosetTable): CosetTable :=
-    PM.remove (tableKey a x) t.
+    PM.remove (table_key a x) t.
 
   Definition define_new_coset (ct: CosetEnum) (a x: positive): CosetEnum :=
     if should_stop ct
@@ -159,7 +159,7 @@ Section TODD_COXETER_ALGORITHM.
          let p := coset_map ct in
          let newP := PM.add b b p in
          let tab := coset_table ct in
-         let newTab := table_add b (negRep x) a (table_add a x b tab) in
+         let newTab := table_add b (neg_rep x) a (table_add a x b tab) in
          Build_CosetEnum (num_coset_upper_bound ct) b newP newTab.
 
   Definition remove_cs (gamma: positive) (pa: list positive * CosetEnum)
@@ -168,17 +168,17 @@ Section TODD_COXETER_ALGORITHM.
     let tbl := coset_table ct in
     match table_find gamma x tbl with
     | None => pa
-    | Some dlta => let newTbl := table_remove dlta (negRep x) tbl in
+    | Some dlta => let newTbl := table_remove dlta (neg_rep x) tbl in
                    let ctm := coset_map ct in
                    let (u, ctm1) := find_rep gamma ctm in
                    let (v, ctm2) := find_rep dlta ctm1 in
                    let (ctml, ntbl) :=
                        match table_find u x newTbl with
                        | Some ux => (merge v ux ctm2 to_be_del, newTbl)
-                       | None => match table_find v (negRep x) newTbl with
+                       | None => match table_find v (neg_rep x) newTbl with
                                  | Some vx => (merge u vx ctm2 to_be_del, newTbl)
                                  | None => ((ctm2, to_be_del),
-                                            table_add v (negRep x) u
+                                            table_add v (neg_rep x) u
                                                       (table_add u x v newTbl))
                                  end
                        end in
@@ -229,14 +229,14 @@ Section TODD_COXETER_ALGORITHM.
              | nil => if f =? a
                       then ct
                       else coincidence f a ct
-             | xi :: _  => let (b, w2) := iter_scan negRep (coset_table ct)
+             | xi :: _  => let (b, w2) := iter_scan neg_rep (coset_table ct)
                                                     a (rev new_w) in
                            match w2 with
                            | nil => coincidence f b ct
                            | xj :: nil =>
                              update_coset_table
                                ct
-                               (table_add b (negRep xi) f
+                               (table_add b (neg_rep xi) f
                                           (table_add f xi b (coset_table ct)))
                            | _ => let new_ct := define_new_coset ct f xi in
                                   scan_and_fill_loop a f new_w new_ct n
@@ -279,14 +279,14 @@ Section TODD_COXETER_ALGORITHM.
 
   Definition coset_enumration_r (group_rep sub_grp: list (list positive))
              (upper_bound: positive): CosetEnum :=
-    let ct := fold_left (scan_and_fill 1) sub_grp (init_coset_table upper_bound) in
+    let ct := fold_left (scan_and_fill 1) sub_grp (init_coset_enum upper_bound) in
     cer_loop 1 ct group_rep (Pos.to_nat upper_bound).
 
   Definition replace_loop (a r: positive) (tbl: CosetTable) (x: positive) :=
     match table_find a x tbl with
     | None => tbl
     | Some bb => let b := if bb =? a then r else bb in
-                 table_add b (negRep x) r (table_add r x b tbl)
+                 table_add b (neg_rep x) r (table_add r x b tbl)
     end.
 
   Definition compress_loop (tbl: CosetTable) (live_pair: positive * positive) :=
@@ -355,7 +355,7 @@ Section TODD_COXETER_ALGORITHM.
 
   Definition standardize (ct: CosetEnum): CosetEnum :=
     let omega_list := gen_pos_list (num_coset ct) in
-    let tbl_keys := flat_map (fun a => (map (tableKey a) all_gen_reps)) omega_list in
+    let tbl_keys := flat_map (fun a => (map (table_key a) all_gen_reps)) omega_list in
     let new_tbl := standardize_loop (num_coset ct)
                                     omega_list tbl_keys 2 (coset_table ct) in
     update_coset_table ct new_tbl.

@@ -33,8 +33,8 @@ Section TWO_GEN_COSET_ENUM.
   Defined.
 
   Definition print_coset_table (ct: CosetEnum) :=
-    map (fun x => map (fun y => PM.find (tableKey x y) (coset_table ct)) all_gen_reps)
-        (gen_pos_list (num_coset ct)).
+    map (fun x => map (fun y => PM.find (table_key x y) (coset_table ct))
+                      all_gen_reps) (gen_pos_list (num_coset ct)).
 
   Compute (fg_size~0).
 

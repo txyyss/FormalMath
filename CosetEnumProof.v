@@ -232,28 +232,28 @@ Section TODD_COXETER_PROOFS.
 
   Definition coset_table_prop (tbl: CosetTable): Prop :=
     forall a x b, table_find a x tbl == Some b <->
-                  table_find b (negRep x) tbl == Some a.
+                  table_find b (neg_rep x) tbl == Some a.
 
   Definition valid_gen_rep (x: positive): Prop := x < fg_size~1.
 
-  Lemma double_neg_rep: forall x, valid_gen_rep x -> negRep (negRep x) == x.
-  Proof. intros. unfold valid_gen_rep in H. unfold negRep. zify. omega. Qed.
+  Lemma double_neg_rep: forall x, valid_gen_rep x -> neg_rep (neg_rep x) == x.
+  Proof. intros. unfold valid_gen_rep in H. unfold neg_rep. zify. omega. Qed.
 
   Lemma init_coset_map_good: forall ub,
-      coset_map_prop (coset_map (init_coset_table ub)).
+      coset_map_prop (coset_map (init_coset_enum ub)).
   Proof.
     Opaque PM.add PM.empty.
-    intros. unfold init_coset_table. simpl. red. intros.
+    intros. unfold init_coset_enum. simpl. red. intros.
     destruct (Pos.eq_dec i 1).
     - subst. rewrite PM.gss in H. inversion H. subst. apply Pos.le_refl.
     - rewrite PM.gso in H by assumption. rewrite PM.gempty in H. discriminate.
     Transparent PM.add PM.empty.
   Qed.
 
-  Lemma init_table_map_good: forall ub,
-      coset_table_prop (coset_table (init_coset_table ub)).
+  Lemma init_coset_table_good: forall ub,
+      coset_table_prop (coset_table (init_coset_enum ub)).
   Proof.
-    intros. unfold init_coset_table. simpl. red. unfold table_find. intros.
+    intros. unfold init_coset_enum. simpl. red. unfold table_find. intros.
     rewrite !PM.gempty. split; intros; discriminate.
   Qed.
 
