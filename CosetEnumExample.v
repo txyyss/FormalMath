@@ -4,15 +4,10 @@ Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Require Import FormalMath.Word.
 Require Import FormalMath.CosetEnum.
+Require Import FormalMath.Coqlib.
 Import ListNotations.
 
 Local Open Scope positive_scope.
-
-Fixpoint flatten {A: Type} (l: list (list A)): list A :=
-  match l with
-  | nil => nil
-  | lh :: lt => lh ++ flatten lt
-  end.
 
 Section TWO_GEN_COSET_ENUM.
 
@@ -33,8 +28,12 @@ Section TWO_GEN_COSET_ENUM.
   Defined.
 
   Definition print_coset_table (ct: CosetEnum) :=
-    map (fun x => map (fun y => PM.find (table_key x y) (coset_table ct))
+    map (fun x => map (fun y => table_find x y (coset_table ct))
                       all_gen_reps) (gen_pos_list (num_coset ct)).
+
+  Definition print_coset_map (ct: CosetEnum) :=
+    filter_option
+      (map (fun x => PM.find x (coset_map ct)) (gen_pos_list (num_coset ct))).
 
   Compute (fg_size~0).
 
@@ -114,6 +113,32 @@ Section TWO_GEN_COSET_ENUM.
 
   Lemma H4_group_size: num_coset H4_group = 14400.
   Proof. idtac "Computing H4 group...". Time native_compute. reflexivity. Qed.
+
+  Definition test1_gens := [repeat (Pe X) 3; repeat (Pe Y) 3;
+                              [Ne X; Ne Y; Pe X; Pe Y]].
+  Definition test1_sub_gens := [[Pe X]].
+  Definition test1_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) test1_gens).
+  Definition test1_sub_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) test1_sub_gens).
+  Definition test1_group :=
+    standardize (compress (coset_enumration_r test1_gens_rep test1_sub_gens_rep 10)).
+  Eval native_compute in (num_coset test1_group).
+  Eval native_compute in (print_coset_table test1_group).
+
+  Definition test2_gens := [repeat (Pe X) 2; repeat (Pe Y) 3;
+                              flatten (repeat [Pe X; Pe Y] 3)].
+  Definition test2_sub_gens := [[Pe X; Pe Y]].
+  Definition test2_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) test2_gens).
+  Definition test2_sub_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) test2_sub_gens).
+  Definition test2_group :=
+    standardize (compress (coset_enumration_r test2_gens_rep test2_sub_gens_rep 10)).
+  Eval native_compute in (num_coset test2_group).
+  Eval native_compute in (print_coset_table test2_group).
+
+  Eval native_compute in (print_coset_map I_group).
 
 End TWO_GEN_COSET_ENUM.
 

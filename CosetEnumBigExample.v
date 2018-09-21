@@ -4,15 +4,10 @@ Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Require Import FormalMath.Word.
 Require Import FormalMath.CosetEnum.
+Require Import FormalMath.Coqlib.
 Import ListNotations.
 
 Local Open Scope positive_scope.
-
-Fixpoint flatten {A: Type} (l: list (list A)): list A :=
-  match l with
-  | nil => nil
-  | lh :: lt => lh ++ flatten lt
-  end.
 
 Section TWO_GEN_COSET_ENUM.
 
