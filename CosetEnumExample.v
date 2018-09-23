@@ -138,7 +138,15 @@ Section TWO_GEN_COSET_ENUM.
   Eval native_compute in (num_coset test2_group).
   Eval native_compute in (print_coset_table test2_group).
 
-  Eval native_compute in (print_coset_map I_group).
+  Definition test3_gens := [repeat (Pe X) 2 ++ repeat (Pe Y) 2;
+                              repeat (Pe X) 3 ++ repeat (Pe Y) 5].
+  Definition test3_gens_rep :=
+    Eval vm_compute in (map (map alphabet_to_positive) test3_gens).
+  Definition test3_group := compress (coset_enumration_r test3_gens_rep nil 15).
+  Eval native_compute in (num_coset test3_group).
+  Eval native_compute in (print_coset_table test3_group).
+  Definition test3_std_group := standardize test3_group.
+  Eval native_compute in (print_coset_table test3_std_group).
 
 End TWO_GEN_COSET_ENUM.
 

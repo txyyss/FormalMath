@@ -160,8 +160,7 @@ Section TODD_COXETER_ALGORITHM.
     match table_find gamma x tbl with
     | None => pa
     | Some dlta => let newTbl := table_remove dlta (neg_rep x) tbl in
-                   let ctm := coset_map ct in
-                   let (u, ctm1) := find_rep gamma ctm in
+                   let (u, ctm1) := find_rep gamma (coset_map ct) in
                    let (v, ctm2) := find_rep dlta ctm1 in
                    let (ctml, ntbl) :=
                        match table_find u x newTbl with
