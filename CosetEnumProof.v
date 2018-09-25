@@ -177,11 +177,11 @@ Section TODD_COXETER_PROOFS.
   Definition coset_map_prop (cm: CosetMap): Prop :=
     forall i j, PM.find i cm == Some j -> j <= i.
 
-  Definition coset_table_prop (tbl: CosetTable): Prop :=
-    forall a x b, table_find a x tbl == Some b <->
-                  table_find b (neg_rep x) tbl == Some a.
-
   Definition valid_gen_rep (x: positive): Prop := x < fg_size~1.
+
+  Definition coset_table_prop (tbl: CosetTable): Prop := forall a x b,
+      valid_gen_rep x ->
+      table_find a x tbl == Some b <-> table_find b (neg_rep x) tbl == Some a.
 
   Lemma double_neg_rep: forall x, valid_gen_rep x -> neg_rep (neg_rep x) == x.
   Proof. intros. unfold valid_gen_rep in H. unfold neg_rep. zify. omega. Qed.
@@ -203,6 +203,78 @@ Section TODD_COXETER_PROOFS.
     intros. unfold init_coset_enum. simpl. red. unfold table_find. intros.
     rewrite !PM.gempty. split; intros; discriminate.
   Qed.
+
+  Lemma define_new_coset_map_good: forall ct a x,
+      coset_map_prop (coset_map ct) ->
+      coset_map_prop (coset_map (define_new_coset ct a x)).
+  Proof.
+    unfold coset_map_prop. intros. unfold define_new_coset in H0.
+    destruct (should_stop ct). 1: apply H in H0; assumption. simpl in H0.
+    destruct (Pos.eq_dec i (num_coset ct + 1)).
+    - subst i. rewrite PM.gss in H0. inversion H0. apply Pos.le_refl.
+    - rewrite PM.gso in H0 by assumption. apply H in H0. assumption.
+  Qed.
+
+  Lemma table_find_add_same: forall a x v t,
+      table_find a x (table_add a x v t) == Some v.
+  Proof. intros. unfold table_find, table_add. rewrite PM.gss. reflexivity. Qed.
+
+  Lemma table_key_eq_iff: forall a b x y,
+      valid_gen_rep x -> valid_gen_rep y ->
+      table_key a x == table_key b y <-> a == b /\ x == y.
+  Proof.
+    intros. split; intros. 2: destruct H1; subst; reflexivity. unfold table_key in H1.
+    unfold valid_gen_rep in H, H0. zify. remember (Z.pos a) as za.
+    remember (Z.pos b) as zb. remember (Z.pos fg_size) as zs.
+    remember (Z.pos x) as zx. remember (Z.pos y) as zy.
+    clear Heqza Heqzb Heqzs Heqzx Heqzy H2 H3. subst z0.
+    rewrite Z.add_sub_swap in Heqz1, Heqz.
+    Local Open Scope Z_scope.
+    rewrite <- (Z.mul_1_l (2 * zs)) in Heqz at 2.
+    rewrite <- (Z.mul_1_l (2 * zs)) in Heqz1 at 2.
+    rewrite <- Z.mul_sub_distr_r in Heqz, Heqz1.
+    assert (0 < z). {
+      subst z. assert (0 <= (za - 1) * (2 * zs)) by
+          (apply Z.mul_nonneg_nonneg; omega). omega. }
+    assert (z2 == z) by (destruct H9; destruct H2; [assumption | omega]). clear H9.
+    assert (0 < z1). {
+      subst z1. assert (0 <= (zb - 1) * (2 * zs)) by
+          (apply Z.mul_nonneg_nonneg; omega). omega. }
+    assert (z2 == z1) by (destruct H10; destruct H9; [assumption | omega]). clear H10.
+    rewrite H2 in H9. subst z2. rewrite Heqz in H9. rewrite Heqz1 in H9.
+    clear Heqz Heqz1 H1 H3. destruct (Z.lt_total za zb) as [? | [? | ?]].
+    2: subst; omega.
+    - assert (zb - 1 == za - 1 + (zb - za)) by omega. rewrite H2 in H9. exfalso.
+      rewrite Z.mul_add_distr_r, <- Z.add_assoc, Z.add_cancel_l in H9.
+      assert (2 * zs + 1 <= zx). {
+        subst zx. apply Z.add_le_mono. 2: omega.
+        rewrite <- (Z.mul_1_l (2 * zs)) at 1. apply Z.mul_le_mono_nonneg_r; omega. }
+      omega.
+    - assert (za - 1 == zb - 1 + (za - zb)) by omega. rewrite H2 in H9. exfalso.
+      rewrite Z.mul_add_distr_r, <- Z.add_assoc, Z.add_cancel_l in H9.
+      assert (2 * zs + 1 <= zy). {
+        subst zy. apply Z.add_le_mono. 2: omega.
+        rewrite <- (Z.mul_1_l (2 * zs)) at 1. apply Z.mul_le_mono_nonneg_r; omega. }
+      Local Close Scope Z_scope. omega.
+  Qed.
+
+  Lemma table_find_add_diff: forall a b x y v t,
+      valid_gen_rep x -> valid_gen_rep y -> (a =/= b \/ x =/= y) ->
+      table_find a x (table_add b y v t) == table_find a x t.
+  Proof.
+    intros. unfold table_find, table_add. rewrite PM.gso. 1: reflexivity.
+    intro. rewrite table_key_eq_iff in H2 by assumption. intuition.
+  Qed.
+
+  Lemma define_new_coset_table_good: forall ct a x,
+      valid_gen_rep x -> coset_table_prop (coset_table ct) ->
+      coset_table_prop (coset_table (define_new_coset ct a x)).
+  Proof.
+    unfold coset_table_prop. intros. unfold define_new_coset.
+    destruct (should_stop ct); simpl. 1: apply H0; assumption.
+  Abort.
+  
+  (* TODO: define new coset is good. *)
 
   Theorem todd_coxeter_is_right: forall
       (relators generators: list (Word A))
