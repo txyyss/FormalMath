@@ -174,45 +174,58 @@ Section TODD_COXETER_PROOFS.
 
   Context `{FG: FiniteGenerators A}.
 
-  Definition coset_map_prop (cm: CosetMap): Prop :=
-    forall i j, PM.find i cm == Some j -> j <= i.
+  Definition coset_map_prop (ct: CosetEnum): Prop := forall i,
+      (i <= num_coset ct -> exists j, PM.find i (coset_map ct) == Some j /\ j <= i)
+      /\ (num_coset ct < i -> PM.find i (coset_map ct) == None).
 
   Definition valid_gen_rep (x: positive): Prop := x < fg_size~1.
 
-  Definition coset_table_prop (tbl: CosetTable): Prop := forall a x b,
-      valid_gen_rep x ->
-      table_find a x tbl == Some b <-> table_find b (neg_rep x) tbl == Some a.
+  Definition valid_coset_rep (ct: CosetEnum) (a: positive): Prop := a <= num_coset ct.
+
+  Definition coset_table_prop (ct: CosetEnum): Prop := forall a x b,
+      valid_gen_rep x -> table_find a x (coset_table ct) == Some b ->
+      table_find b (neg_rep x) (coset_table ct) == Some a /\
+      valid_coset_rep ct a /\ valid_coset_rep ct b.
 
   Lemma double_neg_rep: forall x, valid_gen_rep x -> neg_rep (neg_rep x) == x.
   Proof. intros. unfold valid_gen_rep in H. unfold neg_rep. zify. omega. Qed.
 
-  Lemma init_coset_map_good: forall ub,
-      coset_map_prop (coset_map (init_coset_enum ub)).
+  Lemma gen_rep_neq_neg_rep: forall x, valid_gen_rep x -> x =/= neg_rep x.
+  Proof. unfold valid_gen_rep, neg_rep. repeat intro. zify. omega. Qed.
+
+  Lemma valid_neg_rep: forall x, valid_gen_rep x -> valid_gen_rep (neg_rep x).
+  Proof. unfold valid_gen_rep, neg_rep. intros. zify. omega. Qed.
+
+  Lemma init_coset_map_good: forall ub, coset_map_prop (init_coset_enum ub).
   Proof.
     Opaque PM.add PM.empty.
-    intros. unfold init_coset_enum. simpl. red. intros.
-    destruct (Pos.eq_dec i 1).
-    - subst. rewrite PM.gss in H. inversion H. subst. apply Pos.le_refl.
-    - rewrite PM.gso in H by assumption. rewrite PM.gempty in H. discriminate.
+    intros. unfold init_coset_enum, coset_map_prop. simpl. intros.
+    assert (i <= 1 \/ 1 < i) by (zify; omega).
+    destruct H; split; intros; try (exfalso; zify; omega).
+    - assert (i == 1) by (zify; omega). subst i. exists 1. rewrite PM.gss.
+      split; [reflexivity | assumption].
+    - assert (i =/= 1) by (zify; omega). rewrite PM.gso by assumption.
+      apply PM.gempty.
     Transparent PM.add PM.empty.
   Qed.
 
-  Lemma init_coset_table_good: forall ub,
-      coset_table_prop (coset_table (init_coset_enum ub)).
+  Lemma init_coset_table_good: forall ub, coset_table_prop (init_coset_enum ub).
   Proof.
-    intros. unfold init_coset_enum. simpl. red. unfold table_find. intros.
-    rewrite !PM.gempty. split; intros; discriminate.
+    intros. unfold init_coset_enum, coset_table_prop. simpl. intros.
+    unfold table_find in H0. rewrite PM.gempty in H0. discriminate.
   Qed.
 
   Lemma define_new_coset_map_good: forall ct a x,
-      coset_map_prop (coset_map ct) ->
-      coset_map_prop (coset_map (define_new_coset ct a x)).
+      coset_map_prop ct -> coset_map_prop (define_new_coset ct a x).
   Proof.
-    unfold coset_map_prop. intros. unfold define_new_coset in H0.
-    destruct (should_stop ct). 1: apply H in H0; assumption. simpl in H0.
-    destruct (Pos.eq_dec i (num_coset ct + 1)).
-    - subst i. rewrite PM.gss in H0. inversion H0. apply Pos.le_refl.
-    - rewrite PM.gso in H0 by assumption. apply H in H0. assumption.
+    unfold coset_map_prop. intros. unfold define_new_coset.
+    destruct (should_stop ct); [apply H | simpl].
+    split; intros; specialize (H i); destruct H.
+    - assert (i <= num_coset ct \/ i == num_coset ct + 1) by
+          (zify; omega). destruct H2.
+      + rewrite PM.gso by (intro; subst; zify; omega). apply H. assumption.
+      + subst i. rewrite PM.gss. exists (num_coset ct + 1). intuition.
+    - rewrite PM.gso by (intro; subst; zify; omega). apply H1. zify; omega.
   Qed.
 
   Lemma table_find_add_same: forall a x v t,
@@ -266,15 +279,38 @@ Section TODD_COXETER_PROOFS.
     intro. rewrite table_key_eq_iff in H2 by assumption. intuition.
   Qed.
 
+  Lemma pos_double_eq: forall (a b x y: positive),
+      (a == b /\ x == y) \/ (a =/= b \/ x =/= y). Proof. intros. zify. omega. Qed.
+
   Lemma define_new_coset_table_good: forall ct a x,
-      valid_gen_rep x -> coset_table_prop (coset_table ct) ->
-      coset_table_prop (coset_table (define_new_coset ct a x)).
+      coset_table_prop ct -> valid_coset_rep ct a -> valid_gen_rep x ->
+      table_find a x (coset_table ct) == None ->
+      coset_table_prop (define_new_coset ct a x).
   Proof.
-    unfold coset_table_prop. intros. unfold define_new_coset.
-    destruct (should_stop ct); simpl. 1: apply H0; assumption.
-  Abort.
-  
-  (* TODO: define new coset is good. *)
+    unfold define_new_coset. intros. destruct (should_stop ct). 1: assumption.
+    unfold coset_table_prop, valid_coset_rep. simpl. intros c y b ? ?.
+    assert (valid_gen_rep (neg_rep x)) by (apply valid_neg_rep; assumption).
+    assert (valid_gen_rep (neg_rep y)) by (apply valid_neg_rep; assumption).
+    destruct (pos_double_eq c (num_coset ct + 1) y (neg_rep x)).
+    - destruct H7. subst. rewrite table_find_add_same in H4. inversion H4. subst b.
+      rewrite double_neg_rep by assumption.
+      rewrite table_find_add_diff;
+        [rewrite table_find_add_same | | | right; apply gen_rep_neq_neg_rep];
+        intuition. red in H0. zify; omega.
+    - rewrite table_find_add_diff in H4 by assumption.
+      destruct (pos_double_eq c a y x).
+      + destruct H8. subst. rewrite table_find_add_same in H4. inversion H4. subst.
+        rewrite table_find_add_same. split; [|split]; [reflexivity | | intuition].
+        clear -H0. red in H0. zify; omega.
+      + rewrite table_find_add_diff in H4 by assumption. apply H in H4.
+        2: assumption. destruct H4 as [? [? ?]].
+        rewrite table_find_add_diff;
+          [|assumption..|left; red in H10; intro; zify; omega].
+        destruct (pos_double_eq b a (neg_rep y) x).
+        * destruct H11. subst. exfalso. rewrite H2 in H4. inversion H4.
+        * rewrite table_find_add_diff by assumption. split. 1: assumption.
+          red in H9, H10. zify; omega.
+  Qed.
 
   Theorem todd_coxeter_is_right: forall
       (relators generators: list (Word A))
