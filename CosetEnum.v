@@ -350,4 +350,54 @@ Section TODD_COXETER_ALGORITHM.
                                     omega_list tbl_keys 2 (coset_table ct) in
     update_coset_table ct new_tbl.
 
+  Definition single_coset_rep (ct: CosetTable) (a: positive) (a_rep: list positive)
+             (p_and_rep: (list positive * PM.tree (list positive))) (x: positive) :=
+    match table_find a x ct with
+    | None => p_and_rep (* This will not happen. *)
+    | Some b => let (p, rep) := p_and_rep in
+                match PM.find b rep with
+                | Some _ => p_and_rep
+                | None => (b :: p, PM.add b (a_rep ++ [x]) rep)
+                end
+    end.
+
+  Fixpoint coset_rep_loop (ct: CosetTable) (p: list positive)
+           (rep: PM.tree (list positive)) (steps: nat) :=
+    match steps with
+    | O => rep
+    | S n => match p with
+             | nil => rep
+             | a :: rst =>
+               match PM.find a rep with
+               | None => rep (* This will not happen. *)
+               | Some a_rep =>
+                 let (new_p, new_rep) :=
+                     fold_left (single_coset_rep ct a a_rep) all_gen_reps ([], rep) in
+                 coset_rep_loop ct (rst ++ new_p) new_rep n
+               end
+             end
+    end.
+
+  Definition coset_rep (ct: CosetEnum): list (list positive) :=
+    let rep := PM.add 1 nil (PM.empty (list positive)) in
+    let steps := Pos.to_nat (num_coset ct) in
+    let rep := coset_rep_loop (coset_table ct) [1] rep steps in
+    filter_option (map (fun a => PM.find a rep) (gen_pos_list (num_coset ct))).
+
+    Fixpoint coset_table_mul_helper (ct: CosetTable) (oa: option positive)
+             (w: list positive) :=
+    match w with
+    | nil => oa
+    | x :: rst => match oa with
+                  | None => None
+                  | Some a => coset_table_mul_helper ct (table_find a x ct) rst
+                  end
+    end.
+
+  Definition coset_table_mul (ct: CosetEnum) (a: positive) (w: list positive) :=
+    coset_table_mul_helper (coset_table ct) (Some a) w.
+
+  Definition one_mult_all_rep (ct: CosetEnum): list positive :=
+    filter_option (map (coset_table_mul ct 1) (coset_rep ct)).
+
 End TODD_COXETER_ALGORITHM.

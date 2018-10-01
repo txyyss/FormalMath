@@ -46,9 +46,13 @@ Section TWO_GEN_COSET_ENUM.
   Definition T_gens_rep :=
     Eval vm_compute in (map (map alphabet_to_positive) T_gens).
 
-  Definition T_group := (compress (coset_enumration_r T_gens_rep nil 16)).
+  Definition T_group := (standardize
+                           (compress (coset_enumration_r T_gens_rep nil 16))).
 
   Lemma T_group_size: num_coset T_group = 12.
+  Proof. native_compute. reflexivity. Qed.
+
+  Lemma T_group_rep_test: one_mult_all_rep T_group = gen_pos_list (num_coset T_group).
   Proof. native_compute. reflexivity. Qed.
 
   Compute (print_coset_table T_group).
@@ -67,6 +71,9 @@ Section TWO_GEN_COSET_ENUM.
   Lemma O_group_size: num_coset O_group = 24.
   Proof. native_compute. reflexivity. Qed.
 
+  Lemma O_group_rep_test: one_mult_all_rep O_group = gen_pos_list (num_coset O_group).
+  Proof. native_compute. reflexivity. Qed.
+
   Compute (generator_permutations O_group).
 
   (* The Roration Group of a Regular Icosahedron *)
@@ -81,6 +88,9 @@ Section TWO_GEN_COSET_ENUM.
   Compute (num_coset I_group).
 
   Lemma I_group_size: num_coset I_group = 60.
+  Proof. native_compute. reflexivity. Qed.
+
+  Lemma I_group_rep_test: one_mult_all_rep I_group = gen_pos_list (num_coset I_group).
   Proof. native_compute. reflexivity. Qed.
 
   Compute (generator_permutations I_group).
@@ -100,6 +110,10 @@ Section TWO_GEN_COSET_ENUM.
   Lemma F4_group_size: num_coset F4_group = 1152.
   Proof. native_compute. reflexivity. Qed.
 
+  Lemma F4_group_rep_test: one_mult_all_rep F4_group =
+                           gen_pos_list (num_coset F4_group).
+  Proof. native_compute. reflexivity. Qed.
+
   (* The Symmetry Group of the 600-Cell *)
   Definition H4_gens :=
     [repeat (Pe X) 10; repeat (Pe Y) 6; flatten (repeat [Pe X; Pe Y] 3);
@@ -113,6 +127,10 @@ Section TWO_GEN_COSET_ENUM.
 
   Lemma H4_group_size: num_coset H4_group = 14400.
   Proof. idtac "Computing H4 group...". Time native_compute. reflexivity. Qed.
+
+  Lemma H4_group_rep_test: one_mult_all_rep H4_group =
+                           gen_pos_list (num_coset H4_group).
+  Proof. native_compute. reflexivity. Qed.
 
   Definition test1_gens := [repeat (Pe X) 3; repeat (Pe Y) 3;
                               [Ne X; Ne Y; Pe X; Pe Y]].
@@ -177,7 +195,16 @@ Section THREE_GEN_COSET_ENUM.
   Definition Ih_gens_rep :=
     Eval vm_compute in (map (map alphabet_to_positive) Ih_gens).
 
+  Eval vm_compute in all_gen_reps.
+
   Definition Ih_group := compress (coset_enumration_r Ih_gens_rep nil 210).
+
+  Lemma Ih_group_size: num_coset Ih_group = 120.
+  Proof. native_compute. reflexivity. Qed.
+
+  Lemma Ih_group_rep_test: one_mult_all_rep Ih_group =
+                           gen_pos_list (num_coset Ih_group).
+  Proof. native_compute. reflexivity. Qed.
 
   Eval native_compute in (num_coset Ih_group).
 
