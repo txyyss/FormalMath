@@ -4,7 +4,7 @@ Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Require Import FormalMath.Word.
 Require Import FormalMath.CosetEnum.
-Require Import FormalMath.Coqlib.
+Require Import FormalMath.lib.Coqlib.
 Import ListNotations.
 
 Local Open Scope positive_scope.
