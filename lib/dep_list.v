@@ -59,3 +59,10 @@ Fixpoint dep_map {A B: Type} (f: A -> B) {n: nat} (dl: dep_list A n): dep_list B
   | dep_nil => dep_nil
   | dep_cons a dl' => dep_cons (f a) (dep_map f dl')
   end.
+
+Eval compute in dep_map (fun x => x * 2)
+                        (dep_cons 4 (dep_cons 5 (dep_cons 6 dep_nil))).
+
+Definition dep_binop {A B C: Type} (f: A -> B -> C) {n: nat}
+           (dl1: dep_list A n) (dl2: dep_list B n) : dep_list C n :=
+  dep_map (fun p: (A * B) => f (fst p) (snd p)) (dep_zip dl1 dl2).
