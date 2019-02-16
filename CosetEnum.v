@@ -384,8 +384,8 @@ Section TODD_COXETER_ALGORITHM.
     let rep := coset_rep_loop (coset_table ct) [1] rep steps in
     filter_option (map (fun a => PM.find a rep) (gen_pos_list (num_coset ct))).
 
-    Fixpoint coset_table_mul_helper (ct: CosetTable) (oa: option positive)
-             (w: list positive) :=
+  Fixpoint coset_table_mul_helper (ct: CosetTable) (oa: option positive)
+           (w: list positive) :=
     match w with
     | nil => oa
     | x :: rst => match oa with
