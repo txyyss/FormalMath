@@ -106,7 +106,7 @@ Lemma dep_list_ind_2: forall
     P O dep_nil dep_nil ->
     (forall (n: nat) (v1: dep_list A n) (v2: dep_list B n),
         P n v1 v2 -> forall (a: A) (b: B), P (S n) (dep_cons a v1) (dep_cons b v2)) ->
-    forall {n: nat} (v1: dep_list A n) (v2: dep_list B n), P n v1 v2.
+    forall (n: nat) (v1: dep_list A n) (v2: dep_list B n), P n v1 v2.
 Proof.
   intros until n. induction n; intros.
   - rewrite (dep_list_O_unique v1), (dep_list_O_unique v2). easy.
@@ -120,16 +120,21 @@ Lemma dep_list_ind_3: forall
     (forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n),
         P n v1 v2 v3 -> forall (a: A) (b: B) (c: C),
           P (S n) (dep_cons a v1) (dep_cons b v2) (dep_cons c v3)) ->
-    forall {n: nat} (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n),
+    forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n),
       P n v1 v2 v3.
 Proof.
   intros until n. induction n; intros.
-  - rewrite (dep_list_O_unique v1), (dep_list_O_unique v2), (dep_list_O_unique v3).
-    easy.
+  - now rewrite (dep_list_O_unique v1), (dep_list_O_unique v2), (dep_list_O_unique v3).
   - destruct (dep_list_S_decompose n v1) as [a [va ?]].
     destruct (dep_list_S_decompose n v2) as [b [vb ?]].
     destruct (dep_list_S_decompose n v3) as [c [vc ?]]. subst v1 v2 v3. apply H0, IHn.
 Qed.
+
+Lemma dep_list_binop_nil: forall {A B C} (f: A -> B -> C),
+    dep_list_binop f dep_nil dep_nil = dep_nil.
+Proof. intros. unfold dep_list_binop. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_binop_nil: dep_list.
 
 Lemma dep_list_binop_cons: forall
     {A B C} {n: nat} (a: A) (b: B)
@@ -138,12 +143,14 @@ Lemma dep_list_binop_cons: forall
     dep_cons (f a b) (dep_list_binop f v1 v2).
 Proof. intros. unfold dep_list_binop. simpl. easy. Qed.
 
+Hint Rewrite @dep_list_binop_cons: dep_list.
+
 Lemma dep_list_binop_comm: forall
     {A B} {n: nat} (v1 v2: dep_list A n) (f: A -> A -> B),
     (forall x y, f x y = f y x) -> dep_list_binop f v1 v2 = dep_list_binop f v2 v1.
 Proof.
   intros. revert n v1 v2. apply dep_list_ind_2. 1: easy. intros.
-  rewrite !dep_list_binop_cons. f_equal; easy.
+  autorewrite with dep_list. f_equal; easy.
 Qed.
 
 Lemma dep_list_binop_assoc: forall
@@ -152,7 +159,6 @@ Lemma dep_list_binop_assoc: forall
     dep_list_binop f (dep_list_binop f v1 v2) v3 =
     dep_list_binop f v1 (dep_list_binop f v2 v3).
 Proof.
-  intros. revert n v1 v2 v3. apply dep_list_ind_3.
-  - unfold dep_list_binop. simpl. easy.
-  - intros. rewrite !dep_list_binop_cons. f_equal; easy.
+  intros. revert n v1 v2 v3.
+  apply dep_list_ind_3; intros; autorewrite with dep_list; [easy | now f_equal].
 Qed.
