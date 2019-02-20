@@ -76,7 +76,7 @@ Proof.
   case v; intros; try easy. apply K_dec_set with (p := e); [exact Nat.eq_dec | easy].
 Qed.
 
-Lemma dep_list_S_decompose: forall {A} n (v: dep_list A (S n)),
+Lemma dep_list_S_decompose: forall {A} {n: nat} (v: dep_list A (S n)),
     {a: A & {v': dep_list A n | v = dep_cons a v'}}.
 Proof.
   intros. cut {a: A &  {t: dep_list A n |
@@ -98,7 +98,7 @@ Lemma dep_list_ind_1: forall {A} (P: forall n, dep_list A n -> Prop),
 Proof.
   intros until n. induction n; intros.
   - rewrite dep_list_O_unique. easy.
-  - destruct (dep_list_S_decompose n v) as [a [v' ?]]. subst v. apply H0, IHn.
+  - destruct (dep_list_S_decompose v) as [a [v' ?]]. subst v. apply H0, IHn.
 Qed.
 
 Lemma dep_list_ind_2: forall
@@ -110,8 +110,8 @@ Lemma dep_list_ind_2: forall
 Proof.
   intros until n. induction n; intros.
   - rewrite (dep_list_O_unique v1), (dep_list_O_unique v2). easy.
-  - destruct (dep_list_S_decompose n v1) as [a [va ?]].
-    destruct (dep_list_S_decompose n v2) as [b [vb ?]]. subst v1 v2. apply H0, IHn.
+  - destruct (dep_list_S_decompose v1) as [a [va ?]].
+    destruct (dep_list_S_decompose v2) as [b [vb ?]]. subst v1 v2. apply H0, IHn.
 Qed.
 
 Lemma dep_list_ind_3: forall
@@ -125,9 +125,9 @@ Lemma dep_list_ind_3: forall
 Proof.
   intros until n. induction n; intros.
   - now rewrite (dep_list_O_unique v1), (dep_list_O_unique v2), (dep_list_O_unique v3).
-  - destruct (dep_list_S_decompose n v1) as [a [va ?]].
-    destruct (dep_list_S_decompose n v2) as [b [vb ?]].
-    destruct (dep_list_S_decompose n v3) as [c [vc ?]]. subst v1 v2 v3. apply H0, IHn.
+  - destruct (dep_list_S_decompose v1) as [a [va ?]].
+    destruct (dep_list_S_decompose v2) as [b [vb ?]].
+    destruct (dep_list_S_decompose v3) as [c [vc ?]]. subst v1 v2 v3. apply H0, IHn.
 Qed.
 
 Lemma dep_list_binop_nil: forall {A B C} (f: A -> B -> C),
@@ -161,4 +161,34 @@ Lemma dep_list_binop_assoc: forall
 Proof.
   intros. revert n v1 v2 v3.
   apply dep_list_ind_3; intros; autorewrite with dep_list; [easy | now f_equal].
+Qed.
+
+Fixpoint dep_repeat {A} (e: A) (n: nat): dep_list A n :=
+  match n with
+  | O => dep_nil
+  | S n' => dep_cons e (dep_repeat e n')
+  end.
+
+Fixpoint dep_list_transpose {A: Type} {m n: nat}
+         (mat: dep_list (dep_list A n) m): dep_list (dep_list A m) n :=
+  match mat with
+  | dep_nil => dep_repeat dep_nil n
+  | @dep_cons _ m' row rest_rows =>
+    dep_list_binop (@dep_cons _ m') row (dep_list_transpose rest_rows)
+  end.
+
+Compute (dep_list_transpose
+           (dep_cons (dep_cons 1 (dep_cons 2 dep_nil))
+                     (dep_cons (dep_cons 3 (dep_cons 4 dep_nil))
+                               (dep_cons (dep_cons 5 (dep_cons 6 dep_nil)) dep_nil)))).
+
+Lemma dep_list_transpose_involution: forall {A m n} (mat: dep_list (dep_list A n) m),
+    dep_list_transpose (dep_list_transpose mat) = mat.
+Proof.
+  intros. revert m mat. apply dep_list_ind_1. 1: apply dep_list_O_unique. intros.
+  rename n0 into m. simpl. rewrite <- H at 2. remember (dep_list_transpose v).
+  clear v Heqd H. revert a. apply dep_list_ind_1 with (v := d); intros.
+  - rewrite (dep_list_O_unique a). now simpl.
+  - simpl. destruct (dep_list_S_decompose a0) as [a1 [a2 ?]]. subst a0.
+    autorewrite with dep_list. simpl. rewrite H. now autorewrite with dep_list.
 Qed.
