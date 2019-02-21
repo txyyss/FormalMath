@@ -90,15 +90,20 @@ Proof.
     exists a, d. constructor.
 Qed.
 
+Ltac dep_list_decomp :=
+  repeat match goal with
+         | v: dep_list ?A O |- _ => pose proof (dep_list_O_unique v); subst v
+         | v: dep_list ?A (S ?n) |- _ =>
+           destruct (dep_list_S_decompose v) as [?v [?v ?]]; subst v
+  end.
+
 Lemma dep_list_ind_1: forall {A} (P: forall n, dep_list A n -> Prop),
     P O dep_nil ->
     (forall (n: nat) (v: dep_list A n),
         P n v -> forall a: A, P (S n) (dep_cons a v)) ->
     forall (n: nat) (v: dep_list A n), P n v.
 Proof.
-  intros until n. induction n; intros.
-  - rewrite dep_list_O_unique. easy.
-  - destruct (dep_list_S_decompose v) as [a [v' ?]]. subst v. apply H0, IHn.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
 Qed.
 
 Lemma dep_list_ind_2: forall
@@ -108,10 +113,7 @@ Lemma dep_list_ind_2: forall
         P n v1 v2 -> forall (a: A) (b: B), P (S n) (dep_cons a v1) (dep_cons b v2)) ->
     forall (n: nat) (v1: dep_list A n) (v2: dep_list B n), P n v1 v2.
 Proof.
-  intros until n. induction n; intros.
-  - rewrite (dep_list_O_unique v1), (dep_list_O_unique v2). easy.
-  - destruct (dep_list_S_decompose v1) as [a [va ?]].
-    destruct (dep_list_S_decompose v2) as [b [vb ?]]. subst v1 v2. apply H0, IHn.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
 Qed.
 
 Lemma dep_list_ind_3: forall
@@ -123,11 +125,7 @@ Lemma dep_list_ind_3: forall
     forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n),
       P n v1 v2 v3.
 Proof.
-  intros until n. induction n; intros.
-  - now rewrite (dep_list_O_unique v1), (dep_list_O_unique v2), (dep_list_O_unique v3).
-  - destruct (dep_list_S_decompose v1) as [a [va ?]].
-    destruct (dep_list_S_decompose v2) as [b [vb ?]].
-    destruct (dep_list_S_decompose v3) as [c [vc ?]]. subst v1 v2 v3. apply H0, IHn.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
 Qed.
 
 Lemma dep_list_binop_nil: forall {A B C} (f: A -> B -> C),
@@ -169,6 +167,12 @@ Fixpoint dep_repeat {A} (e: A) (n: nat): dep_list A n :=
   | S n' => dep_cons e (dep_repeat e n')
   end.
 
+Lemma dep_map_repeat: forall {A B} (f: A -> B) (a: A) n,
+    dep_map f (dep_repeat a n) = dep_repeat (f a) n.
+Proof. intros. induction n; simpl; [easy | now rewrite IHn]. Qed.
+
+Hint Rewrite @dep_map_repeat: dep_list.
+
 Fixpoint dep_list_transpose {A: Type} {m n: nat}
          (mat: dep_list (dep_list A n) m): dep_list (dep_list A m) n :=
   match mat with
@@ -187,8 +191,7 @@ Lemma dep_list_transpose_involution: forall {A m n} (mat: dep_list (dep_list A n
 Proof.
   intros. revert m mat. apply dep_list_ind_1. 1: apply dep_list_O_unique. intros.
   rename n0 into m. simpl. rewrite <- H at 2. remember (dep_list_transpose v).
-  clear v Heqd H. revert a. apply dep_list_ind_1 with (v := d); intros.
-  - rewrite (dep_list_O_unique a). now simpl.
-  - simpl. destruct (dep_list_S_decompose a0) as [a1 [a2 ?]]. subst a0.
-    autorewrite with dep_list. simpl. rewrite H. now autorewrite with dep_list.
+  clear v Heqd H. revert a.
+  apply dep_list_ind_1 with (v := d); intros; dep_list_decomp. 1: now simpl.
+  autorewrite with dep_list. simpl. rewrite H. now autorewrite with dep_list.
 Qed.

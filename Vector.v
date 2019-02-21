@@ -120,13 +120,20 @@ Proof.
   now rewrite Rmult_comm, H.
 Qed.
 
-Lemma vec_dot_prod_add: forall {n} (a b c: Vector n),
+Lemma vec_dot_prod_add_l: forall {n} (a b c: Vector n),
     vec_dot_prod a (vec_add b c) = (vec_dot_prod a b + vec_dot_prod a c)%R.
 Proof.
   apply dep_list_ind_3; intros; autorewrite with vector.
   - now rewrite Rplus_0_r.
   - rewrite H. rewrite Rmult_plus_distr_l, !Rplus_assoc. f_equal.
     rewrite <- !Rplus_assoc. f_equal. apply Rplus_comm.
+Qed.
+
+Lemma vec_dot_prod_add_r: forall {n} (a b c: Vector n),
+    vec_dot_prod (vec_add a b) c = (vec_dot_prod a c + vec_dot_prod b c)%R.
+Proof.
+  intros. rewrite vec_dot_prod_comm, vec_dot_prod_add_l, vec_dot_prod_comm. f_equal.
+  apply vec_dot_prod_comm.
 Qed.
 
 Lemma vec_dot_prod_scal_mul: forall a {n} (b c: Vector n),
@@ -148,27 +155,8 @@ Definition linear_map {m n} (f: Vector m -> Vector n): Prop :=
 
 Definition Matrix (m n: nat) := dep_list (dep_list R n) m.
 
-Definition mat_transpose {m n}: Matrix m n -> Matrix n m := dep_list_transpose.
-
-Definition mat_neg {m n}: Matrix m n -> Matrix m n := dep_map vec_neg.
-
 Definition mat_add {m n} (m1 m2: Matrix m n): Matrix m n :=
   dep_list_binop vec_add m1 m2.
-
-Definition mat_scal_mul {m n} (a: R): Matrix m n -> Matrix m n :=
-  dep_map (vec_scal_mul a).
-
-Definition mat_mul {m l n} (m1: Matrix m l) (m2: Matrix l n): Matrix m n :=
-  dep_map (fun row => dep_map (vec_dot_prod row) (mat_transpose m2)) m1.
-
-Definition mat_vec_mul {m n} (mat: Matrix m n) (v: Vector n): Vector m :=
-  dep_map (vec_dot_prod v) mat.
-
-Lemma mat_transpose_involution: forall {m n} (mat: Matrix m n),
-    mat_transpose (mat_transpose mat) = mat.
-Proof. intros. apply dep_list_transpose_involution. Qed.
-
-Hint Rewrite @mat_transpose_involution: matrix.
 
 Lemma mat_add_assoc: forall {m n} (m1 m2 m3: Matrix m n),
     mat_add (mat_add m1 m2) m3 = mat_add m1 (mat_add m2 m3).
@@ -189,38 +177,130 @@ Proof. intros. unfold mat_add. now autorewrite with dep_list. Qed.
 
 Hint Rewrite @mat_add_cons: matrix.
 
-Lemma mat_transpose_cons: forall {m n} (v: Vector n) (mat: Matrix m n),
+Definition mat_transpose {m n}: Matrix m n -> Matrix n m := dep_list_transpose.
+
+Lemma mat_transpose_involution: forall {m n} (mat: Matrix m n),
+    mat_transpose (mat_transpose mat) = mat.
+Proof. intros. apply dep_list_transpose_involution. Qed.
+
+Hint Rewrite @mat_transpose_involution: matrix.
+
+Lemma mat_transpose_cons_row: forall {m n} (v: Vector n) (mat: Matrix m n),
     mat_transpose (dep_cons v mat) =
     dep_list_binop (dep_cons (n:=m)) v (mat_transpose mat).
 Proof. intros. unfold mat_transpose. now simpl. Qed.
 
-Hint Rewrite @mat_transpose_cons: matrix.
+Hint Rewrite @mat_transpose_cons_row: matrix.
+
+Lemma mat_transpose_cons_col: forall {m n} (v: Vector m) (mat: Matrix m n),
+    mat_transpose (dep_list_binop (dep_cons (n := n)) v mat) =
+    dep_cons v (mat_transpose mat).
+Proof.
+  intros. revert m v mat. apply dep_list_ind_2; intros. 1: easy.
+  autorewrite with dep_list matrix. rewrite H. now autorewrite with dep_list.
+Qed.
+
+Hint Rewrite @mat_transpose_cons_col: matrix.
+
+Lemma mat_transpose_nil_1: forall {n},
+    mat_transpose (@dep_nil (Vector n)) = dep_repeat dep_nil n.
+Proof. intros. unfold mat_transpose. now simpl. Qed.
+
+Hint Rewrite @mat_transpose_nil_1: matrix.
+
+Lemma mat_transpose_nil_2: forall {n} (mat: Matrix n O), mat_transpose mat = dep_nil.
+Proof.
+  apply dep_list_ind_1. 1: easy. intros. unfold mat_transpose in *.
+  dep_list_decomp. simpl. rewrite H. easy.
+Qed.
+
+Hint Rewrite @mat_transpose_nil_2: matrix.
 
 Lemma mat_transpose_add: forall {m n} (m1 m2: Matrix m n),
     mat_transpose (mat_add m1 m2) = mat_add (mat_transpose m1) (mat_transpose m2).
 Proof.
   intros. revert m m1 m2. apply dep_list_ind_2; intros; autorewrite with matrix.
-  - unfold mat_transpose. simpl. induction n; simpl; autorewrite with matrix.
-    1: easy. autorewrite with vector. now rewrite <- IHn.
+  - induction n; simpl; autorewrite with matrix vector; [easy | now rewrite <- IHn].
   - rewrite H. clear H. generalize (mat_transpose v1) as m1.
     generalize (mat_transpose v2) as m2. intros. clear v1 v2. revert a b.
-    apply dep_list_ind_2 with (v1 := m1) (v2 := m2); intros; autorewrite with matrix.
-    + rewrite (dep_list_O_unique a), (dep_list_O_unique b).
-      now autorewrite with dep_list.
-    + destruct (dep_list_S_decompose a0) as [a1 [a2 ?]].
-      destruct (dep_list_S_decompose b0) as [b1 [b2 ?]]. subst a0 b0.
-      autorewrite with vector dep_list matrix. now rewrite H.
+    apply dep_list_ind_2 with (v1 := m1) (v2 := m2); intros; autorewrite with matrix;
+      dep_list_decomp. 1: now autorewrite with dep_list.
+    autorewrite with vector dep_list matrix. now rewrite H.
 Qed.
+
+Definition mat_neg {m n}: Matrix m n -> Matrix m n := dep_map vec_neg.
+
+Definition mat_scal_mul {m n} (a: R): Matrix m n -> Matrix m n :=
+  dep_map (vec_scal_mul a).
+
+Definition mat_vec_mul {m n} (mat: Matrix m n) (v: Vector n): Vector m :=
+  dep_map (vec_dot_prod v) mat.
+
+Definition mat_mul {m l n} (m1: Matrix m l) (m2: Matrix l n): Matrix m n :=
+  dep_map (fun row => dep_map (vec_dot_prod row) (mat_transpose m2)) m1.
+
+Lemma mat_mul_cons: forall {m l n} (v: Vector l) (m1: Matrix m l) (m2: Matrix l n),
+    mat_mul (dep_cons v m1) m2 =
+    dep_cons (dep_map (vec_dot_prod v) (mat_transpose m2)) (mat_mul m1 m2).
+Proof. intros. unfold mat_mul. now simpl. Qed.
+
+Hint Rewrite @mat_mul_cons: matrix.
 
 Lemma mat_mul_add_distr_l: forall {m l n} (m1: Matrix m l) (m2 m3: Matrix l n),
     mat_mul m1 (mat_add m2 m3) = mat_add (mat_mul m1 m2) (mat_mul m1 m3).
 Proof.
-  intros. revert m m1. apply dep_list_ind_1; simpl; intros. 1: easy.
-  unfold mat_mul in *. simpl. rewrite H. autorewrite with matrix. f_equal. clear H.
-  rewrite mat_transpose_add. clear v n0. generalize (mat_transpose m2) as m1.
-  clear m2. generalize (mat_transpose m3) as m2. clear m3. intros. revert n m1 m2.
+  intros. revert m m1. apply dep_list_ind_1; intros; autorewrite with matrix. 1: easy.
+  autorewrite with matrix. rewrite H. f_equal. clear H. rewrite mat_transpose_add.
+  clear v n0. generalize (mat_transpose m2) as m1. clear m2.
+  generalize (mat_transpose m3) as m2. clear m3. intros. revert n m1 m2.
   apply dep_list_ind_2; intros; autorewrite with matrix. 1: easy. simpl. rewrite H.
-  autorewrite with vector. f_equal. apply vec_dot_prod_add.
+  autorewrite with vector. f_equal. apply vec_dot_prod_add_l.
+Qed.
+
+Lemma mat_mul_add_distr_r: forall {m l n} (m1 m2: Matrix m l) (m3: Matrix l n),
+    mat_mul (mat_add m1 m2) m3 = mat_add (mat_mul m1 m3) (mat_mul m2 m3).
+Proof.
+  intros. revert m m1 m2. apply dep_list_ind_2; intros; autorewrite with matrix.
+  1: easy. rewrite H. f_equal. generalize (mat_transpose m3) as mat. intros.
+  clear -a b mat. revert n mat.
+  apply dep_list_ind_1; intros; simpl; autorewrite with vector. 1: easy.
+  rewrite H. f_equal. apply vec_dot_prod_add_r.
+Qed.
+
+Lemma mat_transpose_mul: forall {m l n} (m1: Matrix m l) (m2: Matrix l n),
+    mat_transpose (mat_mul m1 m2) = mat_mul (mat_transpose m2) (mat_transpose m1).
+Proof.
+  intros. revert m m1. apply dep_list_ind_1; intros; autorewrite with matrix.
+  - generalize (mat_transpose m2) as m. clear m2. revert n.
+    apply dep_list_ind_1; intros; simpl. 1: easy. rewrite H. autorewrite with matrix.
+    now simpl.
+  - rewrite H. clear H. generalize (mat_transpose m2) as m1. clear m2.
+    generalize (mat_transpose v) as m2. clear v. intros. rename n0 into m.
+    revert a. apply dep_list_ind_1 with (v := m1); intros; simpl. 1: easy.
+    autorewrite with matrix dep_list. rewrite H. f_equal. clear H. simpl. f_equal.
+    apply vec_dot_prod_comm.
+Qed.
+
+Lemma mat_mul_assoc: forall
+    {m k l n} (m1: Matrix m k) (m2: Matrix k l) (m3: Matrix l n),
+    mat_mul (mat_mul m1 m2) m3 = mat_mul m1 (mat_mul m2 m3).
+Proof.
+  intros. revert m m1. apply dep_list_ind_1. 1: easy. intros. autorewrite with matrix.
+  rewrite H. f_equal. clear. rewrite mat_transpose_mul.
+  generalize (mat_transpose m2) as m1. clear m2. generalize (mat_transpose m3) as m2.
+  intros. clear m3. revert n m2. apply dep_list_ind_1. 1: easy. intros.
+  autorewrite with matrix. simpl. rewrite H. f_equal. clear. revert a0.
+  apply dep_list_ind_1 with (v := m1); intros; dep_list_decomp; simpl;
+    autorewrite with vector matrix dep_list.
+  - simpl. clear. revert k a. apply dep_list_ind_1. 1: easy. intros. simpl.
+    autorewrite with vector. now rewrite <- H, Rmult_0_r, Rplus_0_l.
+  -  rewrite H. clear H. generalize (mat_transpose v) as m. intros. clear. revert a a0.
+     apply dep_list_ind_1 with (v := m); intros; dep_list_decomp.
+    + simpl. autorewrite with vector dep_list. now rewrite Rmult_0_l, Rplus_0_l.
+    + autorewrite with vector dep_list. simpl. autorewrite with vector.
+      rewrite <- H. clear H. rewrite <- !Rplus_assoc. f_equal.
+      rewrite Rmult_plus_distr_r, Rmult_plus_distr_l, (Rmult_comm a2 a4),
+      <- Rmult_assoc, !Rplus_assoc. f_equal. apply Rplus_comm.
 Qed.
 
 Lemma linear_map_mat_vec_mul_ext_eq: forall {n m} (f: Vector n -> Vector m),
