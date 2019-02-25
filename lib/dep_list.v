@@ -63,9 +63,6 @@ Fixpoint dep_map {A B: Type} (f: A -> B) {n: nat} (dl: dep_list A n): dep_list B
   | dep_cons a dl' => dep_cons (f a) (dep_map f dl')
   end.
 
-Eval compute in dep_map (fun x => x * 2)
-                        (dep_cons 4 (dep_cons 5 (dep_cons 6 dep_nil))).
-
 Definition dep_list_binop {A B C: Type} (f: A -> B -> C) {n: nat}
            (dl1: dep_list A n) (dl2: dep_list B n): dep_list C n :=
   dep_map (fun p: (A * B) => f (fst p) (snd p)) (dep_zip dl1 dl2).
@@ -126,6 +123,13 @@ Lemma dep_list_ind_3: forall
       P n v1 v2 v3.
 Proof.
   intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
+Qed.
+
+Lemma dep_map_nest:
+  forall {A B C: Type} (f: A -> B) (g: B -> C) {n} (dl: dep_list A n),
+    dep_map g (dep_map f dl) = dep_map (fun x => g (f x)) dl.
+Proof.
+  intros. revert n dl. apply dep_list_ind_1; intros; simpl; [| rewrite H]; easy.
 Qed.
 
 Lemma dep_list_binop_nil: forall {A B C} (f: A -> B -> C),
@@ -194,4 +198,17 @@ Proof.
   clear v Heqd H. revert a.
   apply dep_list_ind_1 with (v := d); intros; dep_list_decomp. 1: now simpl.
   autorewrite with dep_list. simpl. rewrite H. now autorewrite with dep_list.
+Qed.
+
+Definition dep_hd {A: Type} {n: nat} (l: dep_list A (S n)): A :=
+  match l in (dep_list _ m) return (O < m -> A) with
+  | dep_nil => fun p => False_rect _ (Nat.nle_succ_0 _ p)
+  | dep_cons h _ => fun _ => h
+  end (Nat.lt_0_succ n).
+
+Lemma dep_hd_transpose: forall {A} {m n} (mat: dep_list (dep_list A (S n)) m),
+    dep_hd (dep_list_transpose mat) = dep_map dep_hd mat.
+Proof.
+  intros. revert m mat. apply dep_list_ind_1; intros. 1: easy. simpl. rewrite <- H.
+  generalize (dep_list_transpose v). clear. intros. dep_list_decomp. now simpl.
 Qed.
