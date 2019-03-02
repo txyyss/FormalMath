@@ -79,12 +79,19 @@ Proof.
   now rewrite H, Rmult_1_l.
 Qed.
 
-Lemma vec_scal_mul_zero: forall {n} a, @vec_scal_mul a n vec_zero = vec_zero.
+Lemma vec_scal_mul_zero_r: forall {n} a, @vec_scal_mul a n vec_zero = vec_zero.
 Proof.
   intros. induction n; autorewrite with vector; [| rewrite IHn, Rmult_0_r]; easy.
 Qed.
 
-Hint Rewrite @vec_scal_mul_zero: vector.
+Hint Rewrite @vec_scal_mul_zero_r: vector.
+
+Lemma vec_scal_mul_zero_l: forall {n} (v: Vector n), vec_scal_mul 0%R v = vec_zero.
+Proof.
+  apply dep_list_ind_1; intros; autorewrite with vector; [|rewrite H, Rmult_0_l]; easy.
+Qed.
+
+Hint Rewrite @vec_scal_mul_zero_l: vector.
 
 Lemma vec_scal_mul_assoc: forall a b {n} (v: Vector n),
     vec_scal_mul a (vec_scal_mul b v) = vec_scal_mul (a * b) v.
@@ -627,8 +634,77 @@ Qed.
 
 Hint Rewrite @mat_mul_identity_l: matrix.
 
-Lemma linear_map_mat_vec_mul_ext_eq: forall {n m} (f: Vector n -> Vector m),
-    exists ! mat: Matrix m n, forall (v: Vector n), f v = mat_vec_mul mat v.
+Lemma mat_vec_mul_identity: forall {n} (v: Vector n), mat_vec_mul identity_mat v = v.
+Proof. intros. rewrite mat_vec_mul_as_mat. now autorewrite with matrix. Qed.
+
+Hint Rewrite @mat_vec_mul_identity: matrix.
+
+Lemma mat_vec_mul_col_cons:
+  forall {m n} (mat: Matrix m n) (v: Vector n) (sv: Vector m) a,
+    mat_vec_mul (dep_list_binop (dep_cons (n:=n)) sv mat) (dep_cons a v) =
+    vec_add (vec_scal_mul a sv) (mat_vec_mul mat v).
 Proof.
-  intros.
-Abort.
+  intros. rewrite !mat_vec_mul_as_mat, vec_add_as_mat. now autorewrite with matrix.
+Qed.
+
+Hint Rewrite @mat_vec_mul_col_cons: matrix.
+
+Lemma mat_vec_mul_cons: forall {m n} (mat: Matrix m n) (v1 v2: Vector n),
+    mat_vec_mul (dep_cons v1 mat) v2 =
+    dep_cons (vec_dot_prod v1 v2) (mat_vec_mul mat v2).
+Proof. intros. unfold mat_vec_mul. simpl. now rewrite vec_dot_prod_comm. Qed.
+
+Hint Rewrite @mat_vec_mul_cons: matrix.
+
+Lemma mat_vec_mul_zero: forall {n}, mat_vec_mul (dep_repeat dep_nil n) dep_nil =
+                                    vec_zero.
+Proof.
+  induction n; simpl; autorewrite with matrix. 1: easy.
+  autorewrite with matrix vector. now f_equal.
+Qed.
+
+Hint Rewrite @mat_vec_mul_zero: matrix.
+
+Lemma linear_map_mat: forall {m n} (f: Vector m -> Vector n),
+    linear_map f -> forall {l} (mat: Matrix l m) (v: Vector l),
+      f (mat_vec_mul (mat_transpose mat) v) =
+      mat_vec_mul (mat_transpose (dep_map f mat)) v.
+Proof.
+  intros. revert l mat v.
+  apply dep_list_ind_2; intros; autorewrite with matrix; destruct H as [Ha Hs];
+    red in Ha, Hs.
+  - rewrite <- (vec_scal_mul_zero_r 0%R) at 1. rewrite Hs. now autorewrite with vector.
+  - simpl. autorewrite with matrix. rewrite Ha, Hs. now f_equal.
+Qed.
+
+Lemma mat_mul_as_vec_mul: forall {m l n} (m1: Matrix m l) (m2: Matrix l n),
+    mat_mul m1 m2 = mat_transpose (dep_map (mat_vec_mul m1) (mat_transpose m2)).
+Proof.
+  intros. revert m m1. apply dep_list_ind_1; intros; autorewrite with matrix. 1: easy.
+  rewrite H. generalize (mat_transpose m2) as mat. clear. revert n.
+  apply dep_list_ind_1; intros; autorewrite with matrix; simpl. 1: easy.
+  autorewrite with matrix. rewrite <- H. now autorewrite with dep_list.
+Qed.
+
+Lemma mat_vec_mul_unique: forall {m n} (m1 m2: Matrix m n),
+    (forall v, mat_vec_mul m1 v = mat_vec_mul m2 v) -> m1 = m2.
+Proof.
+  intros. cut (forall l (m3: Matrix n l), mat_mul m1 m3 = mat_mul m2 m3).
+  - intros. rewrite <- mat_mul_identity_r, <- (mat_mul_identity_r m1). apply H0.
+  - intros. rewrite !mat_mul_as_vec_mul. f_equal. generalize (mat_transpose m3) as m4.
+    clear m3. revert l. apply dep_list_ind_1; intros; simpl; [| rewrite H, H0]; easy.
+Qed.
+
+Lemma linear_map_mat_iff: forall {n m} (f: Vector n -> Vector m),
+    linear_map f <->
+    exists ! mat: Matrix m n, forall v, f v = mat_vec_mul mat v.
+Proof.
+  intros. split; intros.
+  - exists (mat_transpose (dep_map f identity_mat)).
+    assert (forall v, f v = mat_vec_mul (mat_transpose (dep_map f identity_mat)) v) by
+        (intro; rewrite <- linear_map_mat; auto; now autorewrite with matrix).
+    split; auto. intros m2 ?. apply mat_vec_mul_unique. intros.
+    now rewrite <- H0, <- H1.
+  - destruct H as [mat [? ?]]. destruct (mat_vec_mul_linear_map mat). red in H1, H2.
+    split; red; intros; rewrite !H; easy.
+Qed.
