@@ -60,6 +60,16 @@ Proof.
   now rewrite H, Rplus_opp_r.
 Qed.
 
+Lemma vec_add_neg_zero_iff: forall {n} (u v: Vector n),
+    vec_add u (vec_neg v) = vec_zero <-> u = v.
+Proof.
+  apply dep_list_ind_2; intros; autorewrite with vector. 1: easy.
+  split; intros; apply dep_cons_eq_inv in H0; destruct H0.
+  - f_equal. 2: now rewrite <- H. apply Rplus_opp_r_uniq, Ropp_eq_compat in H0.
+    rewrite !Ropp_involutive in H0. now subst.
+  - rewrite <- H in H1. rewrite H1. f_equal. subst. apply Rplus_opp_r.
+Qed.
+
 Definition vec_scal_mul (a: R) {n} (v: Vector n): Vector n := dep_map (Rmult a) v.
 
 Lemma vec_scal_mul_nil: forall a, vec_scal_mul a dep_nil = dep_nil.
@@ -184,6 +194,40 @@ Proof. intros. rewrite vec_dot_prod_comm. apply vec_dot_prod_zero_r. Qed.
 
 Hint Rewrite @vec_dot_prod_zero_l: vector.
 
+Lemma vec_dot_prod_neg_l: forall {n} (v1 v2: Vector n),
+    vec_dot_prod (vec_neg v1) v2 = (- vec_dot_prod v1 v2)%R.
+Proof.
+  apply dep_list_ind_2; intros; autorewrite with vector. 1: now rewrite Ropp_0.
+  now rewrite H, Ropp_plus_distr, Ropp_mult_distr_l.
+Qed.
+
+Hint Rewrite @vec_dot_prod_neg_l: vector.
+
+Lemma vec_dot_prod_neg_r: forall {n} (v1 v2: Vector n),
+    vec_dot_prod v1 (vec_neg v2) = (- vec_dot_prod v1 v2)%R.
+Proof.
+  intros. now rewrite vec_dot_prod_comm, vec_dot_prod_neg_l, vec_dot_prod_comm.
+Qed.
+
+Hint Rewrite @vec_dot_prod_neg_r: vector.
+
+Lemma vec_dot_prod_nonneg: forall {n} (v: Vector n), (0 <= vec_dot_prod v v)%R.
+Proof.
+  apply dep_list_ind_1; intros; autorewrite with vector.
+  - now apply Req_le.
+  - rewrite <- (Rplus_0_l 0%R). apply Rplus_le_compat; auto. apply Rle_0_sqr.
+Qed.
+
+Lemma vec_dot_prod_zero: forall {n} (v: Vector n),
+    vec_dot_prod v v = 0%R -> v = vec_zero.
+Proof.
+  intros. revert H.
+  apply dep_list_ind_1 with (v := v); intros; autorewrite with vector in *. 1: easy.
+  assert (0 <= a * a)%R by (apply Rle_0_sqr). pose proof (vec_dot_prod_nonneg v0).
+  pose proof H0. apply Rplus_eq_0_l in H0; auto. rewrite Rplus_comm in H3.
+  apply Rplus_eq_0_l, H in H3; auto. rewrite H3. f_equal. now apply Rsqr_eq_0 in H0.
+Qed.
+
 Definition preserve_vec_add {m n} (f: Vector m -> Vector n): Prop :=
   forall u v, f (vec_add u v) = vec_add (f u) (f v).
 
@@ -270,11 +314,11 @@ Qed.
 
 Definition mat_transpose {m n}: Matrix m n -> Matrix n m := dep_list_transpose.
 
-Lemma mat_transpose_involution: forall {m n} (mat: Matrix m n),
+Lemma mat_transpose_involutive: forall {m n} (mat: Matrix m n),
     mat_transpose (mat_transpose mat) = mat.
-Proof. intros. apply dep_list_transpose_involution. Qed.
+Proof. intros. apply dep_list_transpose_involutive. Qed.
 
-Hint Rewrite @mat_transpose_involution: matrix.
+Hint Rewrite @mat_transpose_involutive: matrix.
 
 Lemma mat_transpose_cons_row: forall {m n} (v: Vector n) (mat: Matrix m n),
     mat_transpose (dep_cons v mat) =
@@ -431,7 +475,7 @@ Lemma vec_to_col_to_vec: forall {n} (v: Vector n),
     col_mat_to_vec (vec_to_col_mat v) = v.
 Proof.
   intros. unfold col_mat_to_vec, vec_to_col_mat.
-  rewrite dep_list_transpose_involution. now simpl.
+  rewrite dep_list_transpose_involutive. now simpl.
 Qed.
 
 Hint Rewrite @vec_to_col_to_vec: matrix.
@@ -440,7 +484,7 @@ Lemma col_to_mat_to_col: forall {n} (mat: Matrix n 1),
     vec_to_col_mat (col_mat_to_vec mat) = mat.
 Proof.
   intros. unfold col_mat_to_vec, vec_to_col_mat.
-  rewrite <- (dep_list_transpose_involution mat) at 2.
+  rewrite <- (dep_list_transpose_involutive mat) at 2.
   generalize (dep_list_transpose mat). intros. clear. dep_list_decomp. now simpl.
 Qed.
 
@@ -450,7 +494,7 @@ Lemma mat_vec_mul_as_mat: forall {m n} (mat: Matrix m n) (v: Vector n),
     mat_vec_mul mat v = col_mat_to_vec (mat_mul mat (vec_to_col_mat v)).
 Proof.
   intros. unfold mat_vec_mul, col_mat_to_vec, mat_mul, vec_to_col_mat.
-  rewrite mat_transpose_involution, dep_hd_transpose, dep_map_nest. simpl.
+  rewrite mat_transpose_involutive, dep_hd_transpose, dep_map_nest. simpl.
   revert m mat. apply dep_list_ind_1; intros; simpl;
                   [|rewrite H, vec_dot_prod_comm]; easy.
 Qed.
@@ -707,4 +751,29 @@ Proof.
     now rewrite <- H0, <- H1.
   - destruct H as [mat [? ?]]. destruct (mat_vec_mul_linear_map mat). red in H1, H2.
     split; red; intros; rewrite !H; easy.
+Qed.
+
+Lemma mat_vec_mul_neg: forall {m n} (mat: Matrix m n) (v: Vector n),
+    mat_vec_mul mat (vec_neg v) = vec_neg (mat_vec_mul mat v).
+Proof.
+  intros. revert m mat. apply dep_list_ind_1; intros. 1: easy.
+  autorewrite with matrix vector. now rewrite H.
+Qed.
+
+Hint Rewrite @mat_vec_mul_neg: matrix.
+
+Definition preserve_dot_prod {m n} (f: Vector m -> Vector n): Prop :=
+  forall u v, vec_dot_prod (f u) (f v) = vec_dot_prod u v.
+
+Lemma preserve_dot_prod_linear: forall {m n} (f: Vector m -> Vector n),
+    preserve_dot_prod f -> linear_map f.
+Proof.
+  intros m n f. red. unfold preserve_dot_prod.
+  intros; split; red; intros; rewrite <- vec_add_neg_zero_iff; apply vec_dot_prod_zero;
+    rewrite vec_dot_prod_add_l, !vec_dot_prod_add_r, !vec_dot_prod_neg_l,
+    !vec_dot_prod_neg_r.
+  - rewrite !vec_dot_prod_add_l, !vec_dot_prod_add_r, !H, !vec_dot_prod_add_l,
+    !vec_dot_prod_add_r. ring.
+  - rewrite !vec_dot_prod_scal_l, !vec_dot_prod_scal_r, !H, !vec_dot_prod_scal_l,
+    !vec_dot_prod_scal_r. ring.
 Qed.

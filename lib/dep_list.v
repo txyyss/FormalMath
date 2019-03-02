@@ -125,6 +125,13 @@ Proof.
   intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
 Qed.
 
+Lemma dep_cons_eq_inv: forall {A n} (a1 a2: A) (l1 l2: dep_list A n),
+    dep_cons a1 l1 = dep_cons a2 l2 -> a1 = a2 /\ l1 = l2.
+Proof.
+  intros. inversion H. split; auto. apply eq_sigT_eq_dep in H2.
+  apply eq_dep_eq_dec; auto. apply Nat.eq_dec.
+Qed.
+
 Lemma dep_map_nest:
   forall {A B C: Type} (f: A -> B) (g: B -> C) {n} (dl: dep_list A n),
     dep_map g (dep_map f dl) = dep_map (fun x => g (f x)) dl.
@@ -190,7 +197,7 @@ Compute (dep_list_transpose
                      (dep_cons (dep_cons 3 (dep_cons 4 dep_nil))
                                (dep_cons (dep_cons 5 (dep_cons 6 dep_nil)) dep_nil)))).
 
-Lemma dep_list_transpose_involution: forall {A m n} (mat: dep_list (dep_list A n) m),
+Lemma dep_list_transpose_involutive: forall {A m n} (mat: dep_list (dep_list A n) m),
     dep_list_transpose (dep_list_transpose mat) = mat.
 Proof.
   intros. revert m mat. apply dep_list_ind_1. 1: apply dep_list_O_unique. intros.
