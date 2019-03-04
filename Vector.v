@@ -537,11 +537,18 @@ Proof.
   apply dep_list_ind_1; intros; autorewrite with matrix vector; [|rewrite H]; easy.
 Qed.
 
-Lemma mat_vec_mul_vec_add: forall {m n: nat} (mat: Matrix m n) (u v: Vector n),
+Lemma mat_vec_mul_add_r: forall {m n: nat} (mat: Matrix m n) (u v: Vector n),
     mat_vec_mul mat (vec_add u v) = vec_add (mat_vec_mul mat u) (mat_vec_mul mat v).
 Proof.
   intros. rewrite !vec_add_as_mat, !mat_vec_mul_as_mat. autorewrite with matrix.
   now rewrite mat_mul_add_distr_l.
+Qed.
+
+Lemma mat_vec_mul_add_l: forall {m n: nat} (m1 m2: Matrix m n) (v: Vector n),
+    mat_vec_mul (mat_add m1 m2) v = vec_add (mat_vec_mul m1 v) (mat_vec_mul m2 v).
+Proof.
+  intros. rewrite !vec_add_as_mat, !mat_vec_mul_as_mat. autorewrite with matrix.
+  now rewrite mat_mul_add_distr_r.
 Qed.
 
 Lemma mat_vec_mul_vec_scal_mul:
@@ -556,7 +563,7 @@ Lemma mat_vec_mul_linear_map:
   forall {m n} (mat: Matrix m n), linear_map (mat_vec_mul mat).
 Proof.
   intros. red. split; red; intros.
-  - apply mat_vec_mul_vec_add.
+  - apply mat_vec_mul_add_r.
   - apply mat_vec_mul_vec_scal_mul.
 Qed.
 
@@ -776,4 +783,61 @@ Proof.
     !vec_dot_prod_add_r. ring.
   - rewrite !vec_dot_prod_scal_l, !vec_dot_prod_scal_r, !H, !vec_dot_prod_scal_l,
     !vec_dot_prod_scal_r. ring.
+Qed.
+
+Lemma vec_dot_prod_mul: forall {m l n} (m1: Matrix l m) (m2: Matrix l n) v1 v2,
+    vec_dot_prod (mat_vec_mul m1 v1) (mat_vec_mul m2 v2) =
+    vec_dot_prod (mat_vec_mul (mat_mul (mat_transpose m2) m1) v1) v2.
+Proof.
+  intros. revert l m1 m2. apply dep_list_ind_2; intros; autorewrite with matrix vector.
+  - revert n v2. apply dep_list_ind_1; intros; simpl; autorewrite with matrix vector.
+    1: easy. rewrite <- H, Rplus_0_r. clear. revert m v1.
+    apply dep_list_ind_1; intros; simpl; autorewrite with vector; rewrite Rmult_0_l.
+    1: easy. now rewrite Rplus_0_l.
+  - rewrite H, mat_vec_mul_add_l, vec_dot_prod_add_r. f_equal. clear.
+    revert m a v1. apply dep_list_ind_2; intros; autorewrite with matrix vector.
+    + now rewrite Rmult_0_l.
+    + rewrite vec_dot_prod_add_r, !vec_dot_prod_scal_l, Rmult_plus_distr_r, H,
+      <- Rmult_assoc, (Rmult_comm a b0). easy.
+Qed.
+
+Lemma mat_vec_mul_preserve_dot_prod: forall {m n} (mat: Matrix m n),
+    mat_mul (mat_transpose mat) mat = identity_mat ->
+    preserve_dot_prod (mat_vec_mul mat).
+Proof.
+  intros. red. intros. rewrite vec_dot_prod_mul. rewrite H.
+  now autorewrite with matrix.
+Qed.
+
+Lemma vec_dot_prod_unique: forall {n} (v1 v2: Vector n),
+    (forall u, vec_dot_prod v1 u = vec_dot_prod v2 u) -> v1 = v2.
+Proof.
+  intros. revert H. apply dep_list_ind_2 with (v3 := v1) (v2 := v2); intros. 1: easy.
+  f_equal.
+  - specialize (H0 (dep_cons 1%R vec_zero)). autorewrite with vector in H0.
+    now rewrite !Rplus_0_r, !Rmult_1_r in H0.
+  - apply H. intros. specialize (H0 (dep_cons 0%R u)). autorewrite with vector in H0.
+    now rewrite !Rmult_0_r, !Rplus_0_l in H0.
+Qed.
+
+Lemma preserve_dot_prod_mat: forall {m n} (f: Vector n -> Vector m),
+    preserve_dot_prod f <->
+    exists ! mat: Matrix m n,
+      mat_mul (mat_transpose mat) mat = identity_mat /\
+      forall v, f v = mat_vec_mul mat v.
+Proof.
+  intros. split; intros.
+  - pose proof H. apply preserve_dot_prod_linear in H0.
+    rewrite linear_map_mat_iff in H0. destruct H0 as [mat [? ?]]. exists mat.
+    split; [split|]; auto.
+    + red in H.
+      assert (forall u v,
+                 vec_dot_prod (mat_vec_mul (mat_mul (mat_transpose mat) mat) u) v =
+                 vec_dot_prod u v) by
+          (intros; now rewrite <- vec_dot_prod_mul, <- !H0).
+      apply mat_vec_mul_unique. intros u. autorewrite with matrix.
+      now apply vec_dot_prod_unique.
+    + intros. destruct H2. now apply H1.
+  - destruct H as [mat [[? ?] ?]]. pose proof (mat_vec_mul_preserve_dot_prod _ H).
+    red in H2 |-* . intros. now rewrite !H0.
 Qed.
