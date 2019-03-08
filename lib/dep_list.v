@@ -10,6 +10,13 @@ Inductive dep_list (A: Type): nat -> Type :=
 Arguments dep_nil [_].
 Arguments dep_cons [_ _] _ _.
 
+Module DepListNotations.
+  Notation "{| |}" := dep_nil (format "{| |}"): dep_list_scope.
+  Notation "{| x |}" := (dep_cons x dep_nil): dep_list_scope.
+  Notation "{| x ; y ; .. ; z |}" :=
+    (dep_cons x (dep_cons y .. (dep_cons z dep_nil) ..)): dep_list_scope.
+End DepListNotations.
+
 Fixpoint dep_fold_left {A B: Type} {n: nat}
          (f: A -> B -> A) (dl: dep_list B n) (a: A): A :=
   match dl with
@@ -62,6 +69,12 @@ Fixpoint dep_map {A B: Type} (f: A -> B) {n: nat} (dl: dep_list A n): dep_list B
   | dep_nil => dep_nil
   | dep_cons a dl' => dep_cons (f a) (dep_map f dl')
   end.
+
+Lemma dep_map_cons: forall {A B: Type} (f: A -> B) {n: nat} (a: A) (dl: dep_list A n),
+    dep_map f (dep_cons a dl) = dep_cons (f a) (dep_map f dl).
+Proof. intros. now simpl. Qed.
+
+Hint Rewrite @dep_map_cons: dep_list.
 
 Definition dep_list_binop {A B C: Type} (f: A -> B -> C) {n: nat}
            (dl1: dep_list A n) (dl2: dep_list B n): dep_list C n :=
@@ -219,3 +232,36 @@ Proof.
   intros. revert m mat. apply dep_list_ind_1; intros. 1: easy. simpl. rewrite <- H.
   generalize (dep_list_transpose v). clear. intros. dep_list_decomp. now simpl.
 Qed.
+
+Fixpoint dep_colist {A: Type} {n: nat} (l: dep_list A (S n)):
+  dep_list (dep_list A n) (S n) :=
+  match l in (dep_list _ m) return (m = S n -> dep_list (dep_list A n) (S n)) with
+  | dep_nil => fun p => False_rect _ (O_S _ p)
+  | @dep_cons _ n0 h l' =>
+    fun p => match l' in (dep_list _ k) return
+                   (k = n0 -> dep_list (dep_list A n) (S n)) with
+             | dep_nil =>
+               fun p2 =>
+                 eq_rect_r _ (fun H4 => eq_rect 0 (fun n1 => dep_list _ (S n1))
+                                                (dep_cons dep_nil dep_nil) n H4)
+                           (eq_add_S _ _ p) p2
+             | @dep_cons _ i _ _ =>
+               fun p2 =>
+                 eq_rect
+                   n0 (fun n1 => dep_list _ (S n1))
+                   (eq_rect (S i) (fun n1 => dep_list A n1 -> _)
+                            (fun l0 => dep_cons l0 (dep_map (dep_cons h)
+                                                            (dep_colist l0))) n0 p2 l')
+                   n (eq_add_S _ _ p)
+             end (eq_refl n0)
+  end (eq_refl (S n)).
+
+Compute (dep_colist (dep_cons 1 (dep_cons 2 (dep_cons 3 (dep_cons 4 dep_nil))))).
+
+Lemma dep_colist_cons: forall {A} {n} (a: A) (l: dep_list A (S n)),
+    dep_colist (dep_cons a l) = dep_cons l (dep_map (dep_cons a) (dep_colist l)).
+Proof. intros. dep_list_decomp. easy. Qed.
+
+Lemma dep_colist_nil: forall {A} (a: A),
+    dep_colist (dep_cons a dep_nil) = dep_cons dep_nil dep_nil.
+Proof. intros. easy. Qed.

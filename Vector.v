@@ -1,6 +1,8 @@
 Require Export Coq.Reals.Reals.
 Require Export FormalMath.lib.dep_list.
 
+Import DepListNotations.
+
 Definition Vector (n: nat) := dep_list R n.
 
 Definition vec_zero {n: nat}: Vector n := dep_repeat 0%R n.
@@ -588,8 +590,8 @@ Lemma dep_map_vec_dot_prod_cons:
     vec_add (vec_scal_mul a v2) (dep_map (vec_dot_prod v1) mat).
 Proof.
   intros. revert m mat v2.
-  apply dep_list_ind_2; intros; autorewrite with vector dep_list; simpl. 1: easy.
-  autorewrite with vector. now rewrite H.
+  apply dep_list_ind_2; intros; autorewrite with vector dep_list. 1: easy.
+  unfold Vector in *. now rewrite H.
 Qed.
 
 Lemma mat_mul_identity_r:
@@ -840,4 +842,91 @@ Proof.
     + intros. destruct H2. now apply H1.
   - destruct H as [mat [[? ?] ?]]. pose proof (mat_vec_mul_preserve_dot_prod _ H).
     red in H2 |-* . intros. now rewrite !H0.
+Qed.
+
+Lemma sq_mat_left_right_inverse_eq: forall {n} (A B C: Matrix n n),
+    mat_mul B A = identity_mat -> mat_mul A C = identity_mat -> B = C.
+Proof.
+  intros. pose proof (mat_mul_assoc B A C). rewrite H, H0 in H1.
+  now autorewrite with matrix in H1.
+Qed.
+
+Fixpoint alter_sign_helper {n} (r: R) (v: Vector n): Vector n :=
+  match v with
+  | dep_nil => dep_nil
+  | dep_cons h l => dep_cons (r * h)%R (alter_sign_helper (- r)%R l)
+  end.
+
+Lemma alter_sign_helper_opp: forall {n} (r: R) (v: Vector n),
+    alter_sign_helper (- r) v = vec_scal_mul (- 1)%R (alter_sign_helper r v).
+Proof.
+  intros. revert n v. apply dep_list_ind_1; intros; simpl. 1: easy.
+  autorewrite with vector. rewrite Ropp_involutive, H, vec_scal_mul_assoc.
+  replace (-1 * -1)%R with 1%R by ring. rewrite vec_scal_mul_one. f_equal. ring.
+Qed.
+
+Definition alter_sign {n} (v: Vector n): Vector n := alter_sign_helper 1%R v.
+
+Lemma alter_sign_cons: forall {n} (a: R) (v: Vector n),
+    alter_sign (dep_cons a v) = dep_cons a (vec_scal_mul (-1)%R (alter_sign v)).
+Proof.
+  intros. unfold alter_sign. simpl. now rewrite alter_sign_helper_opp, Rmult_1_l.
+Qed.
+
+Lemma alter_sign_helper_zero: forall {n} r,
+    alter_sign_helper r (@vec_zero n) = vec_zero.
+Proof.
+  intros. induction n. 1: easy. simpl. rewrite alter_sign_helper_opp.
+  unfold vec_zero in *. rewrite IHn. autorewrite with vector. now rewrite Rmult_0_r.
+Qed.
+
+Lemma alter_sign_zero: forall {n}, alter_sign (@vec_zero n) = vec_zero.
+Proof. intros. unfold alter_sign. apply alter_sign_helper_zero. Qed.
+
+Hint Rewrite @alter_sign_zero: vector.
+
+Fixpoint det {n} (mat: Matrix n n): R :=
+  match n as x return (x = n -> R) with
+  | O => fun _ => 1%R
+  | S m =>
+    fun h1 => match mat in (dep_list _ s) return (s = n -> R) with
+              | dep_nil =>
+                fun h2 => False_rect _ (eq_ind (S m) _ (fun h3 => (O_S m h3)) _ h1 h2)
+              | @dep_cons _ n0 h l =>
+                fun h2 =>
+                  vec_dot_prod
+                    (alter_sign h)
+                    (eq_rec (S m) _
+                            (fun h3 l0 =>
+                               eq_rec_r
+                                 (fun n1 => Matrix n1 (S m) -> Vector (S m))
+                                 (fun l1 => dep_map (@det m)
+                                                    (dep_colist (mat_transpose l1)))
+                                 (eq_add_S n0 m h3) l0) n h1 h2 l)
+              end (eq_refl n)
+  end (eq_refl n).
+
+Open Scope dep_list_scope.
+
+Lemma det_cons: forall {n} (h: Vector (S n)) (l: Matrix n (S n)),
+    det (dep_cons h l) = vec_dot_prod (alter_sign h)
+                                      (dep_map det (dep_colist (mat_transpose l))).
+Proof. intros. easy. Qed.
+
+Lemma determinant_for_2: forall (a b c d: R),
+    det {| {| a; b |} ; {| c; d |} |} = (a * d - b * c)%R.
+Proof. intros. vm_compute. ring. Qed.
+
+Lemma determinant_for_3: forall (a b c d e f g h i: R),
+    det {| {| a; b; c |}; {| d; e; f |}; {| g; h; i |} |} =
+    (a * e * i + b * f * g + c * d * h - c * e * g - b * d * i - a * f * h)%R.
+Proof. intros. vm_compute. ring. Qed.
+
+Lemma det_identity: forall {n}, det (@identity_mat n) = 1%R.
+Proof.
+  induction n. 1: now simpl. simpl identity_mat. rewrite det_cons.
+  autorewrite with matrix. destruct n.
+  - simpl. vm_compute. ring.
+  - rewrite dep_colist_cons, alter_sign_cons. autorewrite with dep_list vector.
+    now rewrite IHn, Rmult_1_r, Rplus_0_r.
 Qed.
