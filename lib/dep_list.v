@@ -1,3 +1,6 @@
+(** Lɪʙʀᴀʀʏ ᴏғ Lᴇɴɢᴛʜ-Iɴᴅᴇxᴇᴅ Lɪsᴛ *)
+(** Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
+
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
@@ -24,8 +27,6 @@ Fixpoint dep_fold_left {A B: Type} {n: nat}
   | dep_cons b dl' => dep_fold_left f dl' (f a b)
   end.
 
-Eval compute in (dep_fold_left Nat.add (dep_cons 2 (dep_cons 1 dep_nil)) O).
-
 Fixpoint dep_fold_right {A B: Type} {n: nat}
          (f: B -> A -> A) (dl: dep_list B n) (a: A): A :=
   match dl with
@@ -33,12 +34,8 @@ Fixpoint dep_fold_right {A B: Type} {n: nat}
   | dep_cons b dl' => f b (dep_fold_right f dl' a)
   end.
 
-Eval compute in (dep_fold_right Nat.sub (dep_cons 2 (dep_cons 1 dep_nil)) O).
-
 Definition dep_list_to_list {A: Type} {n: nat} (dl: dep_list A n): list A :=
   dep_fold_right cons dl nil.
-
-Eval compute in (dep_list_to_list (dep_cons 2 (dep_cons 1 dep_nil))).
 
 Fixpoint dep_app {A: Type} {n m: nat} (dl1: dep_list A n) (dl2: dep_list A m):
   dep_list A (n + m) :=
@@ -61,9 +58,6 @@ Fixpoint dep_zip {A B: Type} {n: nat} (dl: dep_list A n):
                end (eq_refl (S m))
   end.
 
-Eval compute in dep_zip (dep_cons 1 (dep_cons 2 (dep_cons 3 dep_nil)))
-                        (dep_cons 4 (dep_cons 5 (dep_cons 6 dep_nil))).
-
 Fixpoint dep_map {A B: Type} (f: A -> B) {n: nat} (dl: dep_list A n): dep_list B n :=
   match dl with
   | dep_nil => dep_nil
@@ -78,7 +72,7 @@ Hint Rewrite @dep_map_cons: dep_list.
 
 Definition dep_list_binop {A B C: Type} (f: A -> B -> C) {n: nat}
            (dl1: dep_list A n) (dl2: dep_list B n): dep_list C n :=
-  dep_map (fun p: (A * B) => f (fst p) (snd p)) (dep_zip dl1 dl2).
+  dep_map (fun p: A * B => f (fst p) (snd p)) (dep_zip dl1 dl2).
 
 Lemma dep_list_O_unique: forall {A} (v: dep_list A O), v = dep_nil.
 Proof.
@@ -140,6 +134,19 @@ Lemma dep_list_ind_3: forall
           P (S n) (dep_cons a v1) (dep_cons b v2) (dep_cons c v3)) ->
     forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n),
       P n v1 v2 v3.
+Proof.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
+Qed.
+
+Lemma dep_list_ind_4: forall
+    {A B C D} (P: forall n, dep_list A n -> dep_list B n ->
+                            dep_list C n -> dep_list D n -> Prop),
+    P O dep_nil dep_nil dep_nil dep_nil ->
+    (forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n)
+            (v4: dep_list D n), P n v1 v2 v3 v4 -> forall (a: A) (b: B) (c: C) (d: D),
+          P (S n) (dep_cons a v1) (dep_cons b v2) (dep_cons c v3) (dep_cons d v4)) ->
+    forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n)
+           (v4: dep_list D n), P n v1 v2 v3 v4.
 Proof.
   intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
 Qed.
@@ -324,7 +331,7 @@ Qed.
 
 Lemma dep_colist_cons_col:
   forall {A} {m n} (v: dep_list A (S n)) (mat: dep_list (dep_list A m) (S n)),
-    dep_colist (dep_list_binop (dep_cons (n := m)) v mat) = 
+    dep_colist (dep_list_binop (dep_cons (n := m)) v mat) =
     dep_list_binop (dep_list_binop (dep_cons (n := m)))
                    (dep_colist v) (dep_colist mat).
 Proof.
@@ -474,4 +481,135 @@ Lemma dep_map_double_nest:
     dep_map (dep_map (fun x => f (g x))) mat.
 Proof.
   intros. rewrite dep_map_nest. apply dep_map_ext. intros. now rewrite dep_map_nest.
+Qed.
+
+Lemma dep_transpose_app: forall {A m n l} (m1: dep_list (dep_list A l) m)
+                                       (m2: dep_list (dep_list A l) n),
+    dep_list_transpose (dep_app m1 m2) =
+    dep_list_binop dep_app (dep_list_transpose m1) (dep_list_transpose m2).
+Proof.
+  intros. revert m m1. apply dep_list_ind_1; intros; simpl.
+  - generalize (dep_list_transpose m2). clear. revert l.
+    apply dep_list_ind_1. 1: easy. intros. simpl. autorewrite with dep_list.
+    rewrite <- H. now simpl.
+  - rewrite H. generalize (dep_list_transpose v). generalize (dep_list_transpose m2).
+    clear. revert l a. apply dep_list_ind_3. 1: easy. intros.
+    autorewrite with dep_list. simpl. f_equal. apply H.
+Qed.
+
+Lemma dep_list_binop_nest_app:
+  forall {A m n l k} (m0 : dep_list A m) (m1 : dep_list A n)
+         (m3 : dep_list (dep_list (dep_list A m) l) k)
+         (m4 : dep_list (dep_list (dep_list A n) l) k),
+    dep_map (dep_cons (dep_app m0 m1))
+            (dep_list_binop (dep_list_binop dep_app) m3 m4) =
+    dep_list_binop (dep_list_binop dep_app) (dep_map (dep_cons m0) m3)
+                   (dep_map (dep_cons m1) m4).
+Proof.
+  intros. revert k m3 m4. apply dep_list_ind_2; intros; autorewrite with dep_list.
+  1: easy. f_equal. apply H.
+Qed.
+
+Lemma dep_colist_app: forall {A m n l} (m1 : dep_list (dep_list A m) (S l))
+                             (m2 : dep_list (dep_list A n) (S l)),
+    dep_colist (dep_list_binop dep_app m1 m2) =
+    dep_list_binop (dep_list_binop dep_app) (dep_colist m1) (dep_colist m2).
+Proof.
+  intros. induction l; intros.
+  - dep_list_decomp. autorewrite with dep_list. easy.
+  - dep_step_decomp m1. dep_step_decomp m2. autorewrite with dep_list. f_equal.
+    rewrite IHl. apply dep_list_binop_nest_app.
+Qed.
+
+Definition dep_list_triop {A B C D: Type} (f: A -> B -> C -> D) {n: nat}
+           (dl1: dep_list A n) (dl2: dep_list B n) (dl3: dep_list C n): dep_list D n :=
+  dep_map (fun p: A * (B * C) => f (fst p) (fst (snd p)) (snd (snd p)))
+          (dep_zip dl1 (dep_zip dl2 dl3)).
+
+Lemma dep_list_triop_nil: forall {A B C D} (f: A -> B -> C -> D),
+    dep_list_triop f dep_nil dep_nil dep_nil = dep_nil.
+Proof. intros. unfold dep_list_triop. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_triop_nil: dep_list.
+
+Lemma dep_list_triop_cons: forall
+    {A B C D} {n: nat} (a: A) (b: B) (c: C)
+    (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n) (f: A -> B -> C -> D),
+    dep_list_triop f (dep_cons a v1) (dep_cons b v2) (dep_cons c v3) =
+    dep_cons (f a b c) (dep_list_triop f v1 v2 v3).
+Proof. intros. unfold dep_list_triop. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_triop_cons: dep_list.
+
+Lemma dep_list_binop_triop: forall
+    {A B C D E n} (f: A -> D -> E) (g: B -> C -> D) (l1: dep_list A n)
+    (l2: dep_list B n) (l3: dep_list C n),
+    dep_list_binop f l1 (dep_list_binop g l2 l3) =
+    dep_list_triop (fun x y z => f x (g y z)) l1 l2 l3.
+Proof.
+  intros. revert n l1 l2 l3. apply dep_list_ind_3; intros; autorewrite with dep_list.
+  1: easy. now rewrite H.
+Qed.
+
+Lemma dep_list_triop_ext: forall
+    {A B C D} (g f: A -> B -> C -> D) {n: nat}
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n),
+    (forall x y z, f x y z = g x y z) ->
+    dep_list_triop f l1 l2 l3 = dep_list_triop g l1 l2 l3.
+Proof.
+  intros. revert n l1 l2 l3. apply dep_list_ind_3; intros; autorewrite with dep_list.
+  1: easy. now rewrite H, H0.
+Qed.
+
+Definition dep_list_quadruple {A B C D E: Type} (f: A -> B -> C -> D -> E) {n: nat}
+           (dl1: dep_list A n) (dl2: dep_list B n) (dl3: dep_list C n)
+           (dl4: dep_list D n): dep_list E n :=
+  dep_map (fun p: A * (B * (C * D)) =>
+             f (fst p) (fst (snd p)) (fst (snd (snd p))) (snd (snd (snd p))))
+          (dep_zip dl1 (dep_zip dl2 (dep_zip dl3 dl4))).
+
+Lemma dep_list_quadruple_nil: forall {A B C D E} (f: A -> B -> C -> D -> E),
+    dep_list_quadruple f dep_nil dep_nil dep_nil dep_nil = dep_nil.
+Proof. intros. unfold dep_list_quadruple. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_quadruple_nil: dep_list.
+
+Lemma dep_list_quadruple_cons: forall
+    {A B C D E} {n: nat} (a: A) (b: B) (c: C) (d: D) (f: A -> B -> C -> D -> E)
+    (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n) (v4: dep_list D n),
+    dep_list_quadruple
+      f (dep_cons a v1) (dep_cons b v2) (dep_cons c v3) (dep_cons d v4) =
+    dep_cons (f a b c d) (dep_list_quadruple f v1 v2 v3 v4).
+Proof. intros. unfold dep_list_quadruple. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_quadruple_cons: dep_list.
+
+Lemma dep_list_triop_quadruple: forall
+    {A B C D E F n} (f: A -> D -> E -> F) (g: B -> C -> D)
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list E n),
+    dep_list_triop f l1 (dep_list_binop g l2 l3) l4 =
+    dep_list_quadruple (fun x y z w => f x (g y z) w) l1 l2 l3 l4.
+Proof.
+  intros. revert n l1 l2 l3 l4.
+  apply dep_list_ind_4; intros; autorewrite with dep_list; [|rewrite H]; easy.
+Qed.
+
+Lemma dep_list_quadruple_ext: forall
+    {A B C D E} (g f: A -> B -> C -> D -> E) {n: nat}
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n),
+    (forall x y z w, f x y z w = g x y z w) ->
+    dep_list_quadruple f l1 l2 l3 l4 = dep_list_quadruple g l1 l2 l3 l4.
+Proof.
+  intros. revert n l1 l2 l3 l4.
+  apply dep_list_ind_4; intros; autorewrite with dep_list; [| rewrite H, H0]; easy.
+Qed.
+
+Lemma dep_list_quadruple_split: forall
+    {A B C D E F G n} (f: A -> B -> D -> E) (g: A -> C -> D -> F) (h: E -> F -> G)
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n),
+    dep_list_quadruple (fun x y z w => h (f x y w) (g x z w)) l1 l2 l3 l4 =
+    dep_list_binop h (dep_list_triop f l1 l2 l4) (dep_list_triop g l1 l3 l4).
+Proof.
+  intros. revert n l1 l2 l3 l4.
+  apply dep_list_ind_4; intros; autorewrite with dep_list; [|rewrite H]; easy.
 Qed.

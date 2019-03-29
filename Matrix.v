@@ -1,7 +1,13 @@
+(** Lɪʙʀᴀʀʏ ᴏғ Mᴀᴛʀɪx Tʜᴇᴏʀʏ Bᴀsᴇᴅ ᴏɴ Dᴇᴘᴇɴᴅᴇɴᴛ Tʏᴘᴇs *)
+(** Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
+
 Require Export Coq.Reals.Reals.
+Require Import Coq.Logic.EqdepFacts.
 Require Export FormalMath.lib.dep_list.
 
 Import DepListNotations.
+
+(** * Vector *)
 
 Definition Vector (n: nat) := dep_list R n.
 
@@ -126,23 +132,32 @@ Proof.
   now rewrite H, Rmult_plus_distr_r.
 Qed.
 
-Definition vec_dot_prod {n} (v1 v2: Vector n) :=
-  dep_fold_left Rplus (dep_list_binop Rmult v1 v2) 0%R.
+Definition vec_sum {n} (v: Vector n) := dep_fold_left Rplus v 0%R.
+
+Lemma vec_sum_nil: vec_sum dep_nil = 0%R. Proof. vm_compute. easy. Qed.
+
+Hint Rewrite vec_sum_nil: vector.
+
+Lemma vec_sum_cons: forall {n} a (v: Vector n),
+    vec_sum (dep_cons a v) = (a + vec_sum v)%R.
+Proof.
+  intros. unfold vec_sum. simpl. rewrite Rplus_0_l. revert a.
+  apply dep_list_ind_1 with (v := v); simpl; intros. 1: now rewrite Rplus_0_r.
+  rewrite H, (H (0 + a)%R). ring.
+Qed.
+
+Hint Rewrite @vec_sum_cons: vector.
+
+Definition vec_dot_prod {n} (v1 v2: Vector n) := vec_sum (dep_list_binop Rmult v1 v2).
 
 Lemma vec_dot_prod_nil: vec_dot_prod dep_nil dep_nil = 0%R.
-Proof. unfold vec_dot_prod. autorewrite with dep_list. simpl. easy. Qed.
+Proof. unfold vec_dot_prod. now autorewrite with vector dep_list. Qed.
 
 Hint Rewrite vec_dot_prod_nil: vector.
 
 Lemma vec_dot_prod_cons: forall a b {n} (v1 v2: Vector n),
     vec_dot_prod (dep_cons a v1) (dep_cons b v2) = (a * b + vec_dot_prod v1 v2)%R.
-Proof.
-  intros. unfold vec_dot_prod. autorewrite with dep_list. simpl.
-  generalize (dep_list_binop Rmult v1 v2) as v. clear v1 v2.
-  generalize (a * b)%R as r. clear a b. intros. rewrite Rplus_0_l. revert r.
-  apply dep_list_ind_1 with (v := v); simpl; intros. 1: now rewrite Rplus_0_r.
-  rewrite H, (H (0 + a)%R), Rplus_0_l. apply Rplus_assoc.
-Qed.
+Proof. intros. unfold vec_dot_prod. now autorewrite with vector dep_list. Qed.
 
 Hint Rewrite @vec_dot_prod_cons: vector.
 
@@ -238,6 +253,8 @@ Definition preserve_vec_scal_mul {m n} (f: Vector m -> Vector n): Prop :=
 
 Definition linear_map {m n} (f: Vector m -> Vector n): Prop :=
   preserve_vec_add f /\ preserve_vec_scal_mul f.
+
+(** * General Matrix Theory *)
 
 Definition Matrix (m n: nat) := dep_list (dep_list R n) m.
 
@@ -850,6 +867,8 @@ Proof.
   now autorewrite with matrix in H1.
 Qed.
 
+(** * Square Matrix Theory *)
+
 Fixpoint alter_sign_helper {n} (r: R) (v: Vector n): Vector n :=
   match v with
   | dep_nil => dep_nil
@@ -885,6 +904,22 @@ Lemma alter_sign_zero: forall {n}, alter_sign (@vec_zero n) = vec_zero.
 Proof. intros. unfold alter_sign. apply alter_sign_helper_zero. Qed.
 
 Hint Rewrite @alter_sign_zero: vector.
+
+Lemma alter_sign_scal_mul: forall {n} (a: R) (v: Vector n),
+    alter_sign (vec_scal_mul a v) = vec_scal_mul a (alter_sign v).
+Proof.
+  intros. revert n v. apply dep_list_ind_1; intros; autorewrite with vector. 1: easy.
+  rewrite H, !vec_scal_mul_assoc. do 2 f_equal. ring.
+Qed.
+
+Lemma alter_sign_vec_add: forall {n} (v1 v2: Vector n),
+    alter_sign (vec_add v1 v2) = vec_add (alter_sign v1) (alter_sign v2).
+Proof.
+  intros. revert n v1 v2. apply dep_list_ind_2; intros; autorewrite with vector.
+  1: easy. rewrite H, vec_scal_mul_add_distr_l. easy.
+Qed.
+
+(** * Determinant of Square Matrix *)
 
 Fixpoint det {n} (mat: Matrix n n): R :=
   match n as x return (x = n -> R) with
@@ -937,31 +972,112 @@ Lemma det_transpose: forall {n} (A: Matrix n n), det (mat_transpose A) = det A.
 Proof.
   intro n. assert (n <= n) by (apply le_n). remember n as m. rewrite Heqm in H at 2.
   clear Heqm. revert m H. induction n; intros. 1: apply le_n_0_eq in H; now subst.
-  destruct m. 1: easy. apply le_S_n in H.
-  destruct (dep_list_S_decompose A) as [?A [?A ?]]; subst A.
-  autorewrite with matrix. remember (mat_transpose A1) as A.
-  clear A1 HeqA. destruct (dep_list_S_decompose A) as [?A [?A ?]]; subst A. destruct m.
+  destruct m. 1: easy. apply le_S_n in H. unfold Matrix in *. dep_step_decomp A.
+  autorewrite with matrix. remember (mat_transpose A1) as A. unfold Matrix in *.
+  clear A1 HeqA. dep_step_decomp A. destruct m.
   - dep_list_decomp. rewrite dep_colist_nil. simpl. f_equal.
-  - autorewrite with dep_list.
-    destruct (dep_list_S_decompose A0) as [?A [?A ?]]; subst A0.
+  - autorewrite with dep_list. dep_step_decomp A0.
     autorewrite with vector dep_list matrix. rewrite IHn, !vec_dot_prod_scal_l; auto.
-    do 2 f_equal. clear A. rewrite !dep_map_nest.
+    do 2 f_equal. clear A3. rewrite !dep_map_nest.
     rewrite (dep_map_ext (fun x => vec_dot_prod
-                                     (alter_sign A3)
+                                     (alter_sign A4)
                                      (dep_map det (dep_colist (mat_transpose x))))
-                         (fun x => det (dep_cons A3 x))) by
+                         (fun x => det (dep_cons A4 x))) by
         (intros; now rewrite det_cons).
     rewrite (dep_map_ext (fun x => vec_dot_prod
                                      (alter_sign A1)
                                      (dep_map det (dep_colist (mat_transpose x))))
                          (fun x => det (dep_cons A1 x))) by
         (intros; now rewrite det_cons).
-    rewrite <- (dep_map_nest (vec_dot_prod (alter_sign A3))),
+    rewrite <- (dep_map_nest (vec_dot_prod (alter_sign A4))),
     <- (dep_map_nest (vec_dot_prod (alter_sign A1))), <- (dep_map_nest (dep_map det)),
     <- (dep_map_nest (dep_map det) (fun x : dep_list (Vector (S m)) m =>
                                       (dep_colist (mat_transpose x)))).
-    rewrite vec_dot_prod_nest. do 2 f_equal. clear A1 A3. unfold Matrix, Vector.
+    rewrite vec_dot_prod_nest. do 2 f_equal. clear A1 A4. unfold Matrix, Vector.
     unfold mat_transpose in *. rewrite dep_list_transpose_double_map, dep_colist_nest.
     rewrite dep_map_double_nest. apply dep_map_ext. intros. apply dep_map_ext, IHn.
     now apply le_Sn_le.
+Qed.
+
+Lemma dep_colist_mat_mul: forall {m l n} (m1: Matrix (S m) l) (m2: Matrix l n),
+    dep_colist (mat_mul m1 m2) = dep_map (fun x => mat_mul x m2) (dep_colist m1).
+Proof.
+  intros. revert m m1. induction m; intros; unfold Matrix in *.
+  - dep_list_decomp. now autorewrite with matrix dep_list.
+  - dep_step_decomp m1. autorewrite with matrix dep_list. rewrite IHm. f_equal.
+    rewrite !dep_map_nest. apply dep_map_ext. intros. now autorewrite with matrix.
+Qed.
+
+Lemma dep_colist_scal: forall {m} (a: R) (v: Vector (S m)),
+    dep_colist (vec_scal_mul a v) = dep_map (vec_scal_mul a) (dep_colist v).
+Proof.
+  intros. induction m; unfold Vector in *.
+  - dep_list_decomp. now vm_compute.
+  - dep_step_decomp v. autorewrite with vector dep_list. f_equal. rewrite IHm.
+    rewrite !dep_map_nest. apply dep_map_ext. intros. now autorewrite with vector.
+Qed.
+
+Lemma det_row_mul: forall {n m: nat} (a: R) (m1: Matrix n (n + S m))
+                          (m2: Matrix m (n + S m)) (r: Vector (n + S m)),
+    det (dep_app m1 (dep_cons (vec_scal_mul a r) m2)) =
+    (a * det (dep_app m1 (dep_cons r m2)))%R.
+Proof.
+  induction n; intros; unfold Matrix in *; dep_list_decomp.
+  - simpl. now rewrite alter_sign_scal_mul, vec_dot_prod_scal_l.
+  - revert m2 r m0 m3.
+    cut (forall (m2 : dep_list (dep_list R (S (n + S m))) m) (r : Vector (S (n + S m)))
+                (m0 : dep_list R (S (n + S m)))
+                (m3 : dep_list (dep_list R (S (n + S m))) n),
+            det (dep_app (dep_cons m0 m3) (dep_cons (vec_scal_mul a r) m2)) =
+            (a * det (dep_app (dep_cons m0 m3) (dep_cons r m2)))%R).
+    1: intros; apply H. intros. simpl dep_app. autorewrite with matrix.
+    rewrite <- vec_dot_prod_scal_r. f_equal. clear m0. unfold mat_transpose.
+    rewrite !dep_transpose_app, !dep_colist_app. simpl.
+    rewrite !dep_colist_cons_col, dep_colist_scal, <- dep_list_binop_map_1.
+    unfold vec_scal_mul at 2. rewrite !dep_map_list_binop, !dep_list_binop_triop.
+    apply dep_list_triop_ext. clear -IHn. intros.
+    rewrite <- (dep_list_transpose_involutive x), <- (dep_list_transpose_involutive z).
+    generalize (dep_list_transpose x). generalize (dep_list_transpose z). clear -IHn.
+    intros x z. rewrite <- !mat_transpose_cons_row. unfold mat_transpose.
+    rewrite <- !dep_transpose_app, !det_transpose. apply IHn.
+Qed.
+
+Lemma dep_colist_vec_add: forall {n} (v1 v2: Vector (S n)),
+    dep_colist (vec_add v1 v2) =
+    dep_list_binop vec_add (dep_colist v1) (dep_colist v2).
+Proof.
+  intros. induction n; unfold Vector in *.
+  - dep_list_decomp. now vm_compute.
+  - dep_step_decomp v1. dep_step_decomp v2. autorewrite with vector dep_list. f_equal.
+    rewrite IHn, <- dep_list_binop_map_1, <- dep_list_binop_map_2, dep_map_list_binop.
+    apply dep_list_binop_ext. intros. now autorewrite with vector.
+Qed.
+
+Lemma det_row_add: forall {n m: nat} (m1: Matrix n (n + S m))
+                          (m2: Matrix m (n + S m)) (r1 r2: Vector (n + S m)),
+    det (dep_app m1 (dep_cons (vec_add r1 r2) m2)) =
+    (det (dep_app m1 (dep_cons r1 m2)) + det (dep_app m1 (dep_cons r2 m2)))%R.
+Proof.
+  induction n; intros; unfold Matrix in *; dep_list_decomp.
+  - simpl dep_app. revert m2 r1 r2.
+    cut (forall (m2 : dep_list (dep_list R (S m)) m) (r1 r2 : Vector (S m)),
+            det (dep_cons (vec_add r1 r2) m2) =
+            (det (dep_cons r1 m2) + det (dep_cons r2 m2))%R); intros. 1: apply H.
+    autorewrite with matrix. now rewrite alter_sign_vec_add, vec_dot_prod_add_r.
+  - revert m2 r1 r2 m0 m3.
+    cut (forall (m2 : dep_list (dep_list R (S (n + S m))) m)
+                (r1 r2 : Vector (S (n + S m)))
+                (m0 : dep_list R (S (n + S m)))
+                (m3 : dep_list (dep_list R (S (n + S m))) n),
+            det (dep_app (dep_cons m0 m3) (dep_cons (vec_add r1 r2) m2)) =
+            (det (dep_app (dep_cons m0 m3) (dep_cons r1 m2)) +
+             det (dep_app (dep_cons m0 m3) (dep_cons r2 m2)))%R); intros. 1: apply H.
+    simpl dep_app. autorewrite with matrix. rewrite <- vec_dot_prod_add_l. f_equal.
+    clear m0. unfold mat_transpose. rewrite !dep_transpose_app, !dep_colist_app. simpl.
+    rewrite !dep_colist_cons_col, dep_colist_vec_add, !dep_map_list_binop.
+    rewrite !dep_list_binop_triop, dep_list_triop_quadruple.
+    unfold vec_add at 2. rewrite <- dep_list_quadruple_split.
+    apply dep_list_quadruple_ext. intros. rewrite <- (mat_transpose_involutive w),
+    <- (mat_transpose_involutive x), <- !mat_transpose_cons_row. unfold mat_transpose.
+    rewrite <- !dep_transpose_app, !det_transpose. apply IHn.
 Qed.
