@@ -151,6 +151,44 @@ Proof.
   intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
 Qed.
 
+Lemma dep_list_ind_5: forall
+    {A B C D E} (P: forall n, dep_list A n -> dep_list B n ->
+                              dep_list C n -> dep_list D n -> dep_list E n -> Prop),
+    P O dep_nil dep_nil dep_nil dep_nil dep_nil ->
+    (forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n)
+            (v4: dep_list D n) (v5: dep_list E n),
+        P n v1 v2 v3 v4 v5 ->
+        forall (a: A) (b: B) (c: C) (d: D) (e: E),
+          P (S n) (dep_cons a v1) (dep_cons b v2) (dep_cons c v3)
+            (dep_cons d v4) (dep_cons e v5)) ->
+    forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n)
+           (v4: dep_list D n) (v5: dep_list E n), P n v1 v2 v3 v4 v5.
+Proof.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
+Qed.
+
+Lemma dep_list_ind_6: forall
+    {A B C D E F}
+    (P: forall n, dep_list A n -> dep_list B n -> dep_list C n -> dep_list D n ->
+                  dep_list E n -> dep_list F n -> Prop),
+    P O dep_nil dep_nil dep_nil dep_nil dep_nil dep_nil ->
+    (forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n)
+            (v4: dep_list D n) (v5: dep_list E n) (v6: dep_list F n),
+        P n v1 v2 v3 v4 v5 v6->
+        forall (a: A) (b: B) (c: C) (d: D) (e: E) (f: F),
+          P (S n) (dep_cons a v1) (dep_cons b v2) (dep_cons c v3)
+            (dep_cons d v4) (dep_cons e v5) (dep_cons f v6)) ->
+    forall (n: nat) (v1: dep_list A n) (v2: dep_list B n) (v3: dep_list C n)
+           (v4: dep_list D n) (v5: dep_list E n) (v6: dep_list F n),
+      P n v1 v2 v3 v4 v5 v6.
+Proof.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
+Qed.
+
+Lemma dep_cons_app: forall {A n m} (a: A) (l1: dep_list A n) (l2: dep_list A m),
+    dep_cons a (dep_app l1 l2) = dep_app (dep_cons a l1) l2.
+Proof. intros. now simpl dep_app. Qed.
+
 Lemma dep_cons_eq_inv: forall {A n} (a1 a2: A) (l1 l2: dep_list A n),
     dep_cons a1 l1 = dep_cons a2 l2 -> a1 = a2 /\ l1 = l2.
 Proof.
@@ -631,3 +669,111 @@ Lemma dep_list_quadruple_const: forall
 Proof. intros. unfold dep_list_quadruple. now autorewrite with dep_list. Qed.
 
 Hint Rewrite @dep_list_quadruple_const: dep_list.
+
+Definition dep_list_quintuple {A B C D E F: Type} (f: A -> B -> C -> D -> E -> F)
+           {n: nat} (dl1: dep_list A n) (dl2: dep_list B n) (dl3: dep_list C n)
+           (dl4: dep_list D n) (dl5: dep_list E n): dep_list F n :=
+  dep_map (fun p: A * (B * (C * (D * E))) =>
+             f (fst p) (fst (snd p)) (fst (snd (snd p))) (fst (snd (snd (snd p))))
+               (snd (snd (snd (snd p)))))
+          (dep_zip dl1 (dep_zip dl2 (dep_zip dl3 (dep_zip dl4 dl5)))).
+
+Lemma dep_list_quintuple_nil: forall {A B C D E F} (f: A -> B -> C -> D -> E -> F),
+    dep_list_quintuple f dep_nil dep_nil dep_nil dep_nil dep_nil = dep_nil.
+Proof. intros. unfold dep_list_quintuple. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_quintuple_nil: dep_list.
+
+Lemma dep_list_quintuple_cons: forall
+    {A B C D E F} {n: nat} (a: A) (b: B) (c: C) (d: D) (e: E)
+    (f: A -> B -> C -> D -> E -> F) (v1: dep_list A n) (v2: dep_list B n)
+    (v3: dep_list C n) (v4: dep_list D n) (v5: dep_list E n),
+    dep_list_quintuple
+      f (dep_cons a v1) (dep_cons b v2) (dep_cons c v3) (dep_cons d v4) (dep_cons e v5)
+    = dep_cons (f a b c d e) (dep_list_quintuple f v1 v2 v3 v4 v5).
+Proof. intros. unfold dep_list_quintuple. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_quintuple_cons: dep_list.
+
+Lemma dep_list_triop_quintuple: forall
+    {A B C D E F G n} (f: A -> B -> F -> G) (g: C -> D -> E -> F) (l1: dep_list A n)
+    (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n) (l5: dep_list E n),
+    dep_list_triop f l1 l2 (dep_list_triop g l3 l4 l5) =
+    dep_list_quintuple (fun x y z w v => f x y (g z w v)) l1 l2 l3 l4 l5.
+Proof.
+  intros. revert n l1 l2 l3 l4 l5.
+  apply dep_list_ind_5; intros; autorewrite with dep_list; [|rewrite H]; easy.
+Qed.
+
+Lemma dep_list_quintuple_ext: forall
+    {A B C D E F n} (g f: A -> B -> C -> D -> E -> F) (l1: dep_list A n)
+    (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n) (l5: dep_list E n),
+    (forall x y z w v, f x y z w v = g x y z w v) ->
+    dep_list_quintuple f l1 l2 l3 l4 l5 = dep_list_quintuple g l1 l2 l3 l4 l5.
+Proof.
+  intros. revert n l1 l2 l3 l4 l5.
+  apply dep_list_ind_5; intros; autorewrite with dep_list; [|rewrite H, H0]; easy.
+Qed.
+
+Definition dep_list_sextuple {A B C D E F G: Type} (f: A -> B -> C -> D -> E -> F -> G)
+           {n: nat} (dl1: dep_list A n) (dl2: dep_list B n) (dl3: dep_list C n)
+           (dl4: dep_list D n) (dl5: dep_list E n) (dl6: dep_list F n): dep_list G n :=
+  dep_map (fun p: A * (B * (C * (D * (E * F)))) =>
+             f (fst p) (fst (snd p)) (fst (snd (snd p))) (fst (snd (snd (snd p))))
+               (fst (snd (snd (snd (snd p))))) (snd (snd (snd (snd (snd p))))))
+          (dep_zip dl1 (dep_zip dl2 (dep_zip dl3 (dep_zip dl4 (dep_zip dl5 dl6))))).
+
+Lemma dep_list_sextuple_nil: forall {A B C D E F G}
+                                    (f: A -> B -> C -> D -> E -> F -> G),
+    dep_list_sextuple f dep_nil dep_nil dep_nil dep_nil dep_nil dep_nil = dep_nil.
+Proof. intros. unfold dep_list_sextuple. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_sextuple_nil: dep_list.
+
+Lemma dep_list_sextuple_cons: forall
+    {A B C D E F G} {n: nat} (a: A) (b: B) (c: C) (d: D) (e: E) (f: F)
+    (fn: A -> B -> C -> D -> E -> F -> G) (v1: dep_list A n) (v2: dep_list B n)
+    (v3: dep_list C n) (v4: dep_list D n) (v5: dep_list E n) (v6: dep_list F n),
+    dep_list_sextuple
+      fn (dep_cons a v1) (dep_cons b v2) (dep_cons c v3) (dep_cons d v4)
+      (dep_cons e v5) (dep_cons f v6) =
+    dep_cons (fn a b c d e f) (dep_list_sextuple fn v1 v2 v3 v4 v5 v6).
+Proof. intros. unfold dep_list_sextuple. simpl. easy. Qed.
+
+Hint Rewrite @dep_list_sextuple_cons: dep_list.
+
+Lemma dep_list_tri_quad_sextuple: forall
+    {A B C D E F G H n} (f: A -> B -> G -> H) (g: C -> D -> E -> F -> G)
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n)
+    (l5: dep_list E n) (l6: dep_list F n),
+    dep_list_triop f l1 l2 (dep_list_quadruple g l3 l4 l5 l6) =
+    dep_list_sextuple (fun x y z w v u => f x y (g z w v u)) l1 l2 l3 l4 l5 l6.
+Proof.
+  intros. revert n l1 l2 l3 l4 l5 l6.
+  apply dep_list_ind_6; intros; autorewrite with dep_list; [|rewrite H0]; easy.
+Qed.
+
+Lemma dep_list_sextuple_ext: forall
+    {A B C D E F G n} (g f: A -> B -> C -> D -> E -> F -> G)
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n)
+    (l5: dep_list E n) (l6: dep_list F n),
+    (forall x y z w v u, f x y z w v u = g x y z w v u) ->
+    dep_list_sextuple f l1 l2 l3 l4 l5 l6 = dep_list_sextuple g l1 l2 l3 l4 l5 l6.
+Proof.
+  intros. revert n l1 l2 l3 l4 l5 l6.
+  apply dep_list_ind_6; intros; autorewrite with dep_list; [|rewrite H, H0]; easy.
+Qed.
+
+Lemma dep_list_sextuple_split: forall
+    {A B C D E F G H I n} (f: A -> B -> C -> D -> F -> G)
+    (g: A -> B -> C -> E -> F -> H) (h: G -> H -> I)
+    (l1: dep_list A n) (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n)
+    (l5: dep_list E n) (l6: dep_list F n),
+    dep_list_sextuple (fun x y z w v u => h (f x y z w u) (g x y z v u))
+                      l1 l2 l3 l4 l5 l6 =
+    dep_list_binop h (dep_list_quintuple f l1 l2 l3 l4 l6)
+                   (dep_list_quintuple g l1 l2 l3 l5 l6).
+Proof.
+  intros. revert n l1 l2 l3 l4 l5 l6.
+  apply dep_list_ind_6; intros; autorewrite with dep_list; [|rewrite H0]; easy.
+Qed.
