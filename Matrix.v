@@ -1074,10 +1074,105 @@ Proof.
              det (dep_app (dep_cons m0 m3) (dep_cons r2 m2)))%R); intros. 1: apply H.
     simpl dep_app. autorewrite with matrix. rewrite <- vec_dot_prod_add_l. f_equal.
     clear m0. unfold mat_transpose. rewrite !dep_transpose_app, !dep_colist_app. simpl.
-    rewrite !dep_colist_cons_col, dep_colist_vec_add, !dep_map_list_binop.
-    rewrite !dep_list_binop_triop, dep_list_triop_quadruple.
+    rewrite !dep_colist_cons_col, dep_colist_vec_add, !dep_map_list_binop,
+    !dep_list_binop_triop, dep_list_triop_quadruple.
     unfold vec_add at 2. rewrite <- dep_list_quadruple_split.
     apply dep_list_quadruple_ext. intros. rewrite <- (mat_transpose_involutive w),
     <- (mat_transpose_involutive x), <- !mat_transpose_cons_row. unfold mat_transpose.
     rewrite <- !dep_transpose_app, !det_transpose. apply IHn.
+Qed.
+
+Lemma det_dup_first_2: forall {n} (r: Vector (S (S n))) (m: Matrix n (S (S n))),
+    det (dep_cons r (dep_cons r m)) = 0%R.
+Proof.
+  induction n; intros; unfold Matrix in *; unfold Vector in *.
+  - dep_list_decomp. vm_compute. ring.
+  - rewrite <- det_transpose, !mat_transpose_cons_row. generalize (mat_transpose m).
+    clear m. intros. unfold Matrix in *. dep_step_decomp m. dep_step_decomp r.
+    rewrite !dep_list_binop_cons. rewrite <- (mat_transpose_involutive m1).
+    autorewrite with matrix dep_list vector. ring_simplify. rewrite !dep_map_nest.
+    rewrite (dep_map_ext (fun x => 0%R)) by apply IHn. rewrite dep_map_const.
+    now autorewrite with vector.
+Qed.
+
+Lemma det_swap_first_2: forall {n} (r1 r2: Vector (S (S n))) (m: Matrix n (S (S n))),
+    det (dep_cons r1 (dep_cons r2 m)) = (- det (dep_cons r2 (dep_cons r1 m)))%R.
+Proof.
+  intros. pose proof (det_dup_first_2 (vec_add r1 r2) m).
+  pose proof (det_row_add dep_nil (dep_cons (vec_add r1 r2) m)). simpl dep_app in H0.
+  rewrite H0 in H. clear H0. revert r1 r2 m H.
+  cut (forall (r1 r2 : Vector (1 + (S n))) (m : Matrix n (1 + (S n))),
+          (det (dep_cons r1 (dep_cons (vec_add r1 r2) m)) +
+           det (dep_cons r2 (dep_cons (vec_add r1 r2) m)))%R = 0%R ->
+          det (dep_cons r1 (dep_cons r2 m)) =
+          (- det (dep_cons r2 (dep_cons r1 m)))%R); intros. 1: now apply H.
+  pose proof (det_row_add {| r1 |} m). simpl dep_app in H0. rewrite H0 in H. clear H0.
+  pose proof (det_row_add {| r2 |} m). simpl dep_app in H0. rewrite H0 in H. clear H0.
+  rewrite !det_dup_first_2, Rplus_0_r, Rplus_0_l in H. apply Rplus_opp_r_uniq.
+  now rewrite Rplus_comm.
+Qed.
+
+Lemma det_dup_row_ind:
+  forall n m l: nat,
+    (forall (m1 : dep_list (dep_list R (n + S (m + S l))) n)
+            (m2 : dep_list (dep_list R (n + S (m + S l))) m)
+            (m3 : dep_list (dep_list R (n + S (m + S l))) l)
+            (r : Vector (n + S (m + S l))),
+        det (dep_app m1 (dep_cons r (dep_app m2 (dep_cons r m3)))) = 0%R) ->
+    forall (m2 : dep_list (dep_list R (S n + S (m + S l))) m)
+           (m3 : dep_list (dep_list R (S n + S (m + S l))) l)
+           (r : Vector (S n + S (m + S l))) (m0 : dep_list R (S n + S (m + S l)))
+           (m4 : dep_list (dep_list R (S n + S (m + S l))) n),
+      det (dep_cons m0 (dep_app m4 (dep_cons r (dep_app m2 (dep_cons r m3))))) = 0%R.
+Proof.
+  intros n m l IHn.
+  cut (forall (m2 : dep_list (dep_list R (S (n + S (m + S l)))) m)
+              (m3 : dep_list (dep_list R (S (n + S (m + S l)))) l)
+              (r : Vector (S (n + S (m + S l))))
+              (m0 : dep_list R (S (n + S (m + S l))))
+              (m4 : dep_list (dep_list R (S (n + S (m + S l)))) n),
+          det (dep_cons m0 (dep_app m4 (dep_cons r (dep_app m2 (dep_cons r m3))))) =
+          0%R); intros. 1: apply H. autorewrite with matrix. unfold mat_transpose.
+  rewrite dep_transpose_app, dep_colist_app. simpl.
+  rewrite dep_transpose_app. simpl.
+  rewrite !dep_colist_cons_col, dep_colist_app, dep_map_list_binop,
+  dep_colist_cons_col, !dep_list_binop_triop, dep_list_triop_quadruple'.
+  rewrite (dep_list_quadruple_ext (fun _ _ _ _ => 0%R)); intros.
+  - rewrite dep_list_quadruple_const. apply vec_dot_prod_zero_r.
+  - rewrite <- (mat_transpose_involutive x), <- (mat_transpose_involutive z),
+    <- (mat_transpose_involutive w), <- !mat_transpose_cons_row.
+    unfold mat_transpose. rewrite <- dep_transpose_app, <- mat_transpose_cons_row.
+    unfold mat_transpose. rewrite <- dep_transpose_app, det_transpose. apply IHn.
+Qed.
+
+Lemma det_dup_row: forall
+    {n m l: nat} (m1: Matrix n (n + S (m + S l))) (m2: Matrix m (n + S (m + S l)))
+    (m3: Matrix l (n + S (m + S l))) (r: Vector (n + S (m + S l))),
+    det (dep_app m1 (dep_cons r (dep_app m2 (dep_cons r m3)))) = 0%R.
+Proof.
+  induction n; intros; unfold Matrix in *; dep_list_decomp; simpl dep_app.
+  - revert m2 m3 r.
+    cut  (forall (m2 : dep_list (dep_list R (S (m + S l))) m)
+                 (m3 : dep_list (dep_list R (S (m + S l))) l)
+                 (r : Vector (S (m + S l))),
+             det (dep_cons r (dep_app m2 (dep_cons r m3))) = 0%R). 1: intros; apply H.
+    induction m; intros.
+    + dep_list_decomp; simpl dep_app. revert m3 r.
+      cut (forall (m3 : dep_list (dep_list R (S (S l))) l) (r : Vector (S (S l))),
+              det (dep_cons r (dep_cons r m3)) = 0%R); intros. 1: apply H.
+      induction l.
+      * unfold Vector in *. dep_list_decomp. vm_compute. ring.
+      * apply det_dup_first_2.
+    + dep_step_decomp m2. simpl dep_app. rewrite (det_swap_first_2 r m0).
+      apply Ropp_eq_0_compat.
+      assert
+        (forall (m2 : dep_list (dep_list R (1 + (S (m + S l)))) m)
+                (m3 : dep_list (dep_list R (1 + (S (m + S l)))) l)
+                (r : Vector (1 + (S (m + S l))))
+                (m0 : dep_list R (1 + (S (m + S l)))),
+            det (dep_cons m0 (dep_app {||}
+                                      (dep_cons r (dep_app m2 (dep_cons r m3))))) =
+            0%R). { intros. apply (det_dup_row_ind O m l). intros. dep_step_decomp m6.
+        simpl dep_app. apply IHm. } simpl dep_app in H. apply H.
+  - now apply det_dup_row_ind.
 Qed.

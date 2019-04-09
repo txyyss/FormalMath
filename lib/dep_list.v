@@ -613,3 +613,21 @@ Proof.
   intros. revert n l1 l2 l3 l4.
   apply dep_list_ind_4; intros; autorewrite with dep_list; [|rewrite H]; easy.
 Qed.
+
+Lemma dep_list_triop_quadruple': forall
+    {A B C D E F n} (f: A -> B -> E -> F) (g: C -> B -> D -> E) (l1: dep_list A n)
+    (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n),
+    dep_list_triop f l1 l2 (dep_list_triop g l3 l2 l4) =
+    dep_list_quadruple (fun x y z w => f x y (g z y w)) l1 l2 l3 l4.
+Proof.
+  intros. revert n l1 l2 l3 l4.
+  apply dep_list_ind_4; intros; autorewrite with dep_list; [|rewrite H]; easy.
+Qed.
+
+Lemma dep_list_quadruple_const: forall
+    {A B C D E} (c: E) {n: nat} (l1: dep_list A n)
+    (l2: dep_list B n) (l3: dep_list C n) (l4: dep_list D n),
+    dep_list_quadruple (fun _ _ _ _ => c) l1 l2 l3 l4 = dep_repeat c n.
+Proof. intros. unfold dep_list_quadruple. now autorewrite with dep_list. Qed.
+
+Hint Rewrite @dep_list_quadruple_const: dep_list.
