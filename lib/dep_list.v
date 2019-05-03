@@ -340,8 +340,8 @@ Fixpoint dep_colist {A: Type} {n: nat} (l: dep_list A (S n)):
                             (fun l0 => dep_cons l0 (dep_map (dep_cons h)
                                                             (dep_colist l0))) n0 p2 l')
                    n (eq_add_S _ _ p)
-             end (eq_refl n0)
-  end (eq_refl (S n)).
+             end eq_refl
+  end eq_refl.
 
 Lemma dep_colist_cons: forall {A} {n} (a: A) (l: dep_list A (S n)),
     dep_colist (dep_cons a l) = dep_cons l (dep_map (dep_cons a) (dep_colist l)).
@@ -777,3 +777,24 @@ Proof.
   intros. revert n l1 l2 l3 l4 l5 l6.
   apply dep_list_ind_6; intros; autorewrite with dep_list; [|rewrite H0]; easy.
 Qed.
+
+Definition dep_tl {A: Type} {n: nat} (l: dep_list A (S n)): dep_list A n :=
+  match l in (dep_list _ m) return (m = S n -> dep_list A n) with
+  | dep_nil => fun p => False_rect _ (O_S _ p)
+  | dep_cons _ l' => fun p => eq_rect_r _ (fun l1 => l1) (eq_add_S _ _ p) l'
+  end eq_refl.
+
+Lemma dep_tl_cons: forall {A n} (a: A) (l: dep_list A n), dep_tl (dep_cons a l) = l.
+Proof. intros. easy. Qed.
+
+Hint Rewrite @dep_tl_cons: dep_list.
+
+Lemma dep_tl_cons_col: forall {A m n} (v: dep_list A m)
+                              (mat: dep_list (dep_list A n) m),
+    dep_map dep_tl (dep_list_binop (@dep_cons _ n) v mat) = mat.
+Proof.
+  intros. revert m v mat.
+  apply dep_list_ind_2; intros; autorewrite with dep_list; [| rewrite H]; easy.
+Qed.
+
+Hint Rewrite @dep_tl_cons_col: dep_list.

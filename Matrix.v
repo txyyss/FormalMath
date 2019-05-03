@@ -2,6 +2,7 @@
 (** Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
 
 Require Export Coq.Reals.Reals.
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Export FormalMath.lib.dep_list.
 
@@ -147,6 +148,22 @@ Proof.
 Qed.
 
 Hint Rewrite @vec_sum_cons: vector.
+
+Definition vec_prod {n} (v: Vector n) := dep_fold_left Rmult v 1%R.
+
+Lemma vec_prod_nil: vec_prod dep_nil = 1%R. Proof. vm_compute. easy. Qed.
+
+Hint Rewrite vec_prod_nil: vector.
+
+Lemma vec_prod_cons: forall {n} a (v: Vector n),
+    vec_prod (dep_cons a v) = (a * vec_prod v)%R.
+Proof.
+  intros. unfold vec_prod. simpl. rewrite Rmult_1_l. revert a.
+  apply dep_list_ind_1 with (v := v); simpl; intros. 1: now rewrite Rmult_1_r.
+  rewrite H, (H (1 * a)%R). ring.
+Qed.
+
+Hint Rewrite @vec_prod_cons: vector.
 
 Definition vec_dot_prod {n} (v1 v2: Vector n) := vec_sum (dep_list_binop Rmult v1 v2).
 
@@ -723,11 +740,20 @@ Proof. intros. unfold mat_vec_mul. simpl. now rewrite vec_dot_prod_comm. Qed.
 
 Hint Rewrite @mat_vec_mul_cons: matrix.
 
-Lemma mat_vec_mul_zero: forall {n}, mat_vec_mul (dep_repeat dep_nil n) dep_nil =
+Lemma mat_vec_mul_nil: forall {n}, mat_vec_mul (dep_repeat dep_nil n) dep_nil =
                                     vec_zero.
 Proof.
   induction n; simpl; autorewrite with matrix. 1: easy.
   autorewrite with matrix vector. now f_equal.
+Qed.
+
+Hint Rewrite @mat_vec_mul_nil: matrix.
+
+Lemma mat_vec_mul_zero: forall {m n} (mat: Matrix m n),
+    mat_vec_mul mat vec_zero = vec_zero.
+Proof.
+  induction m; intros; unfold Matrix in *; dep_list_decomp; autorewrite with matrix.
+  1: easy. autorewrite with vector. now rewrite IHm.
 Qed.
 
 Hint Rewrite @mat_vec_mul_zero: matrix.
@@ -939,8 +965,8 @@ Fixpoint det {n} (mat: Matrix n n): R :=
                                  (fun l1 => dep_map (@det m)
                                                     (dep_colist (mat_transpose l1)))
                                  (eq_add_S n0 m h3) l0) n h1 h2 l)
-              end (eq_refl n)
-  end (eq_refl n).
+              end eq_refl
+  end eq_refl.
 
 Open Scope dep_list_scope.
 
@@ -1259,4 +1285,99 @@ Proof.
   intros. pose proof (det_dup_row m1 m2 m3 (vec_add r1 r2)).
   rewrite det_row_add, !det_row_add_n1m1l, !det_dup_row, Rplus_0_l, Rplus_0_r
     in H. apply Rplus_opp_r_uniq. now rewrite Rplus_comm.
+Qed.
+
+Fixpoint diagonal {n: nat} (mat: Matrix n n) {struct n}: Vector n :=
+  match n as x return (x = n -> Vector x) with
+  | O => fun h1 => dep_nil
+  | S m =>
+    fun h1 =>
+      match mat in (dep_list _ s) return (s = n -> Vector (S m)) with
+      | dep_nil =>
+        fun h2 => False_rect _ (eq_ind (S m) _ (fun h3 => (O_S m h3)) _ h1 h2)
+      | @dep_cons _ n0 h l =>
+        fun h2 =>
+          eq_rec (S m) _
+                 (fun (h0 : dep_list R (S m))
+                      (l0 : dep_list (dep_list R (S m)) n0)
+                      (h3 : S n0 = S m) =>
+                    eq_rec_r _
+                             (fun l1 =>
+                                dep_cons (dep_hd h0) (diagonal (dep_map dep_tl l1)))
+                             (eq_add_S _ _ h3) l0) n h1 h l h2
+      end eq_refl
+  end eq_refl.
+
+Lemma diag_cons: forall {n} (h: Vector (S n)) (l: Matrix n (S n)),
+    diagonal (dep_cons h l) = dep_cons (dep_hd h) (diagonal (dep_map dep_tl l)).
+Proof. intros. easy. Qed.
+
+Hint Rewrite @diag_cons: matrix.
+
+Inductive ut_sigT: {n: nat & Matrix n n} -> Prop :=
+| UT_O: ut_sigT (existT _ O (@dep_nil (dep_list R 0)))
+| UT_Sn: forall
+    (n: nat) (m: Matrix n n) (v: Vector (S n)),
+    ut_sigT (existT (fun x => Matrix x x) n m) ->
+    ut_sigT (existT _ (S n)
+                    (dep_cons v (dep_list_binop (dep_cons (n := n)) vec_zero m))).
+
+Definition upper_triangular {n: nat} (mat: Matrix n n): Prop :=
+  ut_sigT (existT (fun x => Matrix x x) n mat).
+
+Lemma upper_triangular_det: forall {n} (mat: Matrix n n),
+    upper_triangular mat -> det mat = vec_prod (diagonal mat).
+Proof.
+  induction n; intros; unfold Matrix in *. 1: now dep_list_decomp.
+  unfold upper_triangular in H. inversion H. subst. unfold Vector in *. clear H2.
+  dep_step_decomp v0. autorewrite with matrix vector dep_list. simpl dep_hd.
+  rewrite <- IHn by (now red). clear. unfold Matrix in *. destruct n.
+  - dep_list_decomp. vm_compute. ring.
+  - autorewrite with dep_list vector. rewrite det_transpose.
+    rewrite <- (Rplus_0_r (v1 * det m0)%R) at 2. f_equal.
+    rewrite dep_map_nest, (dep_map_ext (fun x => 0%R)).
+    + rewrite dep_map_const. now autorewrite with vector.
+    + intros. now autorewrite with matrix vector.
+Qed.
+
+Lemma upper_triangular_mult: forall {n} (m1 m2: Matrix n n),
+    upper_triangular m1 -> upper_triangular m2 -> upper_triangular (mat_mul m1 m2).
+Proof.
+  unfold upper_triangular. induction n; intros.
+  - unfold Matrix in *. dep_list_decomp. clear. autorewrite with matrix. constructor.
+  - inversion H. apply inj_pair2_eq_dec in H3. 2: exact Nat.eq_dec. subst.
+    inversion H0. apply inj_pair2_eq_dec in H4. 2: exact Nat.eq_dec. subst.
+    autorewrite with matrix.
+    cut (mat_mul m0 (dep_list_binop (dep_cons (n:=n)) vec_zero m1) =
+         dep_list_binop (dep_cons (n := n)) vec_zero (mat_mul m0 m1)).
+    + intros. rewrite H1. constructor. now apply IHn.
+    + rewrite !mat_mul_as_vec_mul. now autorewrite with matrix dep_list.
+Qed.
+
+Lemma upper_triangular_diag: forall {n} (m1 m2: Matrix n n),
+    upper_triangular m1 -> upper_triangular m2 ->
+    diagonal (mat_mul m1 m2) = dep_list_binop Rmult (diagonal m1) (diagonal m2).
+Proof.
+  unfold upper_triangular. induction n; intros.
+  - unfold Matrix in *. dep_list_decomp. now vm_compute.
+  - inversion H. apply inj_pair2_eq_dec in H3. 2: exact Nat.eq_dec. subst.
+    inversion H0. apply inj_pair2_eq_dec in H4. 2: exact Nat.eq_dec. subst.
+    assert (mat_mul m0 (dep_list_binop (dep_cons (n:=n)) vec_zero m1) =
+            dep_list_binop (dep_cons (n := n)) vec_zero (mat_mul m0 m1)) by
+        (rewrite !mat_mul_as_vec_mul; now autorewrite with matrix dep_list).
+    autorewrite with matrix dep_list. rewrite H1. clear H1. autorewrite with dep_list.
+    rewrite IHn; auto. f_equal. clear. unfold Vector in *. dep_list_decomp.
+    simpl. autorewrite with vector. ring.
+Qed.
+
+Lemma upper_triangular_det_mul: forall {n} (m1 m2: Matrix n n),
+    upper_triangular m1 -> upper_triangular m2 ->
+    det (mat_mul m1 m2) = (det m1 * det m2)%R.
+Proof.
+  intros. rewrite !upper_triangular_det; auto.
+  - rewrite upper_triangular_diag; auto. generalize (diagonal m1).
+    generalize (diagonal m2). clear. revert n. apply dep_list_ind_2.
+    + vm_compute. ring.
+    + intros. autorewrite with vector dep_list. rewrite H. ring.
+  - now apply upper_triangular_mult.
 Qed.
