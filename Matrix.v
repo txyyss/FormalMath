@@ -4,6 +4,7 @@
 Require Export Coq.Reals.Reals.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
+Require Import Coq.Program.Equality.
 Require Export FormalMath.lib.dep_list.
 
 Import DepListNotations.
@@ -421,6 +422,17 @@ Lemma mat_mul_cons: forall {m l n} (v: Vector l) (m1: Matrix m l) (m2: Matrix l 
 Proof. intros. unfold mat_mul. now simpl. Qed.
 
 Hint Rewrite @mat_mul_cons: matrix.
+
+Lemma mat_mul_app: forall {k l m n} (m1: Matrix k l) (m2: Matrix m l) (m3: Matrix l n),
+    mat_mul (dep_app m1 m2) m3 = dep_app (mat_mul m1 m3) (mat_mul m2 m3).
+Proof.
+  intro. induction k; intros; unfold Matrix in *; dep_list_decomp.
+  - now simpl.
+  - simpl dep_app at 1. autorewrite with matrix. simpl. autorewrite with matrix.
+    f_equal. apply IHk.
+Qed.
+
+Hint Rewrite @mat_mul_app: matrix.
 
 Lemma mat_mul_add_distr_l: forall {m l n} (m1: Matrix m l) (m2 m3: Matrix l n),
     mat_mul m1 (mat_add m2 m3) = mat_add (mat_mul m1 m2) (mat_mul m1 m3).
@@ -1287,6 +1299,76 @@ Proof.
     in H. apply Rplus_opp_r_uniq. now rewrite Rplus_comm.
 Qed.
 
+Lemma det_row_mul_n1m1l:
+  forall {n m l : nat} (m1 : Matrix n (n + S (m + S l)))
+         (m2 : Matrix m (n + S (m + S l))) (m3 : Matrix l (n + S (m + S l)))
+         (r1 r2 : Vector (n + S (m + S l))) (a: R),
+    det (dep_app m1 (dep_cons r1 (dep_app m2 (dep_cons (vec_scal_mul a r2) m3)))) =
+    (a * det (dep_app m1 (dep_cons r1 (dep_app m2 (dep_cons r2 m3)))))%R.
+Proof.
+  intros. induction n.
+  - unfold Matrix in *. dep_list_decomp. simpl dep_app. revert m2 m3 r1 r2.
+    cut (forall (m2 : dep_list (dep_list R (S m + S l)) m)
+                (m3 : dep_list (dep_list R (S m + S l)) l)
+                (r1 r2 : Vector (S m + S l)),
+            det (dep_cons r1 (dep_app m2 (dep_cons (vec_scal_mul a r2) m3))) =
+            (a * det (dep_cons r1 (dep_app m2 (dep_cons r2 m3))))%R); intros.
+    1: apply H. now rewrite !dep_cons_app, det_row_mul.
+  - unfold Matrix in *. dep_step_decomp m1. simpl dep_app. revert m2 m3 r1 r2 m0 m4.
+    cut (forall (m2 : dep_list (dep_list R (S (n + S (m + S l)))) m)
+                (m3 : dep_list (dep_list R (S (n + S (m + S l)))) l)
+                (r1 r2 : Vector (S (n + S (m + S l))))
+                (m0 : dep_list R (S (n + S (m + S l))))
+                (m4 : dep_list (dep_list R (S (n + S (m + S l)))) n),
+            det (dep_cons
+                   m0 (dep_app
+                         m4 (dep_cons
+                               r1 (dep_app m2 (dep_cons (vec_scal_mul a r2) m3))))) =
+            (a * det (dep_cons
+                        m0 (dep_app
+                              m4 (dep_cons r1 (dep_app m2 (dep_cons r2 m3))))))%R).
+    1: intros; apply H. intros. autorewrite with matrix.
+    rewrite <- vec_dot_prod_scal_r. f_equal. clear m0. unfold mat_transpose.
+    rewrite !dep_transpose_app, !dep_colist_app. simpl.
+    rewrite !dep_transpose_app. simpl.
+    rewrite !dep_colist_cons_col, !dep_colist_app, !dep_map_list_binop,
+    !dep_colist_cons_col, !dep_colist_scal, <- dep_list_binop_map_1,
+    !dep_list_binop_triop, !dep_list_triop_quintuple.
+    rewrite
+      (dep_list_quintuple_ext
+         (fun (x : dep_list (dep_list R n) (n + S (m + S l)))
+              (y : dep_list R (n + S (m + S l)))
+              (z : dep_list (dep_list R m) (n + S (m + S l)))
+              (w : dep_list R (n + S (m + S l)))
+              (v : dep_list (dep_list R l) (n + S (m + S l))) =>
+            (a * det (dep_list_binop
+                        dep_app x
+                        (dep_list_binop
+                           (dep_cons (n:=m + S l)) y
+                           (dep_list_binop
+                              dep_app z (dep_list_binop (dep_cons (n:=l)) w v)))))%R)).
+    + now rewrite dep_list_quintuple_constant_split.
+    + intros.
+      rewrite <- (dep_list_transpose_involutive x). generalize (dep_list_transpose x).
+      rewrite <- (dep_list_transpose_involutive z). generalize (dep_list_transpose z).
+      rewrite <- (dep_list_transpose_involutive v). generalize (dep_list_transpose v).
+      clear -IHn. intros v z x. rewrite <- !mat_transpose_cons_row.
+      unfold mat_transpose. rewrite <- !dep_transpose_app, <- !dep_transpose_cons_row,
+                            <- !dep_transpose_app. now rewrite !det_transpose, IHn.
+Qed.
+
+Lemma det_row_add_multiple_row_1:
+  forall {n m l : nat} (m1 : Matrix n (n + S (m + S l)))
+         (m2 : Matrix m (n + S (m + S l))) (m3 : Matrix l (n + S (m + S l)))
+         (r1 r2 : Vector (n + S (m + S l))) (a: R),
+    det (dep_app
+           m1 (dep_cons r1 (dep_app
+                              m2 (dep_cons (vec_add r2 (vec_scal_mul a r1)) m3)))) =
+    det (dep_app m1 (dep_cons r1 (dep_app m2 (dep_cons r2 m3)))).
+Proof.
+  intros. rewrite det_row_add_n1m1l, det_row_mul_n1m1l, det_dup_row. ring.
+Qed.
+
 Fixpoint diagonal {n: nat} (mat: Matrix n n) {struct n}: Vector n :=
   match n as x return (x = n -> Vector x) with
   | O => fun h1 => dep_nil
@@ -1381,3 +1463,92 @@ Proof.
     + intros. autorewrite with vector dep_list. rewrite H. ring.
   - now apply upper_triangular_mult.
 Qed.
+
+(** * Elementary Row Operations *)
+
+Definition row_op_mul_row (a: R) (i: nat) {m n: nat} (mat1 mat2: Matrix m n): Prop :=
+  i < m /\ (forall j, j <> i -> dep_nth j mat1 vec_zero = dep_nth j mat2 vec_zero) /\
+  dep_nth i mat2 vec_zero = vec_scal_mul a (dep_nth i mat1 vec_zero).
+
+Lemma row_op_mul_row_spec:
+  forall (a: R) {m n l: nat} (mat1 mat2: Matrix m l) (mat3 mat4: Matrix n l)
+         (v1 v2: Vector l),
+    row_op_mul_row a m (dep_app mat1 (dep_cons v1 mat3))
+                   (dep_app mat2 (dep_cons v2 mat4)) <->
+    mat1 = mat2 /\ v2 = vec_scal_mul a v1 /\ mat3 = mat4.
+Proof.
+  intros. split; intros; destruct H as [? [? ?]].
+  - split; [|split]; unfold Matrix in *.
+    + rewrite <- dep_nth_eq_iff with (d1 := vec_zero) (d2 := vec_zero). intros.
+      rewrite <- (dep_nth_app_1 _ mat1 (dep_cons v1 mat3)); auto.
+      rewrite <- (dep_nth_app_1 _ mat2 (dep_cons v2 mat4)); auto.
+      now apply H0, Nat.lt_neq.
+    + now rewrite !dep_nth_app_cons in H1.
+    + rewrite <- dep_nth_eq_iff with (d1 := vec_zero) (d2 := vec_zero). intros.
+      pose proof (Nat.add_sub i (S m)). rewrite <- H3. clear H3.
+      assert (m < i + S m) by (apply Nat.lt_lt_add_l, Nat.lt_succ_diag_r).
+      rewrite <- (dep_nth_app_cons' _ mat1 mat3 v1); auto.
+      rewrite <- (dep_nth_app_cons' _ mat2 mat4 v2); auto. apply H0.
+      apply Nat.lt_neq in H3. intro. rewrite <- H4 in H3 at 1. now apply H3.
+  - subst. split; [|split].
+    + rewrite <- Nat.le_succ_l, <- Nat.add_succ_comm. apply le_plus_l.
+    + intros. pose proof (lt_eq_lt_dec j m). destruct H0 as [[? | ?] | ?].
+      * now rewrite !dep_nth_app_1.
+      * exfalso. now apply H.
+      * now rewrite !dep_nth_app_cons'.
+    + now rewrite !dep_nth_app_cons.
+Qed.
+
+Ltac decomp_lt_subst :=
+  match goal with
+  | [H: ?i < ?n |- _ ] =>
+    apply lt_le_S, le_plus_minus in H; rewrite plus_Snm_nSm in H;
+    let j := fresh "j" in
+    let ph := fresh "H" in
+    remember (n - S i) as j eqn: ph; clear ph; subst n
+  end.
+
+Lemma row_op_mul_row_det: forall a i {n: nat} (mat1 mat2: Matrix n n),
+    row_op_mul_row a i mat1 mat2 -> det mat2 = (a * det mat1)%R.
+Proof.
+  intros. pose proof H. destruct H as [? _]. decomp_lt_subst.
+  unfold Matrix in *. dep_step_decomp mat1. dep_step_decomp mat2.
+  dep_list_decomp. apply row_op_mul_row_spec in H0. destruct H0 as [? [? ?]].
+  subst. apply det_row_mul.
+Qed.
+
+Lemma row_op_mul_row_comm_mul:
+  forall a i {m n l: nat} (A A': Matrix m n) (B: Matrix n l),
+    row_op_mul_row a i A A' -> row_op_mul_row a i (mat_mul A B) (mat_mul A' B).
+Proof.
+  intros. pose proof H. destruct H as [? _]. decomp_lt_subst.
+  unfold Matrix in *. dep_step_decomp A. dep_step_decomp A'. dep_list_decomp.
+  apply row_op_mul_row_spec in H0. destruct H0 as [? [? ?]]. subst.
+  autorewrite with matrix. rewrite row_op_mul_row_spec. split; [|split]; auto.
+  unfold vec_scal_mul at 2. rewrite dep_map_nest. apply dep_map_ext. intros.
+  apply vec_dot_prod_scal_l.
+Qed.
+
+Lemma row_op_mul_row_unique: forall a i {m n: nat} (mat mat1 mat2: Matrix m n),
+    row_op_mul_row a i mat mat1 -> row_op_mul_row a i mat mat2 -> mat1 = mat2.
+Proof.
+  intros. pose proof H. destruct H1 as [? _]. decomp_lt_subst.
+  unfold Matrix in *. dep_step_decomp mat. dep_step_decomp mat1. dep_step_decomp mat2.
+  dep_list_decomp. rewrite row_op_mul_row_spec in H, H0.
+  destruct H0 as [? [? ?]]. destruct H as [? [? ?]].
+  now subst mat4 mat1 mat2 mat7 mat5 mat8.
+Qed.
+
+Lemma row_op_mul_row_exists: forall a i {m n: nat} (mat: Matrix m n),
+    i < m -> exists mat', row_op_mul_row a i mat mat'.
+Proof.
+  intros. decomp_lt_subst. unfold Matrix in *. dep_step_decomp mat. dep_list_decomp.
+  exists (dep_app mat0 (dep_cons (vec_scal_mul a mat2) mat3)).
+  rewrite row_op_mul_row_spec. easy.
+Qed.
+
+Definition row_op_swap_row (i j: nat) {m n: nat} (mat1 mat2: Matrix m n): Prop :=
+  i < m /\ j < m /\ i <> j /\
+  (forall k, k <> i -> k <> j -> dep_nth k mat1 vec_zero = dep_nth k mat2 vec_zero) /\
+  dep_nth i mat1 vec_zero = dep_nth j mat2 vec_zero /\
+  dep_nth j mat1 vec_zero = dep_nth i mat2 vec_zero.
