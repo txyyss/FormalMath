@@ -4,7 +4,7 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
-Require Import Coq.Arith.PeanoNat.
+Require Import Coq.Arith.Arith.
 
 Inductive dep_list (A: Type): nat -> Type :=
 | dep_nil: dep_list A O
@@ -99,7 +99,7 @@ Ltac dep_list_decomp :=
   | v: dep_list ?A O |- _ => pose proof (dep_list_O_unique v); subst v
   | v: dep_list ?A (S ?n) |- _ =>
     destruct (dep_list_S_decompose v) as [?v [?v ?]]; subst v
-  end.
+         end.
 
 Lemma dep_list_add_decompose: forall {A} {m n: nat} (l: dep_list A (m + n)),
     {l1: dep_list A m & {l2: dep_list A n | l = dep_app l1 l2}}.
@@ -112,6 +112,12 @@ Proof.
     1: apply X. dep_list_decomp. destruct (IHm _ l1) as [?l [?l ?H]].
     exists (dep_cons l0 l), l2. now subst l1.
 Qed.
+
+Ltac dep_add_decomp :=
+  repeat match goal with
+  | v: dep_list ?A (?m + ?n) |- _ =>
+    destruct (dep_list_add_decompose v) as [?v [?v ?]]; subst v
+  end.
 
 Ltac dep_step_decomp v :=
   match type of v with
@@ -840,7 +846,7 @@ Lemma dep_nth_overflow: forall {A n} (i: nat) (l: dep_list A n) (d: A),
     n <= i -> dep_nth i l d = d.
 Proof.
   intros A n i. revert n. induction i; intros.
-  - apply Le.le_n_0_eq in H. subst n. dep_list_decomp. now simpl.
+  - apply le_n_0_eq in H. subst n. dep_list_decomp. now simpl.
   - simpl. destruct l. 1: easy. apply le_S_n in H. now apply IHi.
 Qed.
 
@@ -848,11 +854,11 @@ Lemma dep_nth_indep: forall {A n} (i: nat) (l: dep_list A n) (d d': A),
     i < n -> dep_nth i l d = dep_nth i l d'.
 Proof.
   intros A n i. revert n. induction i; intros.
-  - apply Nat.succ_pred_pos in H. remember (Nat.pred n) as m. clear Heqm. subst n.
+  - apply Nat.succ_pred_pos in H. remember (pred n) as m. clear Heqm. subst n.
     dep_list_decomp. now simpl.
   - destruct n.
     + exfalso. now apply Nat.nlt_0_r in H.
-    + dep_list_decomp. simpl. apply IHi. now apply Lt.lt_S_n.
+    + dep_list_decomp. simpl. apply IHi. now apply lt_S_n.
 Qed.
 
 Lemma dep_nth_app_cons:
@@ -871,43 +877,33 @@ Proof.
   - intros. split; intros.
     + f_equal.
       * specialize (H0 O (Nat.lt_0_succ n)). now simpl in H0.
-      * rewrite <- H. intros. apply Lt.lt_n_S in H1.
+      * rewrite <- H. intros. apply lt_n_S in H1.
         specialize (H0 _ H1). now simpl in H0.
     + apply dep_cons_eq_inv in H0. destruct H0. subst. destruct i.
       * now simpl.
-      * simpl. now apply dep_nth_indep, Lt.lt_S_n.
+      * simpl. now apply dep_nth_indep, lt_S_n.
 Qed.
 
 Lemma dep_nth_app_1:
   forall {A} (i: nat) {m n: nat} (l1: dep_list A m) (l2: dep_list A n) (d: A),
-    i < m -> dep_nth i (dep_app l1 l2) d = dep_nth i l1 d.
+    i < m -> dep_nth i l1 d = dep_nth i (dep_app l1 l2) d.
 Proof.
   intros A. induction i; intros.
-  - apply Nat.succ_pred_pos in H. remember (Nat.pred m) as m1. clear Heqm1. subst m.
+  - apply Nat.succ_pred_pos in H. remember (pred m) as m1. clear Heqm1. subst m.
     dep_list_decomp. now simpl.
   - destruct m. 1: exfalso; now apply Nat.nlt_0_r in H. dep_list_decomp. simpl.
-    now apply IHi, Lt.lt_S_n.
+    now apply IHi, lt_S_n.
 Qed.
 
 Lemma dep_nth_app_2:
   forall {A} (i: nat) {m n: nat} (l1: dep_list A m) (l2: dep_list A n) (d: A),
-    m <= i -> dep_nth i (dep_app l1 l2) d = dep_nth (i - m) l2 d.
+    dep_nth i l2 d = dep_nth (m + i) (dep_app l1 l2) d.
 Proof.
-  intro. induction i; intros.
-  - rewrite Nat.le_0_r in H. subst m. dep_list_decomp. simpl. easy.
-  - destruct m; dep_list_decomp.
-    + simpl. easy.
-    + rewrite Nat.sub_succ. simpl. apply IHi. now apply le_S_n.
+  intros. revert m l1 i n l2 d. induction m; intros; dep_list_decomp.
+  - now simpl.
+  - rewrite plus_Sn_m, <- dep_cons_app. simpl. apply IHm.
 Qed.
 
-Lemma dep_nth_app_cons':
-  forall {A} (i: nat) {m n: nat} (l1: dep_list A m) (l2: dep_list A n) (a d: A),
-    m < i -> dep_nth i (dep_app l1 (dep_cons a l2)) d = dep_nth (i - S m) l2 d.
-Proof.
-  intro. induction i; intros.
-  - exfalso. now apply Nat.nlt_0_r in H.
-  - destruct m; dep_list_decomp.
-    + simpl. rewrite Nat.sub_0_r. easy.
-    + rewrite Nat.sub_succ. simpl. apply IHi. now apply le_S_n.
-Qed.
-
+Lemma dep_nth_cons: forall {A} (i: nat) {n: nat} (l: dep_list A n) (a d: A),
+    dep_nth i l d = dep_nth (S i) (dep_cons a l) d.
+Proof. intros. now simpl. Qed.

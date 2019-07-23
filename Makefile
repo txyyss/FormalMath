@@ -6,7 +6,8 @@ COQ_FLAG = -Q "." FormalMath -native-compiler
 SOURCE := $(shell find "." -type f -name '*.v')
 VO_FILE := $(shell find "." -type f -name '*.vo')
 GLOB_FILE := $(shell find "." -type f -name '*.glob')
-AUX_FILE := $(shell find "." -type f -name '*.vo.aux')
+VOAUX_FILE := $(shell find "." -type f -name '*.vo.aux')
+AUX_FILE := $(shell find "." -type f -name '*.aux')
 
 $(SOURCE:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
@@ -18,7 +19,7 @@ dep:
 all: $(SOURCE:%.v=%.vo)
 
 clean:
-	@rm $(VO_FILE) $(GLOB_FILE) $(AUX_FILE)
+	@rm $(VO_FILE) $(GLOB_FILE) $(VOAUX_FILE) $(AUX_FILE)
 
 .DEFAULT_GOAL := all
 

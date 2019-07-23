@@ -3,7 +3,7 @@ Require Import Coq.PArith.PArith.
 Require Import Coq.omega.Omega.
 Require Import FormalMath.FreeGroup.
 Require Import FormalMath.CosetEnum.
-Require Import FormalMath.lib.Coqlib.
+Require Import FormalMath.lib.List_ext.
 Import ListNotations.
 
 Local Open Scope positive_scope.

@@ -5,7 +5,7 @@ Require Import Coq.PArith.PArith.
 Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Require Import FormalMath.Word.
-Require Import FormalMath.lib.Coqlib.
+Require Import FormalMath.lib.List_ext.
 Import ListNotations.
 
 Module PM := PositiveMap.
@@ -67,7 +67,7 @@ Section COSET_MAP.
 
 End COSET_MAP.
 
-Definition gen_pos_list (p: positive) := map Pos.of_nat (nat_seq 1 (Pos.to_nat p)).
+Definition gen_pos_list (p: positive) := map Pos.of_nat (seq 1 (Pos.to_nat p)).
 
 Section FIN_GEN_REP.
 

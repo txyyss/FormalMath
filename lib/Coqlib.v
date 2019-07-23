@@ -1,76 +1,32 @@
-Require Import Coq.omega.Omega.
-Require Import Coq.Lists.List.
-Import ListNotations.
+Require Import Coq.Arith.Arith.
 
-Fixpoint flatten {A: Type} (l: list (list A)): list A :=
-  match l with
-  | nil => nil
-  | lh :: lt => lh ++ flatten lt
+Lemma lt_plus_S_l: forall (n m: nat), n < n + S m.
+Proof. intros. rewrite <- Nat.le_succ_l, <- Nat.add_succ_comm. apply le_plus_l. Qed.
+
+Lemma lt_exists_S_diff: forall (n m: nat), n < m -> exists k, m = n + S k.
+Proof.
+  intros. apply lt_le_S, le_plus_minus in H; rewrite plus_Snm_nSm in H.
+  now exists (m - S n).
+Qed.
+
+Ltac decomp_lt_subst' H :=
+  match type of H with
+  | ?i < ?n =>
+    apply lt_exists_S_diff in H; let k := fresh "k" in let ph := fresh "H" in
+                                                       destruct H as [k ph]; subst n
   end.
 
-Fixpoint filter_option {A: Type} (l: list (option A)): list A :=
-  match l with
-  | nil => nil
-  | Some h :: lt => h :: filter_option lt
-  | None :: lt => filter_option lt
-  end.
+Ltac decomp_lt_subst := match goal with | [H: ?i < ?n |- _ ] => decomp_lt_subst' H end.
 
-Fixpoint nat_seq (s: nat) (total: nat): list nat :=
-  match total with
-  | O => nil
-  | S n => s :: nat_seq (S s) n
-  end.
-
-Tactic Notation "if_tac" :=
-  match goal with |- context [if ?a then _ else _] =>
-    lazymatch type of a with
-    | sumbool _ _ => destruct a
-    | bool => destruct a eqn: ?
-    | ?t => fail "Use if_tac only for sumbool; your expression"a" has type" t
-    end end.
-
-Tactic Notation "if_tac" "in" hyp(H0)
-  := match type of H0 with context [if ?a then _ else _] =>
-    lazymatch type of a with
-    | sumbool _ _ => destruct a
-    | bool => destruct a eqn: ?
-    | ?t => fail "Use if_tac only for sumbool; your expression"a" has type" t
-    end end.
-
-Lemma nat_seq_length: forall s n, length (nat_seq s n) = n.
+Lemma S_plus_neq: forall i m, m + S i <> m.
 Proof.
-  intros. revert s. induction n; intros; simpl; [|rewrite IHn]; reflexivity.
+  intros. apply Nat.neq_sym. rewrite <- plus_n_Sm, Nat.add_comm.
+  apply Nat.succ_add_discr.
 Qed.
 
-Lemma nat_seq_S: forall i num, nat_seq i (S num) = nat_seq i num ++ [num + i].
+Lemma neq_nSl_nSm: forall l n m, l <> m -> n + S l <> n + S m.
 Proof.
-  intros. revert i. induction num; intros. 1: simpl; reflexivity. remember (S num).
-  simpl. rewrite (IHnum (S i)). subst. simpl. repeat f_equal. omega.
+  intros.  intro.
+  rewrite Nat.add_cancel_l in H0. inversion H0. subst. now apply H.
 Qed.
 
-Lemma nat_seq_In_iff: forall s n i, In i (nat_seq s n) <-> s <= i < s + n.
-Proof. intros. revert s. induction n; intros; simpl; [|rewrite IHn]; omega. Qed.
-
-Lemma nat_seq_NoDup: forall s n, NoDup (nat_seq s n).
-Proof.
-  intros. revert s. induction n; intros; simpl; constructor. 2: apply IHn.
-  intro. rewrite nat_seq_In_iff in H. omega.
-Qed.
-
-Lemma nat_seq_nth: forall s num n a, n < num ->
-                                     nth n (nat_seq s num) a = s + n.
-Proof.
-  intros. revert s n H. induction num; intros. 1: exfalso; omega. simpl. destruct n.
-  1: omega. specialize (IHnum (S s) n).
-  replace (s + S n) with (S s + n) by omega.
-  rewrite IHnum; [reflexivity | omega].
-Qed.
-
-Lemma nat_seq_app: forall s n m,
-    nat_seq s (n + m) = nat_seq s n ++ nat_seq (s + n) m.
-Proof.
-  intros. revert s; induction n; simpl; intros.
-  - rewrite Nat.add_0_r. reflexivity.
-  - f_equal. rewrite IHn. replace (S s + n) with (s + S n) by omega.
-    reflexivity.
-Qed.
