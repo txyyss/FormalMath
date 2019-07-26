@@ -249,6 +249,16 @@ Proof. intros. unfold dep_list_binop. simpl. easy. Qed.
 
 Hint Rewrite @dep_list_binop_cons: dep_list.
 
+Lemma dep_list_binop_app: forall
+    {A B C} {m n: nat} (v1: dep_list A m) (v3: dep_list A n)
+    (v2: dep_list B m) (v4: dep_list B n) (f: A -> B -> C),
+    dep_list_binop f (dep_app v1 v3) (dep_app v2 v4) =
+    dep_app (dep_list_binop f v1 v2) (dep_list_binop f v3 v4).
+Proof.
+  intros. revert m v1 v2. apply dep_list_ind_2; intros. 1: now simpl.
+  autorewrite with dep_list. simpl. autorewrite with dep_list. now rewrite H.
+Qed.
+
 Lemma dep_list_binop_comm: forall
     {A B} {n: nat} (v1 v2: dep_list A n) (f: A -> A -> B),
     (forall x y, f x y = f y x) -> dep_list_binop f v1 v2 = dep_list_binop f v2 v1.
@@ -278,6 +288,10 @@ Lemma dep_map_repeat: forall {A B} (f: A -> B) (a: A) n,
 Proof. intros. induction n; simpl; [easy | now rewrite IHn]. Qed.
 
 Hint Rewrite @dep_map_repeat: dep_list.
+
+Lemma dep_repeat_app: forall {A} (e: A) (m n: nat),
+    dep_repeat e (m + n) = dep_app (dep_repeat e m) (dep_repeat e n).
+Proof. intros. induction m; simpl; [|rewrite IHm]; easy. Qed.
 
 Fixpoint dep_list_transpose {A: Type} {m n: nat}
          (mat: dep_list (dep_list A n) m): dep_list (dep_list A m) n :=
