@@ -5,6 +5,8 @@ Require Import Coq.Lists.List.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.Arith.Arith.
+Require Import Coq.omega.Omega.
+Require Import FormalMath.lib.Coqlib.
 
 Inductive dep_list (A: Type): nat -> Type :=
 | dep_nil: dep_list A O
@@ -883,16 +885,16 @@ Proof.
 Qed.
 
 Lemma dep_nth_eq_iff:
-  forall {A} {n: nat} (l1 l2: dep_list A n) (d1 d2: A),
-    (forall i, i < n -> dep_nth i l1 d1 = dep_nth i l2 d2) <-> l1 = l2.
+  forall {A} {n: nat} (l1 l2: dep_list A n),
+    (forall d1 d2 i, i < n -> dep_nth i l1 d1 = dep_nth i l2 d2) <-> l1 = l2.
 Proof.
-  intros. revert n l1 l2. apply dep_list_ind_2.
+  intro. apply dep_list_ind_2.
   - split; intros; simpl. 1: easy. exfalso. now apply Nat.nlt_0_r in H0.
   - intros. split; intros.
     + f_equal.
-      * specialize (H0 O (Nat.lt_0_succ n)). now simpl in H0.
+      * specialize (H0 a b O (Nat.lt_0_succ n)). now simpl in H0.
       * rewrite <- H. intros. apply lt_n_S in H1.
-        specialize (H0 _ H1). now simpl in H0.
+        specialize (H0 d1 d2 _ H1). now simpl in H0.
     + apply dep_cons_eq_inv in H0. destruct H0. subst. destruct i.
       * now simpl.
       * simpl. now apply dep_nth_indep, lt_S_n.
@@ -921,3 +923,97 @@ Qed.
 Lemma dep_nth_cons: forall {A} (i: nat) {n: nat} (l: dep_list A n) (a d: A),
     dep_nth i l d = dep_nth (S i) (dep_cons a l) d.
 Proof. intros. now simpl. Qed.
+
+Lemma dep_nth_list_binop: forall {A B C: Type} (f: A -> B -> C) {n: nat}
+                                 (dl1: dep_list A n) (dl2: dep_list B n) i d1 d2 d,
+    f d1 d2 = d -> dep_nth i (dep_list_binop f dl1 dl2) d =
+                   f (dep_nth i dl1 d1) (dep_nth i dl2 d2).
+Proof.
+  intros. revert n dl1 dl2 i. induction n; intros; dep_list_decomp.
+  - autorewrite with dep_list. rewrite !dep_nth_overflow; [easy | apply Nat.le_0_l..].
+  - rewrite dep_list_binop_cons. destruct i; simpl; auto.
+Qed.
+
+Lemma dep_nth_repeat: forall {A n} (i: nat) (e d: A),
+    i < n -> dep_nth i (dep_repeat e n) d = e.
+Proof.
+  intros. decomp_lt_subst. rewrite dep_repeat_app. simpl. now rewrite dep_nth_app_cons.
+Qed.
+
+Definition rev_rel {A} {n: nat} (l1 l2: dep_list A n): Prop :=
+  forall d i, i < n -> dep_nth i l1 d = dep_nth (n - 1 - i) l2 d.
+
+Lemma rev_rel_nil: forall {A}, @rev_rel A _ dep_nil dep_nil.
+Proof. intros. red. intros. now apply Nat.nlt_0_r in H. Qed.
+
+Lemma rev_rel_sym: forall {A n} (l1 l2: dep_list A n), rev_rel l1 l2 -> rev_rel l2 l1.
+Proof.
+  intros. unfold rev_rel in *. intros. specialize (H d _ (lt_sub_1_sub_lt _ _ H0)).
+  now rewrite lt_sub1_sub1_sub_eq in H.
+Qed.
+
+Lemma rev_rel_exists: forall {A n} (l: dep_list A n), exists l', rev_rel l l'.
+Proof.
+  intro. apply dep_list_ind_1; intros.
+  - exists dep_nil. apply rev_rel_nil.
+  - destruct H as [l2 ?]. rename v into l1.
+    remember (dep_app l2 (dep_cons a dep_nil)) as l3.
+    assert (forall d i, i < n -> dep_nth i l3 d = dep_nth i l2 d). {
+      intros. subst l3. now rewrite <- dep_nth_app_1. }
+    assert (forall d, dep_nth n l3 d = a). {
+      intros. subst l3. now rewrite dep_nth_app_cons. } clear Heql3.
+    remember (n + 1) as m. rewrite Nat.add_1_r in Heqm. subst m. exists l3.
+    unfold rev_rel in *. intros. destruct i; simpl; rewrite !Nat.sub_0_r.
+    1: now rewrite H1. rewrite <- Nat.succ_lt_mono in H2.
+    rewrite <- Nat.add_1_l, Nat.sub_add_distr, H, H0; auto. now apply lt_sub_1_sub_lt.
+Qed.
+
+Lemma rev_rel_unique: forall {A n} (l l1 l2: dep_list A n),
+    rev_rel l l1 -> rev_rel l l2 -> l1 = l2.
+Proof.
+  intros. red in H, H0. rewrite <- dep_nth_eq_iff. intros.
+  pose proof (lt_sub_1_sub_lt _ _ H1). specialize (H d1 _ H2). specialize (H0 d2 _ H2).
+  rewrite lt_sub1_sub1_sub_eq in *; auto. rewrite <- H, <- H0. now apply dep_nth_indep.
+Qed.
+
+Lemma double_rev_rel_eq: forall {A n} (l1 l2 l3: dep_list A n),
+    rev_rel l1 l2 -> rev_rel l2 l3 -> l1 = l3.
+Proof. intros. apply rev_rel_sym in H. now apply rev_rel_unique with l2. Qed.
+
+Fixpoint dep_to_list {A} {n} (l: dep_list A n): list A :=
+  match l with
+  | dep_nil => nil
+  | dep_cons a l' => a :: dep_to_list l'
+  end.
+
+Lemma dep_to_list_len: forall {A n} (l: dep_list A n), length (dep_to_list l) = n.
+Proof. intro. induction n; intros; dep_list_decomp; simpl; [|rewrite IHn]; easy. Qed.
+
+Lemma dep_to_list_nth: forall {A n} (l: dep_list A n) (d: A) (i: nat),
+    dep_nth i l d = nth i (dep_to_list l) d.
+Proof.
+  intros. destruct (le_lt_dec n i).
+  - rewrite dep_nth_overflow, nth_overflow; auto. now rewrite dep_to_list_len.
+  - revert l i l0. induction n; intros.
+    + now apply Nat.nlt_0_r in l0.
+    + dep_list_decomp. destruct i; simpl; [| apply IHn, lt_S_n]; easy.
+Qed.
+
+Lemma dep_vertical_split: forall {A n m} (mat: dep_list (dep_list A (S n)) m),
+    exists v mat', mat = (dep_list_binop (dep_cons (n := n)) v mat').
+Proof.
+  intros. pose proof (dep_list_transpose_involutive mat).
+  remember (dep_list_transpose mat) as mat0. dep_step_decomp mat0. rewrite e in H.
+  clear e. rewrite dep_transpose_cons_row in H.
+  remember (dep_list_transpose mat2) as mat3. now exists mat1, mat3.
+Qed.
+
+Lemma dep_list_binop_cons_eq: forall
+    {A m n} (v1 v2: dep_list A m) (mat1 mat2: dep_list (dep_list A n) m),
+    dep_list_binop (dep_cons (n:=n)) v1 mat1 =
+    dep_list_binop (dep_cons (n:=n)) v2 mat2 -> v1 = v2 /\ mat1 = mat2.
+Proof.
+  intros. revert m v1 v2 mat1 mat2 H. induction m; intros; dep_list_decomp; auto.
+  autorewrite with dep_list in H. do 2 (apply dep_cons_eq_inv in H; destruct H).
+  apply IHm in H0. destruct H0. subst. easy.
+Qed.

@@ -30,3 +30,25 @@ Proof.
   rewrite Nat.add_cancel_l in H0. inversion H0. subst. now apply H.
 Qed.
 
+Lemma subsub_eq: forall m n, n <= m -> m - (m - n) = n.
+Proof.
+  induction m, n; intros.
+  - now simpl.
+  - now apply Nat.nle_succ_0 in H.
+  - simpl. apply Nat.sub_diag.
+  - rewrite <- Nat.succ_le_mono in H. rewrite Nat.sub_succ, Nat.sub_succ_l.
+    + now rewrite IHm.
+    + apply Nat.le_sub_l.  
+Qed.
+
+Lemma lt_sub_1_sub_lt: forall m n, m < n -> n - 1 - m < n.
+Proof.
+  intros. rewrite <- Nat.sub_add_distr. apply Nat.sub_lt.
+  - now rewrite Nat.add_1_l.
+  - apply lt_plus_trans, Nat.lt_0_1.
+Qed.
+
+Lemma lt_sub1_sub1_sub_eq:  forall i n, i < n -> n - 1 - (n - 1 - i) = i.
+Proof.
+  intros. rewrite subsub_eq; auto. apply Nat.le_add_le_sub_l. now rewrite Nat.add_1_l.
+Qed.
