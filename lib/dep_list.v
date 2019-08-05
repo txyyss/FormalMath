@@ -924,13 +924,18 @@ Lemma dep_nth_cons: forall {A} (i: nat) {n: nat} (l: dep_list A n) (a d: A),
     dep_nth i l d = dep_nth (S i) (dep_cons a l) d.
 Proof. intros. now simpl. Qed.
 
+Lemma dep_nth_nil: forall {A} (i: nat) d, dep_nth i (@dep_nil A) d = d.
+Proof. intros. rewrite dep_nth_overflow; [easy | apply Nat.le_0_l]. Qed.
+
+Hint Rewrite @dep_nth_nil: dep_list.
+
 Lemma dep_nth_list_binop: forall {A B C: Type} (f: A -> B -> C) {n: nat}
                                  (dl1: dep_list A n) (dl2: dep_list B n) i d1 d2 d,
     f d1 d2 = d -> dep_nth i (dep_list_binop f dl1 dl2) d =
                    f (dep_nth i dl1 d1) (dep_nth i dl2 d2).
 Proof.
   intros. revert n dl1 dl2 i. induction n; intros; dep_list_decomp.
-  - autorewrite with dep_list. rewrite !dep_nth_overflow; [easy | apply Nat.le_0_l..].
+  - now autorewrite with dep_list.
   - rewrite dep_list_binop_cons. destruct i; simpl; auto.
 Qed.
 
@@ -979,6 +984,90 @@ Qed.
 Lemma double_rev_rel_eq: forall {A n} (l1 l2 l3: dep_list A n),
     rev_rel l1 l2 -> rev_rel l2 l3 -> l1 = l3.
 Proof. intros. apply rev_rel_sym in H. now apply rev_rel_unique with l2. Qed.
+
+Definition row_rev_rel {A: Type} {m n: nat} (m1 m2: dep_list (dep_list A n) m): Prop :=
+  forall row d, row < m -> rev_rel (dep_nth row m1 d) (dep_nth row m2 d).
+
+Lemma row_rev_rel_sym: forall {A m n} (m1 m2: dep_list (dep_list A n) m),
+    row_rev_rel m1 m2 -> row_rev_rel m2 m1.
+Proof. intros. unfold row_rev_rel in *. intros. now apply rev_rel_sym, H. Qed.
+
+Lemma row_rev_rel_cons: forall
+    {A m n} (v1 v2: dep_list A n) (mat1 mat2: dep_list (dep_list A n) m),
+    rev_rel v1 v2 -> row_rev_rel mat1 mat2 ->
+    row_rev_rel (dep_cons v1 mat1) (dep_cons v2 mat2).
+Proof.
+  intros. unfold row_rev_rel in *. intros.
+  destruct row; simpl; [|apply H0, lt_S_n]; easy.
+Qed.
+
+Lemma row_rev_rel_exists: forall {A m n} (mat: dep_list (dep_list A n) m),
+    exists mat', row_rev_rel mat mat'.
+Proof.
+  intro. induction m; intros; dep_list_decomp.
+  - exists dep_nil. red. intros. now apply Nat.nlt_0_r in H.
+  - rename mat0 into v. destruct (rev_rel_exists v) as [v' ?].
+    destruct (IHm _ mat1) as [mat2 ?]. exists (dep_cons v' mat2).
+    now apply row_rev_rel_cons.
+Qed.
+
+Lemma row_rev_rel_unique: forall {A m n} (mat mat1 mat2: dep_list (dep_list A n) m),
+    row_rev_rel mat mat1 -> row_rev_rel mat mat2 -> mat1 = mat2.
+Proof.
+  intros. rewrite <- dep_nth_eq_iff. intros. rewrite (dep_nth_indep _ _ d1 d2); auto.
+  unfold row_rev_rel in *. specialize (H _ d2 H1). specialize (H0 _ d2 H1).
+  now apply rev_rel_unique with (dep_nth i mat d2).
+Qed.
+
+Lemma double_row_rev_rel_eq: forall {A m n} (m1 m2 m3: dep_list (dep_list A n) m),
+    row_rev_rel m1 m2 -> row_rev_rel m2 m3 -> m1 = m3.
+Proof. intros. apply row_rev_rel_sym in H. now apply row_rev_rel_unique with m2. Qed.
+
+Lemma row_rev_comm_rev: forall {A m n} (m1 m2 m3 m4 m5: dep_list (dep_list A n) m),
+    row_rev_rel m1 m2 -> rev_rel m2 m3 ->
+    rev_rel m1 m4 -> row_rev_rel m4 m5 -> m3 = m5.
+Proof.
+  intros. unfold rev_rel, row_rev_rel in *. rewrite <- dep_nth_eq_iff.
+  intros ? ? row ?. rewrite (dep_nth_indep _ _ d1 d2 H3). clear d1. rename d2 into d.
+  pose proof (lt_sub_1_sub_lt _ _ H3). specialize (H _ d H4). specialize (H0 d _ H4).
+  specialize (H1 d _ H4). specialize (H2 _ d H3).
+  assert (m - 1 - (m - 1 - row) = row). {
+    rewrite subsub_eq; auto. rewrite <- (Nat.add_sub row 1), Nat.add_1_r.
+    now apply Nat.sub_le_mono_r. } rewrite H5 in *. rewrite H0 in H.
+  rewrite <- H1 in H2. eapply rev_rel_unique; eauto.
+Qed.
+
+Definition dual_rev_rel {A: Type} {m n: nat}(m1 m2: dep_list (dep_list A n) m): Prop :=
+  exists m3, row_rev_rel m1 m3 /\ rev_rel m3 m2.
+
+Lemma dual_rev_rel_sym: forall {A m n} (m1 m2: dep_list (dep_list A n) m),
+    dual_rev_rel m1 m2 -> dual_rev_rel m2 m1.
+Proof.
+  intros. unfold dual_rev_rel in *. destruct H as [m3 [? ?]].
+  destruct (row_rev_rel_exists m2) as [m4 ?]. exists m4. split; auto.
+  apply rev_rel_sym in H0. apply row_rev_rel_sym in H.
+  destruct (rev_rel_exists m4) as [m5 ?].
+  pose proof (row_rev_comm_rev _ _ _ _ _ H1 H2 H0 H). now subst.
+Qed.
+
+Lemma dual_rev_rel_exists: forall {A m n} (mat: dep_list (dep_list A n) m),
+    exists mat', dual_rev_rel mat mat'.
+Proof.
+  intros. destruct (row_rev_rel_exists mat) as [mat1 ?].
+  destruct (rev_rel_exists mat1) as [mat2 ?]. exists mat2. red. exists mat1. now split.
+Qed.
+
+Lemma dual_rev_rel_unique: forall {A m n} (mat mat1 mat2: dep_list (dep_list A n) m),
+    dual_rev_rel mat mat1 -> dual_rev_rel mat mat2 -> mat1 = mat2.
+Proof.
+  intros. red in H, H0. destruct H as [m3 [? ?]]. destruct H0 as [m4 [? ?]].
+  assert (m3 = m4) by (eapply row_rev_rel_unique; eauto). subst.
+  eapply rev_rel_unique; eauto.
+Qed.
+
+Lemma double_dual_rev_rel_eq: forall A m n (m1 m2 m3: dep_list (dep_list A n) m),
+    dual_rev_rel m1 m2 -> dual_rev_rel m2 m3 -> m1 = m3.
+Proof. intros. apply dual_rev_rel_sym in H. now apply dual_rev_rel_unique with m2. Qed.
 
 Fixpoint dep_to_list {A} {n} (l: dep_list A n): list A :=
   match l with

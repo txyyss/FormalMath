@@ -1065,6 +1065,8 @@ Proof.
     now apply le_Sn_le.
 Qed.
 
+Hint Rewrite @det_transpose: matrix.
+
 Lemma dep_colist_mat_mul: forall {m l n} (m1: Matrix (S m) l) (m2: Matrix l n),
     dep_colist (mat_mul m1 m2) = dep_map (fun x => mat_mul x m2) (dep_colist m1).
 Proof.
@@ -1438,6 +1440,17 @@ Proof. intros. easy. Qed.
 
 Hint Rewrite @diag_cons: matrix.
 
+Lemma diag_transpose: forall {n} (mat: Matrix n n),
+    diagonal (mat_transpose mat) = diagonal mat.
+Proof.
+  induction n; intros; unfold Matrix in *; dep_list_decomp. 1: easy.
+  autorewrite with matrix. simpl dep_hd. rename mat2 into a.
+  destruct (dep_vertical_split mat1) as [v [mat2 ?]]. subst mat1.
+  autorewrite with matrix dep_list. simpl dep_hd. now rewrite IHn.
+Qed.
+
+Hint Rewrite @diag_transpose: matrix.
+
 Inductive ut_sigT: {n: nat & Matrix n n} -> Prop :=
 | UT_O: ut_sigT (existT _ O (@dep_nil (dep_list R 0)))
 | UT_Sn: forall
@@ -1505,6 +1518,54 @@ Proof.
     + intros. autorewrite with vector dep_list. rewrite H. ring.
   - now apply upper_triangular_mult.
 Qed.
+
+Definition lower_triangular {n: nat} (mat: Matrix n n): Prop :=
+  upper_triangular (mat_transpose mat).
+
+Lemma lower_triangular_det: forall {n} (mat: Matrix n n),
+    lower_triangular mat -> det mat = vec_prod (diagonal mat).
+Proof.
+  intros. red in H. apply upper_triangular_det in H. now autorewrite with matrix in H.
+Qed.
+
+Lemma lower_triangular_mult: forall {n} (m1 m2: Matrix n n),
+    lower_triangular m1 -> lower_triangular m2 -> lower_triangular (mat_mul m1 m2).
+Proof.
+  intros. red in H, H0 |- *. rewrite mat_transpose_mul.
+  now apply upper_triangular_mult.
+Qed.
+
+Lemma lower_triangular_diag: forall {n} (m1 m2: Matrix n n),
+    lower_triangular m1 -> lower_triangular m2 ->
+    diagonal (mat_mul m1 m2) = dep_list_binop Rmult (diagonal m1) (diagonal m2).
+Proof.
+  unfold lower_triangular. intros.
+  rewrite <- diag_transpose, <- (diag_transpose m1), <- (diag_transpose m2),
+  mat_transpose_mul, dep_list_binop_comm.
+  - now apply upper_triangular_diag.
+  - apply Rmult_comm.
+Qed.
+
+Lemma lower_triangular_det_mul: forall {n} (m1 m2: Matrix n n),
+    lower_triangular m1 -> lower_triangular m2 ->
+    det (mat_mul m1 m2) = (det m1 * det m2)%R.
+Proof.
+  intros. red in H, H0. pose proof (upper_triangular_det_mul _ _ H0 H).
+  now rewrite <- mat_transpose_mul, !det_transpose, Rmult_comm in H1.
+Qed.
+
+Lemma lower_dual_rev_upper: forall {n} (m1 m2: Matrix n n),
+    lower_triangular m1 -> dual_rev_rel m1 m2 -> upper_triangular m2.
+Proof.
+  induction n; intros; unfold Matrix in *.
+  - dep_list_decomp. red. constructor.
+  - dep_list_decomp. destruct (dep_vertical_split m5) as [v [m7 ?]]. subst.
+    red in H. autorewrite with matrix dep_list in H. inversion H. subst. clear H3.
+    apply inj_pair2_eq_dec in H4. 2: exact Nat.eq_dec. subst v1.
+    do 2 (apply inj_pair2_eq_dec in H5; [| exact Nat.eq_dec]).
+    apply dep_list_binop_cons_eq in H5. destruct H5. subst.
+    destruct (dep_vertical_split m3) as [v2 [m5 ?]]. subst.
+Abort.
 
 (** * Elementary Row Operations *)
 
