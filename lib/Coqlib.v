@@ -52,3 +52,24 @@ Lemma lt_sub1_sub1_sub_eq:  forall i n, i < n -> n - 1 - (n - 1 - i) = i.
 Proof.
   intros. rewrite subsub_eq; auto. apply Nat.le_add_le_sub_l. now rewrite Nat.add_1_l.
 Qed.
+
+Lemma sub_lt_mono_l: forall n m p : nat, n < m <= p -> p - m < p - n.
+Proof.
+  induction n, m, p; intros; destruct H.
+  - inversion H.
+  - inversion H.
+  - inversion H0.
+  - simpl. rewrite <- Nat.sub_succ. apply Nat.sub_lt; auto.
+  - inversion H.
+  - inversion H.
+  - inversion H0.
+  - rewrite !Nat.sub_succ in *. apply lt_S_n in H. apply le_S_n in H0.
+    now apply IHn.
+Qed.
+
+Lemma ltlt_sub1_lt: forall i j m, i < j < m -> m - 1 - j < m - 1 - i < m.
+Proof.
+  intros. destruct H. assert (i < m) by (eapply lt_trans; eauto).
+  split. 2: now apply lt_sub_1_sub_lt. apply sub_lt_mono_l. split; auto.
+  apply Nat.le_add_le_sub_r. now rewrite Nat.add_1_r.
+Qed.
