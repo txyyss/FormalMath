@@ -1564,6 +1564,38 @@ Proof.
   - now apply upper_triangular_mult.
 Qed.
 
+Lemma upper_triangular_spec: forall {n} (mat: Matrix n n),
+    upper_triangular mat <->
+    forall i j, i < j < n ->
+                dep_nth j (dep_nth i (mat_transpose mat) vec_zero) 0%R = 0%R.
+Proof.
+  induction n; intros; split; intros; unfold Matrix in *.
+  - destruct H0. inversion H1.
+  - dep_list_decomp. constructor.
+  - red in H. inversion H. subst. apply inj_pair2_eq_dec in H3. 2: exact Nat.eq_dec.
+    subst. unfold upper_triangular in IHn. rewrite IHn in H2. clear IHn H.
+    unfold Vector in *. dep_list_decomp. autorewrite with matrix dep_list.
+    destruct H0. destruct i.
+    + destruct j. 1: inversion H. simpl dep_nth. unfold vec_zero. apply dep_nth_repeat.
+      now apply lt_S_n in H0.
+    + destruct j. 1: inversion H. apply lt_S_n in H. apply lt_S_n in H0.
+      simpl dep_nth at 2. rewrite (dep_nth_list_binop _ _ _ _ 0%R vec_zero); auto.
+      simpl. now apply H2.
+  - dep_step_decomp mat. rename mat0 into v1. rename mat1 into mat.
+    destruct (dep_vertical_split mat) as [v2 [mat1 ?]]. subst. red. dep_list_decomp.
+    pose proof H. autorewrite with matrix dep_list in H. specialize (H O). simpl in H.
+    assert (v2 = vec_zero). {
+      rewrite <- dep_nth_eq_iff. intros.
+      rewrite (dep_nth_indep _ _ d1 0%R), (dep_nth_indep _ _ d2 0%R); auto.
+      clear d1 d2. unfold vec_zero. rewrite dep_nth_repeat; auto. specialize (H (S i)).
+      simpl in H. apply H. split; [apply Nat.lt_0_succ | now apply lt_n_S]. } subst v2.
+    constructor. autorewrite with matrix dep_list in H0.
+    unfold upper_triangular in IHn. rewrite IHn. intros.
+    assert (S i < S j < S n) by (destruct H1; now split; apply lt_n_S).
+    specialize (H0 _ _ H2). simpl dep_nth at 2 in H0.
+    now rewrite (dep_nth_list_binop _ _ _ _ 0%R vec_zero) in H0.
+Qed.
+
 Definition lower_triangular {n: nat} (mat: Matrix n n): Prop :=
   upper_triangular (mat_transpose mat).
 
@@ -1599,18 +1631,41 @@ Proof.
   now rewrite <- mat_transpose_mul, !det_transpose, Rmult_comm in H1.
 Qed.
 
+Lemma lower_triangular_spec: forall {n} (mat: Matrix n n),
+    lower_triangular mat <->
+    forall i j, i < j < n -> dep_nth j (dep_nth i mat vec_zero) 0%R = 0%R.
+Proof.
+  intros. unfold lower_triangular. rewrite upper_triangular_spec.
+  now autorewrite with matrix.
+Qed.
+
+Lemma upper_dual_rev_lower: forall {n} (m1 m2: Matrix n n),
+    upper_triangular m1 -> dual_rev_rel m1 m2 -> lower_triangular m2.
+Proof.
+  intros. rewrite upper_triangular_spec in H. rewrite lower_triangular_spec. intros.
+  red in H0. destruct H0 as [m3 [? ?]]. red in H0, H2.
+  pose proof (ltlt_sub1_lt i j n H1). specialize (H _ _ H3). destruct H3.
+  specialize (H2 vec_zero _ H4). destruct H1.
+  assert (i < n) by (eapply lt_trans; eauto). rewrite lt_sub1_sub1_sub_eq in H2; auto.
+  specialize (H0 _ vec_zero H4). rewrite H2 in H0. red in H0.
+  assert (n - 1 - j < n) by (eapply lt_trans; eauto). specialize (H0 0%R _ H7).
+  rewrite lt_sub1_sub1_sub_eq in H0; auto.
+  rewrite (dep_nth_transpose vec_zero) in H; auto. now rewrite H0 in H.
+Qed.
+
 Lemma lower_dual_rev_upper: forall {n} (m1 m2: Matrix n n),
     lower_triangular m1 -> dual_rev_rel m1 m2 -> upper_triangular m2.
 Proof.
-  induction n; intros; unfold Matrix in *.
-  - dep_list_decomp. red. constructor.
-  - dep_list_decomp. destruct (dep_vertical_split m5) as [v [m7 ?]]. subst.
-    red in H. autorewrite with matrix dep_list in H. inversion H. subst. clear H3.
-    apply inj_pair2_eq_dec in H4. 2: exact Nat.eq_dec. subst v1.
-    do 2 (apply inj_pair2_eq_dec in H5; [| exact Nat.eq_dec]).
-    apply dep_list_binop_cons_eq in H5. destruct H5. subst.
-    destruct (dep_vertical_split m3) as [v2 [m5 ?]]. subst.
-Abort.
+  intros. rewrite lower_triangular_spec in H. rewrite upper_triangular_spec. intros.
+  red in H0. destruct H0 as [m3 [? ?]]. red in H0, H2.
+  pose proof (ltlt_sub1_lt i j n H1). specialize (H _ _ H3). destruct H3, H1.
+  assert (i < n) by (eapply lt_trans; eauto).
+  rewrite (dep_nth_transpose vec_zero); auto.
+  assert (n - 1 - j < n) by (eapply lt_trans; eauto).
+  specialize (H2 vec_zero _ H7). rewrite lt_sub1_sub1_sub_eq in H2; auto.
+  specialize (H0 _ vec_zero H7). rewrite H2 in H0. red in H0. specialize (H0 0%R _ H4).
+  rewrite lt_sub1_sub1_sub_eq in H0; auto. now rewrite H0 in H.
+Qed.
 
 (** * Elementary Row Operations *)
 
@@ -1654,7 +1709,7 @@ Proof.
   intros. pose proof H. destruct H as [? _]. decomp_lt_subst.
   unfold Matrix in *. dep_add_decomp. dep_list_decomp.
   apply row_op_mul_spec in H0. destruct H0 as [? [? [? ?]]]. subst.
-  rewrite det_row_mul, <- Rmult_assoc, <- Rinv_l_sym, Rmult_1_l; auto.
+  rewrite det_row_mul, <- Rmult_assoc, Rinv_l, Rmult_1_l; auto.
 Qed.
 
 Lemma row_op_mul_comm_mul:
@@ -2506,49 +2561,28 @@ Proof.
       exists (AddRow a0 (m-1-i) (m-1-j) :: l2). now apply seror_add_cons with m6.
 Qed.
 
-Definition multilinear_map (f: forall n, Matrix n n -> R): Prop :=
-  forall (n m: nat) (a1 a2: R) (m1: Matrix n (n + S m))
-         (m2: Matrix m (n + S m)) (r1 r2: Vector (n + S m)),
-    f (n + S m)
-      (dep_app m1 (dep_cons (vec_add (vec_scal_mul a1 r1) (vec_scal_mul a2 r2)) m2)) =
-    (a1 * f (n + S m)%nat (dep_app m1 (dep_cons r1 m2)) +
-     a2 * f (n + S m)%nat (dep_app m1 (dep_cons r2 m2)))%R.
-
-Lemma det_is_multilinear_map: multilinear_map (@det).
-Proof. red. intros. now rewrite det_row_add, !det_row_mul. Qed.
-
-Definition alternating_form (f: forall x, Matrix x x -> R): Prop :=
-  forall {n m l: nat} (m1: Matrix n (n + S (m + S l))) (m2: Matrix m (n + S (m + S l)))
-         (m3: Matrix l (n + S (m + S l))) (r: Vector (n + S (m + S l))),
-    f (n + S (m + S l)) (dep_app m1 (dep_cons r (dep_app m2 (dep_cons r m3)))) = 0%R.
-
-Lemma det_is_alternating_form: alternating_form (@det).
-Proof. red. intros. now rewrite det_row_dup. Qed.
-
-Lemma multilinear_alternating_unique: forall (f: forall n, Matrix n n -> R),
-    multilinear_map f -> alternating_form f ->
-    forall n (m: Matrix n n), f n m = (det m * f n identity_mat)%R.
+Lemma mat_seror_lower_triangular: forall {n} (mat: Matrix n n),
+    exists l lowt, SeqElmtryRowOpRel mat l lowt /\ lower_triangular lowt.
 Proof.
-  do 3 intro. induction n; intros; unfold Matrix in *.
-  - dep_list_decomp. simpl. ring.
-  -
-Abort.
+  intros. destruct (dual_rev_rel_exists mat) as [mat' ?].
+  destruct (mat_seror_upper_triangular mat') as [l [ut [? ?]]].
+  destruct (dual_rev_rel_exists ut) as [lowt ?]. apply dual_rev_rel_sym in H.
+  destruct (seror_dual_rev _ _ _ _ _ H0 H H2) as [l' ?].
+  pose proof (upper_dual_rev_lower _ _ H1 H2). now exists l', lowt.
+Qed.
 
-Goal forall (a b c d e f g h i j k l: R),
-    let A := {| {| a; b; c |}; {| d; e; f |} |} in
-    let B := {| {| g; h |}; {| i; j |}; {| k; l |} |} in
-    det (mat_mul A B) =
-    vec_sum (dep_map det (dep_list_binop mat_mul (dep_colist (mat_transpose A))
-                                         (dep_colist B))).
-Proof. intros. subst A. subst B. vm_compute. ring. Qed.
-
-Goal forall (a b c d e f g h i j k l m n o p q r s t u v w x: R),
-    let A := {| {| a; b; c; d |}; {| e; f; g; h |}; {| i; j; k; l |} |} in
-    let B := {| {| m; n; o |}; {| p; q; r |}; {| s; t; u |}; {| v; w; x |} |} in
-    det (mat_mul A B) =
-    vec_sum (dep_map det (dep_list_binop mat_mul (dep_colist (mat_transpose A))
-                                         (dep_colist B))).
-Proof. intros. subst A. subst B. vm_compute. ring. Qed.
+Theorem det_mul: forall {n} (A B: Matrix n n), det (mat_mul A B) = (det A * det B)%R.
+Proof.
+  intros. destruct (mat_seror_upper_triangular A) as [lA [utA [? ?]]].
+  pose proof (seror_comm_mul _ _ B _ H). pose proof (seror_det _ _ _ H1).
+  rewrite <- (det_transpose (mat_mul utA B)), mat_transpose_mul in H2.
+  destruct (mat_seror_lower_triangular (mat_transpose B)) as [lB [ltB [? ?]]].
+  pose proof (seror_comm_mul _ _ (mat_transpose utA) _ H3). rewrite H2.
+  rewrite (seror_det _ _ _ H5), lower_triangular_det_mul; auto.
+  2: red; now autorewrite with matrix. autorewrite with matrix.
+  rewrite (seror_det _ _ _ H). apply seror_det in H3. autorewrite with matrix in H3.
+  rewrite H3. ring.
+Qed.
 
 Definition adj {n: nat}: Matrix n n -> Matrix n n :=
   match n as m return (Matrix m m -> Matrix m m) with
@@ -2564,17 +2598,6 @@ Definition adj {n: nat}: Matrix n n -> Matrix n n :=
                                        (dep_colist mat))))))
   end.
 
-Goal forall (a b c d e f g h i: R),
-    let A := {| {| a; b; c |}; {| d; e; f |}; {| g; h; i |} |} in
-    mat_mul (adj A) A = mat_scal_mul (det A) identity_mat.
-Proof.
-  intros. subst A. vm_compute. do 2 f_equal.
-  - ring.
-  - do 2 (f_equal; try ring).
-  - do 3 (f_equal; try ring).
-  - do 4 (f_equal; try ring).
-Qed.
-
 Lemma mat_mul_adj_l: forall {n} (mat: Matrix n n),
     mat_mul (adj mat) mat = mat_scal_mul (det mat) identity_mat.
 Proof.
@@ -2585,32 +2608,4 @@ Proof.
     + dep_list_decomp. autorewrite with matrix. vm_compute. do 2 f_equal. ring.
     + simpl dep_repeat. autorewrite with dep_list matrix vector.
 
-Abort.
-
-Lemma cauchy_binet_nxSn: forall {n} (A: Matrix n (S n)) (B: Matrix (S n) n),
-    det (mat_mul A B) =
-    vec_sum (dep_map det (dep_list_binop mat_mul (dep_colist (mat_transpose A))
-                                         (dep_colist B))).
-Proof.
-  induction n; intros; unfold Matrix in *.
-  - dep_list_decomp. autorewrite with matrix dep_list. simpl. vm_compute. ring.
-  - rewrite <- (mat_transpose_involutive A) at 1. generalize (mat_transpose A).
-    clear A. intros A. unfold Matrix in *. dep_step_decomp A. dep_step_decomp B.
-    autorewrite with matrix dep_list.
-    dep_step_decomp A1. dep_step_decomp B1. autorewrite with matrix dep_list.
-Abort.
-
-Lemma det_mul: forall {n} (A B: Matrix n n), det (mat_mul A B) = (det A * det B)%R.
-Proof.
-  induction n; intros; unfold Matrix in *.
-  - dep_list_decomp. simpl. now rewrite Rmult_1_r.
-  - dep_step_decomp A. dep_step_decomp B. autorewrite with matrix.
-    rewrite mat_transpose_mul. autorewrite with matrix.
-    rewrite dep_colist_mat_mul, dep_colist_cons_col.
-    rewrite dep_map_nest, !dep_map_list_binop.
-    generalize (mat_transpose A1) (mat_transpose B1). clear A1 B1. intros A1 B1.
-    unfold Matrix in *. dep_step_decomp A1.
-    rewrite (dep_list_binop_ext
-               (fun x y => det (mat_add (mat_span x A2) (mat_mul y A3)))) by
-        (intros; now autorewrite with matrix).
 Abort.

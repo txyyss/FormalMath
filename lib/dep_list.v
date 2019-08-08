@@ -1106,3 +1106,21 @@ Proof.
   autorewrite with dep_list in H. do 2 (apply dep_cons_eq_inv in H; destruct H).
   apply IHm in H0. destruct H0. subst. easy.
 Qed.
+
+Lemma dep_nth_transpose: forall {A m n} d3 (mat: dep_list (dep_list A n) m) i j d1 d2,
+    i < m -> j < n -> dep_nth i (dep_nth j (dep_list_transpose mat) d1) d2 =
+                      dep_nth j (dep_nth i mat d3) d2.
+Proof.
+  intro. induction m, n; intros; [inversion H | inversion H | inversion H0 |].
+  dep_list_decomp. destruct (dep_vertical_split mat1) as [v [mat4 ?]]. subst.
+  rename mat4 into mat1. destruct i, j; simpl dep_nth at 4; autorewrite with dep_list.
+  - simpl dep_nth at 3. now simpl.
+  - simpl dep_nth at 3. simpl dep_nth at 2.
+    rewrite (dep_nth_list_binop _ _ _ _ d0 d4); auto. simpl.
+    now apply dep_nth_indep, lt_S_n.
+  - simpl dep_nth at 2. rewrite (dep_nth_list_binop _ _ _ _ d1 d5); auto. simpl.
+    now apply dep_nth_indep, lt_S_n.
+  - simpl dep_nth at 2. rewrite (dep_nth_list_binop _ _ _ _ d1 d5),
+                        (dep_nth_list_binop _ _ _ _ d0 d4); auto. simpl.
+    apply IHm; now apply lt_S_n.
+Qed.
