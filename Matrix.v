@@ -371,6 +371,17 @@ Proof. intros. unfold mat_add. now autorewrite with dep_list. Qed.
 
 Hint Rewrite @mat_add_cons: matrix.
 
+Lemma mat_add_col_cons: forall {m n} (m1 m2: Matrix m n) (v1 v2: Vector m),
+    mat_add (dep_list_binop (dep_cons (n:= n)) v1 m1)
+            (dep_list_binop (dep_cons (n:= n)) v2 m2) =
+    dep_list_binop (dep_cons (n:= n)) (vec_add v1 v2) (mat_add m1 m2).
+Proof.
+  intros m n. revert m. apply dep_list_ind_4; intros;
+                          autorewrite with matrix vector dep_list; [|rewrite H]; easy.
+Qed.
+
+Hint Rewrite @mat_add_col_cons: matrix.
+
 Definition mat_scal_mul {m n} (a: R): Matrix m n -> Matrix m n :=
   dep_map (vec_scal_mul a).
 
@@ -495,6 +506,33 @@ Lemma mat_mul_cons: forall {m l n} (v: Vector l) (m1: Matrix m l) (m2: Matrix l 
 Proof. intros. unfold mat_mul. now simpl. Qed.
 
 Hint Rewrite @mat_mul_cons: matrix.
+
+Definition zero_mat {m n}: Matrix m n := dep_repeat vec_zero m.
+
+Lemma zero_mat_cons: forall {m n}, @zero_mat (S m) n = dep_cons vec_zero zero_mat.
+Proof. intros; unfold zero_mat. now simpl. Qed.
+
+Hint Rewrite @zero_mat_cons: matrix.
+
+Lemma mat_mul_nil': forall {m n} (mat: Matrix m 0),
+    mat_mul mat (@dep_nil (Vector n)) = zero_mat.
+Proof.
+  induction m; intros; unfold Matrix in *; dep_list_decomp;
+    autorewrite with matrix vector dep_list;
+    [unfold zero_mat; simpl | rewrite IHm]; easy.
+Qed.
+
+Hint Rewrite @mat_mul_nil': matrix.
+
+Lemma zero_mat_col_cons: forall {m n},
+    dep_list_binop (dep_cons (n:=n)) vec_zero (@zero_mat m n) = zero_mat.
+Proof.
+  induction m; intros.
+  - unfold zero_mat, vec_zero. now simpl.
+  - rewrite !zero_mat_cons, vec_zero_cons. autorewrite with dep_list. now rewrite IHm.
+Qed.
+
+Hint Rewrite @zero_mat_col_cons: matrix.
 
 Lemma mat_mul_app: forall {k l m n} (m1: Matrix k l) (m2: Matrix m l) (m3: Matrix l n),
     mat_mul (dep_app m1 m2) m3 = dep_app (mat_mul m1 m3) (mat_mul m2 m3).
@@ -742,13 +780,6 @@ Qed.
 
 Hint Rewrite @mat_mul_col_cons: matrix.
 
-Definition zero_mat {m n}: Matrix m n := dep_repeat vec_zero m.
-
-Lemma zero_mat_cons: forall {m n}, @zero_mat (S m) n = dep_cons vec_zero zero_mat.
-Proof. intros; unfold zero_mat. now simpl. Qed.
-
-Hint Rewrite @zero_mat_cons: matrix.
-
 Lemma mat_add_zero_r: forall {m n} (mat: Matrix m n), mat_add mat zero_mat = mat.
 Proof.
   intros. revert m mat. apply dep_list_ind_1; intros; autorewrite with matrix. 1: easy.
@@ -783,9 +814,7 @@ Hint Rewrite @mat_span_col_cons: matrix.
 Lemma mat_span_zero_l: forall {m n} (v: Vector n), mat_span (@vec_zero m) v = zero_mat.
 Proof.
   intros. revert n v. apply dep_list_ind_1; intros; simpl; autorewrite with matrix.
-  1: easy. rewrite H. autorewrite with vector. clear.
-  induction m; autorewrite with matrix vector dep_list. 1: easy. unfold Vector.
-  now rewrite IHm.
+  1: easy. rewrite H. now autorewrite with matrix vector.
 Qed.
 
 Hint Rewrite @mat_span_zero_l: matrix.
@@ -842,6 +871,18 @@ Proof.
 Qed.
 
 Hint Rewrite @mat_vec_mul_zero: matrix.
+
+Lemma mat_mul_col_cons_2:
+  forall {m l n} (m1: Matrix m l) (m2: Matrix l n) (v: Vector l),
+    mat_mul m1 (dep_list_binop (dep_cons (n:=n)) v m2) =
+    dep_list_binop (dep_cons (n:=n)) (mat_vec_mul m1 v) (mat_mul m1 m2).
+Proof.
+  intros. revert l m1 m2 v.
+  induction l; intros; unfold Matrix, Vector in *; dep_list_decomp;
+    autorewrite with matrix vector dep_list; auto.
+  destruct (dep_vertical_split m1) as [v [m2 ?]]. subst.
+  autorewrite with matrix. rewrite IHl. now autorewrite with matrix.
+Qed.
 
 Lemma linear_map_mat: forall {m n} (f: Vector m -> Vector n),
     linear_map f -> forall {l} (mat: Matrix l m) (v: Vector l),
@@ -971,14 +1012,14 @@ Proof.
     red in H2 |-* . intros. now rewrite !H0.
 Qed.
 
+(** * Square Matrix Theory *)
+
 Lemma sq_mat_left_right_inverse_eq: forall {n} (A B C: Matrix n n),
     mat_mul B A = identity_mat -> mat_mul A C = identity_mat -> B = C.
 Proof.
   intros. pose proof (mat_mul_assoc B A C). rewrite H, H0 in H1.
   now autorewrite with matrix in H1.
 Qed.
-
-(** * Square Matrix Theory *)
 
 Fixpoint alter_sign_helper {n} (r: R) (v: Vector n): Vector n :=
   match v with
@@ -2422,47 +2463,56 @@ Lemma mat_seror_O_S_col_some: forall
     (dep_cons (dep_cons a v1) (dep_list_binop (dep_cons (n:=n)) cv mat1))
     (map (fun i : nat => AddRow (f i) 0 i) l)
     (dep_cons v2 (dep_list_binop (dep_cons (n:=n)) rv mat2)) ->
-  forall i d,
-      (In i l -> dep_nth (i - 1) rv d = (dep_nth (i - 1) cv d + (f i) * a)%R) /\
-      (~ In i l -> 1 <= i -> dep_nth (i - 1) rv d = dep_nth (i - 1) cv d).
+  v2 = dep_cons a v1 /\
+  forall i,
+    (In i l -> dep_nth (i - 1) rv 0%R = (dep_nth (i - 1) cv 0%R + (f i) * a)%R /\
+               dep_nth (i - 1) mat2 vec_zero =
+               vec_add (dep_nth (i - 1) mat1 vec_zero) (vec_scal_mul (f i) v1)) /\
+    (~ In i l -> 1 <= i -> dep_nth (i - 1) rv 0%R = dep_nth (i - 1) cv 0%R /\
+                           dep_nth (i - 1) mat2 vec_zero =
+                           dep_nth (i - 1) mat1 vec_zero).
 Proof.
-  intros. revert i d. revert l cv mat1 mat2 H H0 H1. induction l; intros.
+  intros. revert l cv mat1 mat2 H H0 H1. induction l; intros.
   - simpl in H1. inversion H1. apply inj_pair2_eq_dec in H5. 2: apply Nat.eq_dec.
-    subst. apply dep_list_binop_cons_eq in H5. destruct H5. subst. split; intros; auto.
-    1: inversion H2.
+    subst. apply dep_list_binop_cons_eq in H5. destruct H5. subst.
+    split; intros; [|split; intros]; auto. inversion H2.
   - rename a0 into j. simpl in H1. inversion H1. subst. clear H1. unfold Matrix in *.
     dep_step_decomp m2. destruct (dep_vertical_split m1) as [cv1 [mat3 ?]]. subst m1.
     apply row_op_add_cons_Oi in H8. destruct H8 as [? [? ?]]. subst m0.
-    specialize (H2 (dep_cons d (dep_repeat d n))).
-    rewrite !(dep_nth_list_binop _ _ _ _ d (dep_repeat d n)) in H2; auto.
-    autorewrite with vector in H2. apply dep_cons_eq_inv in H2. destruct H2 as [? _].
-    assert (forall k, k <> j - 1 -> dep_nth k cv d = dep_nth k cv1 d). {
-      intros. specialize (H3 k (dep_cons d (dep_repeat d n)) H2).
-      rewrite !(dep_nth_list_binop _ _ _ _ d (dep_repeat d n)) in H3; auto.
-      apply dep_cons_eq_inv in H3. now destruct H3. } clear H3.
     rewrite NoDup_cons_iff in H. destruct H.
     assert (forall i : nat, In i l -> 1 <= i <= m) by (intros; apply H0; now right).
-    specialize (IHl _ _ _ H3 H4 H9 i d). clear H9. destruct IHl. split; intros.
-    + simpl in H7. destruct H7.
-      * subst. rewrite <- H1. destruct (H0 _ (in_eq i l)). now apply H6.
-      * rewrite H5, H2; auto. specialize (H4 _ H7). destruct H4.
-        specialize (H0 _ (in_eq j l)). destruct H0. intro.
-        rewrite <- (Nat.add_cancel_r _ _ 1), !Nat.sub_add in H10; auto.
-        subst i. now apply H.
-    + assert (~ In i l) by (intro; now apply H7, in_cons).
+    specialize (IHl _ _ _ H1 H4 H9). destruct IHl. split; auto. intros.
+    specialize (H2 (dep_cons 0%R vec_zero)). specialize (H6 i). destruct H6.
+    rewrite !(dep_nth_list_binop _ _ _ _ 0%R vec_zero) in H2; auto.
+    autorewrite with vector in H2. apply dep_cons_eq_inv in H2. destruct H2 as [? ?].
+    assert (forall k, k <> j - 1 ->
+                      dep_nth k cv 0%R = dep_nth k cv1 0%R /\
+                      dep_nth k mat1 vec_zero = dep_nth k mat3 vec_zero). {
+      intros. specialize (H3 k vec_zero H10).
+      rewrite !(dep_nth_list_binop _ _ _ _ 0%R vec_zero) in H3; auto.
+      apply dep_cons_eq_inv in H3. now destruct H3. } clear H3 H9. split; intros.
+    + simpl in H3. unfold Vector in *. destruct H3.
+      * subst. rewrite <- H2, <- H8. destruct (H0 _ (in_eq i l)). now apply H7.
+      * specialize (H6 H3). destruct H6. rewrite H6, H9.
+        specialize (H4 _ H3). destruct H4. specialize (H0 _ (in_eq j l)).
+        destruct H0. assert (i - 1 <> j - 1). {
+          intro. rewrite <- (Nat.add_cancel_r _ _ 1), !Nat.sub_add in H13; auto.
+          subst. now apply H. } destruct (H10 _ H13). now rewrite H14, H15.
+    + assert (~ In i l) by (intro; now apply H3, in_cons).
       assert (i - 1 <> j - 1). {
         intro. destruct (H0 _ (in_eq j l)).
-        rewrite <- (Nat.add_cancel_r _ _ 1), !Nat.sub_add in H10; auto.
-        subst. apply H7, in_eq. } rewrite H6; auto. symmetry. now apply H2.
+        rewrite <- (Nat.add_cancel_r _ _ 1), !Nat.sub_add in H12; auto.
+        subst. apply H3, in_eq. } destruct (H10 _ H12). destruct (H7 H11 H9).
+      now rewrite H13, H14, H15, H16.
 Qed.
 
 Lemma mat_seror_clear_col_not_zero: forall
     {m n} (mat1: Matrix m n) (a: R) (v1: Vector n) (cv: Vector m),
     a <> 0%R ->
-    exists l mat2 v2,
+    exists l mat2,
       SeqElmtryRowOpRel
         (dep_cons (dep_cons a v1) (dep_list_binop (dep_cons (n := n)) cv mat1)) l
-        (dep_cons v2 (dep_list_binop (dep_cons (n := n)) vec_zero mat2)).
+        (dep_cons (dep_cons a v1) (dep_list_binop (dep_cons (n := n)) vec_zero mat2)).
 Proof.
   intros. remember (map (fun i => AddRow (-dep_nth (i-1) cv 0%R * / a) O i) (seq 1 m)).
   exists l. assert (Forall (legal_ero (S m)) l). {
@@ -2472,46 +2522,48 @@ Proof.
     split; [|split]; [|easy|now apply lt_0_neq]. unfold lt. apply le_n_S, Nat.le_0_l. }
   destruct (seror_exists
               (dep_cons (dep_cons a v1) (dep_list_binop (dep_cons (n:=n)) cv mat1))
-              _ H0) as [mat3 ?]. unfold Matrix in *.
-  dep_step_decomp mat3. destruct (dep_vertical_split mat2) as [v3 [mat' ?]].
-  subst mat2. cut (v3 = vec_zero). 1: intros; subst v3; now exists mat', mat0.
-  subst l. clear -H1 H. rewrite <- dep_nth_eq_iff. intros.
+              _ H0) as [mat3 ?]. unfold Matrix in *. clear H0. dep_step_decomp mat3.
+  destruct (dep_vertical_split mat2) as [v3 [mat' ?]]. subst mat2. subst l.
+  assert (forall i : nat, In i (seq 1 m) -> 1 <= i <= m). {
+    intros. rewrite in_seq in H0. destruct H0. split; auto. apply lt_n_Sm_le.
+    now rewrite <- Nat.add_1_l. } pose proof H1.
+  apply mat_seror_O_S_col_some in H1; auto. 2: apply seq_NoDup. destruct H1. subst.
+  cut (v3 = vec_zero). 1: { intros; subst v3; now exists mat'. } clear -H3 H.
+  rewrite <- dep_nth_eq_iff. intros. specialize (H3 (S i)). destruct H3.
   rewrite (dep_nth_indep _ _ d1 0%R); auto. rewrite (dep_nth_indep _ _ d2 0%R); auto.
-  apply mat_seror_O_S_col_some with (i0 := S i) (d := 0%R) in H1. 2: apply seq_NoDup.
-  - destruct H1 as [? _]. simpl in H1. rewrite Nat.sub_0_r in H1.
-    rewrite Rmult_assoc, Rinv_l, Rmult_1_r, Rplus_opp_r in H1; auto.
-    unfold vec_zero. rewrite dep_nth_repeat, H1; auto. rewrite in_seq, (Nat.add_1_l m).
-    split; [apply le_n_S, Nat.le_0_l | now apply lt_n_S].
-  - intros. rewrite in_seq in H2. destruct H2. split; auto. apply lt_n_Sm_le.
-    now rewrite <- Nat.add_1_l.
+  simpl in H1. rewrite Nat.sub_0_r, Rmult_assoc, Rinv_l, Rmult_1_r in H1; auto.
+  rewrite Rplus_opp_r in H1. unfold vec_zero. rewrite dep_nth_repeat; auto.
+  assert (In (S i) (seq 1 m)). {
+    rewrite in_seq, (Nat.add_1_l m).
+    split; [apply le_n_S, Nat.le_0_l | now apply lt_n_S]. } now destruct (H1 H3).
 Qed.
 
 Lemma mat_seror_clear_col_not_vec_zero: forall
     {m n} (mat1: Matrix m n) (v1: Vector (S n)) (cv: Vector m),
     cv <> vec_zero ->
-    exists l mat2 v2,
+    exists v2 l mat2,
       SeqElmtryRowOpRel
         (dep_cons v1 (dep_list_binop (dep_cons (n := n)) cv mat1)) l
         (dep_cons v2 (dep_list_binop (dep_cons (n := n)) vec_zero mat2)).
 Proof.
   intros. unfold Vector in *. dep_list_decomp. rename v0 into a. rename v2 into v1.
-  destruct (Req_dec a 0%R). 2: now apply mat_seror_clear_col_not_zero. subst a.
-  apply vec_neq_zero in H. destruct H as [i [? ?]].
+  destruct (Req_dec a 0%R). apply vec_neq_zero in H. destruct H as [i [? ?]].
+  2: exists (dep_cons a v1); now apply mat_seror_clear_col_not_zero. subst a.
   assert (exists mat3,
              row_op_add
                1%R (S i) O
                (dep_cons (dep_cons 0%R v1) (dep_list_binop (dep_cons (n:=n)) cv mat1))
                mat3). {
     apply row_op_add_exists; [now apply lt_n_S | apply Nat.lt_0_succ |].
-    apply Nat.neq_succ_0. } destruct H1 as [mat3 ?]. unfold Matrix in *.
-  dep_list_decomp. rename mat3 into a. rename mat4 into v2. pose proof H1.
+    apply Nat.neq_succ_0. } destruct H0 as [mat3 ?]. unfold Matrix in *.
+  dep_list_decomp. rename mat3 into a. rename mat4 into v2. pose proof H0.
   apply row_op_add_cons_iO in H2. destruct H2. simpl in H2.
   rewrite Nat.sub_0_r in H2. autorewrite with vector in H2.
   rewrite dep_nth_list_binop with (d1 := 0%R) (d2 := @vec_zero n) in H2; auto.
   autorewrite with vector in H2. apply dep_cons_eq_inv in H2. destruct H2 as [? _].
-  rewrite Rplus_0_l, Rmult_1_l in H2. rewrite <- H2 in H0. clear H2. subst mat2.
-  destruct (mat_seror_clear_col_not_zero mat1 a v2 cv H0) as [l' [mat3 [v3 ?]]].
-  exists (AddRow 1 (S i) O :: l'), mat3, v3.
+  rewrite Rplus_0_l, Rmult_1_l in H2. rewrite <- H2 in H1. clear H2. subst mat2.
+  destruct (mat_seror_clear_col_not_zero mat1 a v2 cv H1) as [l' [mat3 ?]].
+  exists (dep_cons a v2), (AddRow 1 (S i) O :: l'), mat3.
   now apply seror_add_cons with
       (dep_cons (dep_cons a v2) (dep_list_binop (dep_cons (n:=n)) cv mat1)).
 Qed.
@@ -2538,7 +2590,7 @@ Proof.
     destruct (vec_eq_dec d0 vec_zero).
     + subst d0. specialize (H0 mat0 mat2). apply H0.
     + rename mat0 into v. rename d0 into vv.
-      destruct (mat_seror_clear_col_not_vec_zero mat2 v vv n0) as [l1 [mat1 [v1 ?]]].
+      destruct (mat_seror_clear_col_not_vec_zero mat2 v vv n0) as [v1 [l1 [mat1 ?]]].
       specialize (H0 v1 mat1). destruct H0 as [l2 [ut [? ?]]]. exists (l1 ++ l2), ut.
       split; auto. now apply seror_trans with
                        (dep_cons v1 (dep_list_binop (dep_cons (n:=n)) vec_zero mat1)).
@@ -2584,28 +2636,186 @@ Proof.
   rewrite H3. ring.
 Qed.
 
-Definition adj {n: nat}: Matrix n n -> Matrix n n :=
-  match n as m return (Matrix m m -> Matrix m m) with
-  | O => fun _ => dep_nil
-  | S l =>
-    fun mat =>
-      (dep_map (dep_list_binop Rmult (alter_sign (dep_repeat 1%R (S l))))
-               (mat_transpose
-                  (dep_map
-                     (dep_list_binop Rmult (alter_sign (dep_repeat 1%R (S l))))
-                     (dep_map (dep_map det)
-                              (dep_map (fun x => dep_colist (dep_list_transpose x))
-                                       (dep_colist mat))))))
-  end.
+Inductive diag_sigT: {n: nat & Matrix n n} -> Prop :=
+| DIAG_O: diag_sigT (existT _ O (@dep_nil (dep_list R 0)))
+| DIAG_Sn: forall
+    (n: nat) (m: Matrix n n) (a: R),
+    diag_sigT (existT (fun x => Matrix x x) n m) ->
+    diag_sigT (existT _ (S n)
+                      (dep_cons (dep_cons a vec_zero)
+                                (dep_list_binop (dep_cons (n := n)) vec_zero m))).
 
-Lemma mat_mul_adj_l: forall {n} (mat: Matrix n n),
-    mat_mul (adj mat) mat = mat_scal_mul (det mat) identity_mat.
+Definition diagonal_mat {n: nat} (mat: Matrix n n): Prop :=
+  diag_sigT (existT (fun x => Matrix x x) n mat).
+
+Lemma upper_lower_is_diag: forall {n} (mat: Matrix n n),
+    upper_triangular mat -> lower_triangular mat -> diagonal_mat mat.
 Proof.
-  induction n; intros; unfold Matrix in *.
-  - dep_list_decomp. easy.
-  - dep_step_decomp mat. unfold adj. simpl dep_repeat.
-    autorewrite with matrix vector. destruct n.
-    + dep_list_decomp. autorewrite with matrix. vm_compute. do 2 f_equal. ring.
-    + simpl dep_repeat. autorewrite with dep_list matrix vector.
+  induction n; intro; unfold Matrix in *; intros; dep_list_decomp. 1: constructor.
+  destruct (dep_vertical_split mat1) as [v2 [mat4 ?]]. subst. rename mat4 into mat1.
+  rename mat3 into v1. rename mat2 into a. inversion H0; subst. clear H0.
+  apply inj_pair2_eq_dec in H3. 2: exact Nat.eq_dec.
+  autorewrite with matrix dep_list in H3. apply dep_cons_eq_inv in H3. destruct H3.
+  apply dep_list_binop_cons_eq in H1. destruct H1. subst.
+  inversion H; subst. do 2 (apply inj_pair2_eq_dec in H5; [|exact Nat.eq_dec]).
+  apply dep_list_binop_cons_eq in H5. destruct H5. subst. clear v0 H3 H4.
+  constructor. now apply IHn.
+Qed.
 
-Abort.
+Lemma diag_iff_upper_lower: forall {n} (mat: Matrix n n),
+    diagonal_mat mat <-> upper_triangular mat /\ lower_triangular mat.
+Proof.
+  intros. split; intros. 2: destruct H; now apply upper_lower_is_diag. revert mat H.
+  induction n; intros; unfold Matrix in *; dep_list_decomp. 1: split; constructor.
+  inversion H. apply inj_pair2_eq_dec in H5. 2: exact Nat.eq_dec. subst. clear H2 H3.
+  destruct (dep_vertical_split mat1) as [v [mat3 ?]]. subst. rename mat3 into mat1.
+  do 2 (apply inj_pair2_eq_dec in H6; [|exact Nat.eq_dec]).
+  apply dep_list_binop_cons_eq in H6. destruct H6. subst. apply IHn in H1. destruct H1.
+  split. 1: now constructor. red. autorewrite with matrix dep_list. now constructor.
+Qed.
+
+Lemma mat_seror_clear_col_single: forall
+    {m n} (mat: Matrix m n) (a: R) (v: Vector m),
+    a <> 0%R ->
+    exists l,
+      SeqElmtryRowOpRel
+        (dep_cons (dep_cons a vec_zero) (dep_list_binop (dep_cons (n := n)) v mat)) l
+        (dep_cons (dep_cons a vec_zero)
+                  (dep_list_binop (dep_cons (n := n)) vec_zero mat)).
+Proof.
+  intros. remember (map (fun i => AddRow (-dep_nth (i-1) v 0%R * / a) O i) (seq 1 m)).
+  exists l. assert (Forall (legal_ero (S m)) l). {
+    subst l. clear. rewrite Forall_forall. intros. rewrite in_map_iff in H.
+    destruct H as [i [? ?]]. subst x. simpl. apply in_seq in H0.
+    rewrite (Nat.add_1_l m) in H0. destruct H0.
+    split; [|split]; [|easy|now apply lt_0_neq]. unfold lt. apply le_n_S, Nat.le_0_l. }
+  destruct (seror_exists
+              (dep_cons (dep_cons a vec_zero) (dep_list_binop (dep_cons (n:=n)) v mat))
+              _ H0) as [mat3 ?]. unfold Matrix in *. clear H0. dep_step_decomp mat3.
+  destruct (dep_vertical_split mat1) as [v3 [mat' ?]]. subst mat1. subst l.
+  assert (forall i : nat, In i (seq 1 m) -> 1 <= i <= m). {
+    intros. rewrite in_seq in H0. destruct H0. split; auto. apply lt_n_Sm_le.
+    now rewrite <- Nat.add_1_l. } pose proof H1.
+  apply mat_seror_O_S_col_some in H1; auto. 2: apply seq_NoDup. destruct H1. subst.
+  cut (dep_list_binop (dep_cons (n:=n)) v3 mat' =
+       dep_list_binop (dep_cons (n:=n)) vec_zero mat). 1: intros; now rewrite <- H1.
+  clear -H3 H. rewrite <- dep_nth_eq_iff. intros. specialize (H3 (S i)).
+  destruct H3 as [? _]. rewrite (dep_nth_indep _ _ d1 vec_zero); auto.
+  rewrite (dep_nth_indep _ _ d2 vec_zero); auto. simpl in H1.
+  rewrite Nat.sub_0_r, Rmult_assoc, Rinv_l, Rmult_1_r in H1; auto.
+  autorewrite with vector in H1. rewrite Rplus_opp_r in H1.
+  rewrite !(dep_nth_list_binop _ _ _ _ 0%R vec_zero); auto.
+  assert (In (S i) (seq 1 m)). {
+    rewrite in_seq, (Nat.add_1_l m).
+    split; [apply le_n_S, Nat.le_0_l | now apply lt_n_S]. } specialize (H1 H2).
+  destruct H1. f_equal. 2: apply H3. unfold vec_zero. now rewrite dep_nth_repeat.
+Qed.
+
+Lemma mat_seror_lower_to_diag: forall {n} (mat: Matrix n n),
+    det mat <> 0%R -> lower_triangular mat ->
+    exists l m, SeqElmtryRowOpRel mat l m /\ diagonal_mat m.
+Proof.
+  induction n; intros; unfold Matrix in *; dep_list_decomp.
+  - exists nil, {||}. split; constructor.
+  - rename mat2 into a. rename mat3 into v1. pose proof (lower_triangular_det _ H0).
+    rewrite diag_cons in H1. destruct (dep_vertical_split mat1) as [v2 [mat2 ?]].
+    subst. rename mat2 into mat. autorewrite with dep_list in H1. simpl dep_hd in H1.
+    autorewrite with vector in H1. rewrite H1 in H. clear H1. red in H0.
+    autorewrite with matrix dep_list in H0. inversion H0. subst. 
+    do 2 (apply inj_pair2_eq_dec in H5; [|exact Nat.eq_dec]). clear H0 v0 H3 H4.
+    apply dep_list_binop_cons_eq in H5. destruct H5. subst.
+    rewrite <- (lower_triangular_det _ H2) in H. apply Rmult_neq_0_reg in H.
+    assert
+      (exists l diam,
+          SeqElmtryRowOpRel
+            (dep_cons (dep_cons a vec_zero)
+                      (dep_list_binop (dep_cons (n := n)) vec_zero mat)) l diam /\
+          diagonal_mat diam). {
+      intros. destruct H. specialize (IHn _ H0 H2). destruct IHn as [l' [m' [? ?]]].
+      apply seror_cons_col, (seror_cons _ _ (dep_cons a vec_zero)) in H1.
+      destruct H1 as [li ?].
+      exists li, (dep_cons (dep_cons a vec_zero)
+                           (dep_list_binop (dep_cons (n:=n)) vec_zero m')).
+      split; auto. constructor. apply H3. } destruct H.
+    destruct (mat_seror_clear_col_single mat a v2 H) as [l1 ?].
+    destruct H0 as [l2 [dm [? ?]]]. exists (l1 ++ l2), dm. split; auto.
+    now apply seror_trans with
+        (dep_cons (dep_cons a vec_zero)
+                  (dep_list_binop (dep_cons (n:=n)) vec_zero mat)).
+Qed.
+
+Lemma mat_seror_diag: forall {n} (mat: Matrix n n),
+    det mat <> 0%R -> exists l m, SeqElmtryRowOpRel mat l m /\ diagonal_mat m.
+Proof.
+  intros. destruct (mat_seror_lower_triangular mat) as [l1 [lowt [? ?]]].
+  rewrite (seror_det _ _ _ H0) in H. apply Rmult_neq_0_reg in H. destruct H.
+  destruct (mat_seror_lower_to_diag _ H2 H1) as [l2 [mat' [? ?]]].
+  exists (l1 ++ l2), mat'. split; auto. now apply seror_trans with lowt.
+Qed.
+
+Fixpoint diag_mat {n} (v: Vector n): Matrix n n :=
+  match n as x return (x = n -> Matrix x x) with
+  | O => fun _ => dep_nil
+  | S m =>
+    fun h1 =>
+      match v in (dep_list _ s) return (s = n -> Matrix (S m) (S m)) with
+      | dep_nil =>
+        fun h2 => False_rect _ (eq_ind (S m) _ (fun h3 => (O_S m h3)) _ h1 h2)
+      | @dep_cons _ n0 h l =>
+        fun h2 => 
+          eq_rec (S m) _
+                 (fun _ (h3 : S n0 = S m) =>
+                    eq_rec_r _
+                             (fun l0 =>
+                                dep_cons (dep_cons h vec_zero)
+                                         (dep_list_binop (dep_cons (n:=m))
+                                                         vec_zero (diag_mat l0)))
+                             (eq_add_S _ _ h3) l) n h1 v h2
+      end eq_refl
+  end eq_refl.
+
+Lemma diag_mat_cons: forall {n} (a: R) (v: Vector n),
+    diag_mat (dep_cons a v) =
+    dep_cons (dep_cons a vec_zero)
+             (dep_list_binop (dep_cons (n:=n)) vec_zero (diag_mat v)).
+Proof. intros. easy. Qed.
+
+Lemma diag_mat_is_diag: forall {n} (v: Vector n), diagonal_mat (diag_mat v).
+Proof.
+  apply dep_list_ind_1; intros; [simpl | rewrite diag_mat_cons]; constructor; easy.
+Qed.
+
+Lemma identity_is_diag_mat: forall {n}, identity_mat = diag_mat (dep_repeat 1%R n).
+Proof.
+  induction n; intros. 1: now simpl. simpl dep_repeat. rewrite diag_mat_cons.
+  simpl. rewrite IHn. f_equal.
+Qed.
+
+Lemma diagonal_diag_mat: forall {n} (v: Vector n), diagonal (diag_mat v) = v.
+Proof.
+  induction n; intros; unfold Vector in *; dep_list_decomp. 1: now simpl.
+  rewrite diag_mat_cons, diag_cons. autorewrite with dep_list. simpl. now rewrite IHn.
+Qed.
+
+Lemma diagonal_mat_is_diag: forall {n} (m: Matrix n n),
+    diagonal_mat m -> exists v, m = diag_mat v.
+Proof.
+  induction n; intros; unfold Matrix in *; dep_list_decomp.
+  - exists dep_nil. now simpl.
+  - destruct (dep_vertical_split m1) as [v2 [m4 ?]]. subst. red in H. inversion H.
+    subst. clear H2 H3. apply inj_pair2_eq_dec in H5; [|exact Nat.eq_dec]. subst.
+    do 2 (apply inj_pair2_eq_dec in H6; [|exact Nat.eq_dec]).
+    apply dep_list_binop_cons_eq in H6. destruct H6. subst. specialize (IHn _ H1).
+    destruct IHn. subst. exists (dep_cons m2 x). now rewrite diag_mat_cons.
+Qed.
+
+Lemma diag_mat_mul: forall {n} (v1 v2: Vector n),
+    mat_mul (diag_mat v1) (diag_mat v2) = diag_mat (dep_list_binop Rmult v1 v2).
+Proof.
+  apply dep_list_ind_2; intros. 1: now simpl. autorewrite with dep_list.
+  rewrite !diag_mat_cons. autorewrite with matrix vector dep_list. f_equal.
+  - f_equal. 1: ring. rewrite dep_map_dot_prod_cons. autorewrite with vector.
+    rewrite <- (vec_scal_mul_zero_r 0%R), dep_map_dot_prod_scal_mul.
+    now autorewrite with vector.
+  - rewrite mat_mul_col_cons_2. rewrite H. now autorewrite with matrix.
+Qed.
