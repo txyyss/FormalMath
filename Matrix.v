@@ -87,6 +87,8 @@ Proof.
   now rewrite H, Rplus_opp_r.
 Qed.
 
+Hint Rewrite @vec_add_inv: vector.
+
 Lemma vec_add_neg_zero_iff: forall {n} (u v: Vector n),
     vec_add u (vec_neg v) = vec_zero <-> u = v.
 Proof.
@@ -384,6 +386,12 @@ Qed.
 
 Hint Rewrite @mat_add_col_cons: matrix.
 
+Lemma mat_add_app: forall {m n l} (m1 m2: Matrix m l) (m3 m4: Matrix n l),
+    mat_add (dep_app m1 m3) (dep_app m2 m4) = dep_app (mat_add m1 m2) (mat_add m3 m4).
+Proof. intros. unfold mat_add. now rewrite dep_list_binop_app. Qed.
+
+Hint Rewrite @mat_add_app: matrix.
+
 Definition mat_scal_mul {m n} (a: R): Matrix m n -> Matrix m n :=
   dep_map (vec_scal_mul a).
 
@@ -573,8 +581,8 @@ Lemma mat_transpose_mul: forall {m l n} (m1: Matrix m l) (m2: Matrix l n),
 Proof.
   intros. revert m m1. apply dep_list_ind_1; intros; autorewrite with matrix.
   - generalize (mat_transpose m2) as m. clear m2. revert n.
-    apply dep_list_ind_1; intros; simpl. 1: easy. rewrite H. autorewrite with matrix.
-    now simpl.
+    apply dep_list_ind_1; intros; simpl. 1: easy. autorewrite with matrix.
+    rewrite H. easy.
   - rewrite H. clear H. generalize (mat_transpose m2) as m1. clear m2.
     generalize (mat_transpose v) as m2. clear v. intros. rename n0 into m.
     revert a. apply dep_list_ind_1 with (v := m1); intros; simpl. 1: easy.
@@ -593,6 +601,7 @@ Proof.
   autorewrite with matrix. simpl. rewrite H. f_equal. clear. revert a0.
   apply dep_list_ind_1 with (v := m1); intros; dep_list_decomp; simpl;
     autorewrite with vector matrix dep_list. 1: easy.
+  generalize (@dep_map (Vector 0) R (vec_dot_prod dep_nil) k (@zero_mat k 0)).
   rewrite H. clear H. generalize (mat_transpose v) as m. intros. clear. revert a a0.
   apply dep_list_ind_1 with (v := m); intros; dep_list_decomp.
   - simpl. autorewrite with vector dep_list. now rewrite Rmult_0_l, Rplus_0_l.
@@ -2851,6 +2860,55 @@ Proof.
     rewrite dep_map_dot_prod_cons. now autorewrite with matrix vector.
 Qed.
 
+Lemma mat_mul_zero_l: forall {m n l} (mat: Matrix n l),
+    mat_mul (@zero_mat m n) mat = zero_mat.
+Proof.
+  induction m; intros; autorewrite with matrix; [|rewrite IHm]; easy.
+Qed.
+
+Hint Rewrite @mat_mul_zero_l: matrix.
+
+Lemma mat_transpose_zero: forall {m n}, mat_transpose (@zero_mat m n) = zero_mat.
+Proof.
+  induction m; intros; autorewrite with matrix. 1: easy.
+  rewrite IHm. now autorewrite with matrix.
+Qed.
+
+Hint Rewrite @mat_transpose_zero: matrix.
+
+Lemma mat_mul_zero_r: forall {m n l} (mat: Matrix m n),
+    mat_mul mat (@zero_mat n l) = zero_mat.
+Proof.
+  induction m; intros; unfold Matrix in *; dep_list_decomp; autorewrite with matrix.
+  1: easy. rewrite IHm. f_equal. clear. induction l; intros; autorewrite with matrix.
+  1: easy. simpl. rewrite IHl. now autorewrite with vector.
+Qed.
+
+Hint Rewrite @mat_mul_zero_r: matrix.
+
+Lemma dep_map_dot_prod_app:
+  forall {m n l} (v1: Vector m) (v2: Vector n) (mat1: Matrix l m) (mat2: Matrix l n),
+    dep_map (vec_dot_prod (dep_app v1 v2)) (dep_list_binop dep_app mat1 mat2) =
+    vec_add (dep_map (vec_dot_prod v1) mat1) (dep_map (vec_dot_prod v2) mat2).
+Proof.
+  induction m; intros; unfold Matrix, Vector in *; dep_list_decomp.
+  - autorewrite with matrix vector. simpl. f_equal. clear.
+    revert l mat1 mat2. apply dep_list_ind_2; intros; autorewrite with dep_list.
+    1: easy. rewrite H. dep_list_decomp. f_equal.
+  - destruct (dep_vertical_split mat1) as [v1 [mat3 ?]]. subst. simpl dep_app.
+    rewrite dep_map_dot_prod_cons, vec_add_assoc, <- IHm, <- dep_cons_app_col.
+    now rewrite (dep_map_dot_prod_cons (dep_list_binop dep_app mat3 mat2)).
+Qed.
+
+Lemma vec_neg_scal_mul: forall {n} (v: Vector n),
+    vec_scal_mul (-1) v = vec_neg v.
+Proof.
+  apply dep_list_ind_1; intros; autorewrite with vector. 1: easy. rewrite H. f_equal.
+  ring.
+Qed.
+
+Hint Rewrite @vec_neg_scal_mul: vector.
+
 Lemma row_op_swap_mat: forall i j {m n} (mat1 mat2: Matrix m n),
     row_op_swap i j mat1 mat2 -> exists (m: Matrix m m), mat2 = mat_mul m mat1.
 Proof.
@@ -2859,4 +2917,146 @@ Proof.
   rewrite plus_assoc_reverse, plus_Sn_m in H0. subst m.
   do 2 (dep_add_decomp; dep_list_decomp). rewrite row_op_swap_spec in H.
   destruct H as [? [? [? [? ?]]]]. subst.
-Abort.
+  exists (mat_add
+            identity_mat
+            (dep_app
+               zero_mat
+               (dep_cons
+                  (dep_app vec_zero
+                           (dep_cons (-1)%R
+                                     (dep_app vec_zero (dep_cons 1%R vec_zero))))
+                  (dep_app zero_mat
+                           (dep_cons
+                              (dep_app
+                                 vec_zero
+                                 (dep_cons 1%R (dep_app vec_zero
+                                                        (dep_cons (-1)%R vec_zero))))
+                              zero_mat))))).
+  rewrite mat_mul_add_distr_r. autorewrite with matrix. do 2 f_equal.
+  - unfold mat_transpose. rewrite dep_transpose_app, dep_map_dot_prod_app.
+    autorewrite with matrix vector. unfold mat_transpose. rewrite dep_transpose_app.
+    rewrite dep_map_dot_prod_cons, dep_map_dot_prod_app.
+    autorewrite with matrix vector. rewrite dep_map_dot_prod_cons.
+    rewrite <- vec_add_assoc. now autorewrite with matrix vector.
+  - do 2 f_equal. unfold mat_transpose.
+    rewrite dep_transpose_app, dep_map_dot_prod_app.
+    autorewrite with matrix vector. unfold mat_transpose. rewrite dep_transpose_app.
+    rewrite dep_map_dot_prod_cons, dep_map_dot_prod_app.
+    autorewrite with matrix vector. rewrite dep_map_dot_prod_cons.
+    rewrite <- vec_add_assoc, (vec_add_comm mat2 mat5), vec_add_assoc.
+    now autorewrite with matrix vector.
+Qed.
+
+Lemma row_op_add_mat: forall a i j {m n} (mat1 mat2: Matrix m n),
+    row_op_add a i j mat1 mat2 -> exists (m: Matrix m m), mat2 = mat_mul m mat1.
+Proof.
+  intros. pose proof H. destruct H0 as [? [? [? _]]]. apply not_eq in H2. destruct H2.
+  - clear H0. decomp_lt_subst' H2. apply lt_exists_S_diff in H1. unfold Matrix in *.
+    destruct H1 as [l ?]. rewrite plus_assoc_reverse, plus_Sn_m in H0. subst.
+    do 2 (dep_add_decomp; dep_list_decomp). rewrite row_op_add_spec_1 in H.
+    destruct H as [? [? [? [? ?]]]]. subst.
+    exists (mat_add
+              identity_mat
+              (dep_app
+                 zero_mat
+                 (dep_cons
+                    (dep_app vec_zero
+                             (dep_cons 0%R
+                                       (dep_app vec_zero (dep_cons 0%R vec_zero))))
+                    (dep_app zero_mat
+                             (dep_cons
+                                (dep_app
+                                   vec_zero
+                                   (dep_cons a (dep_app vec_zero
+                                                        (dep_cons 0%R vec_zero))))
+                                zero_mat))))).
+    rewrite mat_mul_add_distr_r. autorewrite with matrix. do 2 f_equal.
+    + unfold mat_transpose. rewrite dep_transpose_app, dep_map_dot_prod_app.
+      autorewrite with matrix vector. unfold mat_transpose. rewrite dep_transpose_app.
+      rewrite dep_map_dot_prod_cons, dep_map_dot_prod_app.
+      now autorewrite with matrix vector. 
+    + do 2 f_equal. unfold mat_transpose.
+      rewrite dep_transpose_app, dep_map_dot_prod_app.
+      autorewrite with matrix vector. unfold mat_transpose. rewrite dep_transpose_app.
+      rewrite dep_map_dot_prod_cons, dep_map_dot_prod_app.
+      now autorewrite with matrix vector.
+  - clear H1. decomp_lt_subst' H2. apply lt_exists_S_diff in H0. unfold Matrix in *.
+    destruct H0 as [l ?]. rewrite plus_assoc_reverse, plus_Sn_m in H0. subst.
+    do 2 (dep_add_decomp; dep_list_decomp). rewrite row_op_add_spec_2 in H.
+    destruct H as [? [? [? [? ?]]]]. subst.
+    exists (mat_add
+              identity_mat
+              (dep_app
+                 zero_mat
+                 (dep_cons
+                    (dep_app vec_zero
+                             (dep_cons 0%R
+                                       (dep_app vec_zero (dep_cons a vec_zero))))
+                    (dep_app zero_mat
+                             (dep_cons
+                                (dep_app
+                                   vec_zero
+                                   (dep_cons 0%R (dep_app vec_zero
+                                                        (dep_cons 0%R vec_zero))))
+                                zero_mat))))).
+    rewrite mat_mul_add_distr_r. autorewrite with matrix. do 2 f_equal.
+    + unfold mat_transpose. rewrite dep_transpose_app, dep_map_dot_prod_app.
+      autorewrite with matrix vector. unfold mat_transpose. rewrite dep_transpose_app.
+      rewrite dep_map_dot_prod_cons, dep_map_dot_prod_app.
+      autorewrite with matrix vector. rewrite dep_map_dot_prod_cons.
+      now autorewrite with matrix vector.
+    + do 2 f_equal. unfold mat_transpose.
+      rewrite dep_transpose_app, dep_map_dot_prod_app.
+      autorewrite with matrix vector. unfold mat_transpose. rewrite dep_transpose_app.
+      rewrite dep_map_dot_prod_cons, dep_map_dot_prod_app.
+      now autorewrite with matrix vector.
+Qed.
+
+Lemma seror_mat: forall {m n} (m1 m2: Matrix m n) l,
+    SeqElmtryRowOpRel m1 l m2 -> exists (mat: Matrix m m), m2 = mat_mul mat m1.
+Proof.
+  intros. induction H.
+  - exists identity_mat. now autorewrite with matrix.
+  - destruct (row_op_mul_mat _ _ _ _ H) as [mat1 ?]. subst.
+    destruct IHSeqElmtryRowOpRel as [mat2 ?]. rewrite <- mat_mul_assoc in H1.
+    now exists (mat_mul mat2 mat1).
+  - destruct (row_op_swap_mat _ _ _ _ H) as [mat1 ?]. subst.
+    destruct IHSeqElmtryRowOpRel as [mat2 ?]. rewrite <- mat_mul_assoc in H1.
+    now exists (mat_mul mat2 mat1).
+  - destruct (row_op_add_mat _ _ _ _ _ H) as [mat1 ?]. subst.
+    destruct IHSeqElmtryRowOpRel as [mat2 ?]. rewrite <- mat_mul_assoc in H1.
+    now exists (mat_mul mat2 mat1).
+Qed.
+
+Lemma diag_mat_det: forall {n} (v: Vector n), det (diag_mat v) = vec_prod v.
+Proof.
+  intros. rewrite upper_triangular_det.
+  - now rewrite diagonal_diag_mat.
+  - pose proof (diag_mat_is_diag v). rewrite diag_iff_upper_lower in H.
+    now destruct H.
+Qed.
+
+Lemma diag_mat_left_inv: forall {n} (v: Vector n),
+    vec_prod v <> 0%R -> exists v', mat_mul (diag_mat v') (diag_mat v) = identity_mat.
+Proof.
+  induction n; intros; unfold Vector in *; dep_list_decomp.
+  - exists dep_nil. simpl. easy.
+  - autorewrite with vector in H. apply Rmult_neq_0_reg in H. destruct H.
+    destruct (IHn _ H0) as [v2 ?]. exists (dep_cons (/ v0)%R v2).
+    rewrite !diag_mat_cons. autorewrite with matrix.
+    rewrite dep_map_dot_prod_cons. autorewrite with matrix vector.
+    rewrite Rinv_l; auto. simpl identity_mat. f_equal. rewrite mat_mul_col_cons_2.
+    autorewrite with matrix. now rewrite H1.
+Qed.
+
+Lemma mat_left_inv_exists: forall {n} (mat: Matrix n n),
+    det mat <> 0%R -> exists mat', mat_mul mat' mat = identity_mat.
+Proof.
+  intros. destruct (mat_seror_diag _ H) as [l [mat1 [? ?]]].
+  destruct (seror_mat _ _ _ H0) as [mat2 ?].
+  destruct (diagonal_mat_is_diag _ H1) as [v ?].
+  pose proof (seror_det _ _ _ H0). rewrite H4 in H. apply Rmult_neq_0_reg in H.
+  destruct H as [_ ?]. rewrite H3, diag_mat_det in H. apply diag_mat_left_inv in H.
+  destruct H as [v' ?]. rewrite H3 in H2. rewrite H2, <- mat_mul_assoc in H.
+  now exists (mat_mul (diag_mat v') mat2).
+Qed.

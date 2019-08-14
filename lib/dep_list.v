@@ -1124,3 +1124,13 @@ Proof.
                         (dep_nth_list_binop _ _ _ _ d0 d4); auto. simpl.
     apply IHm; now apply lt_S_n.
 Qed.
+
+Lemma dep_cons_app_col: forall
+    {A m n l} (v: dep_list A l) (m1: dep_list (dep_list A m) l)
+    (m2: dep_list (dep_list A n) l),
+    dep_list_binop (dep_cons (n := m + n)) v (dep_list_binop dep_app m1 m2) =
+    dep_list_binop dep_app (dep_list_binop (dep_cons (n:=m)) v m1) m2.
+Proof.
+  intros A m n. apply dep_list_ind_3; intros; autorewrite with dep_list. 1: easy.
+  simpl dep_app. now rewrite H.
+Qed.
