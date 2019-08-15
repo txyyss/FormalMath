@@ -2732,7 +2732,7 @@ Proof.
     rewrite diag_cons in H1. destruct (dep_vertical_split mat1) as [v2 [mat2 ?]].
     subst. rename mat2 into mat. autorewrite with dep_list in H1. simpl dep_hd in H1.
     autorewrite with vector in H1. rewrite H1 in H. clear H1. red in H0.
-    autorewrite with matrix dep_list in H0. inversion H0. subst. 
+    autorewrite with matrix dep_list in H0. inversion H0. subst.
     do 2 (apply inj_pair2_eq_dec in H5; [|exact Nat.eq_dec]). clear H0 v0 H3 H4.
     apply dep_list_binop_cons_eq in H5. destruct H5. subst.
     rewrite <- (lower_triangular_det _ H2) in H. apply Rmult_neq_0_reg in H.
@@ -2773,7 +2773,7 @@ Fixpoint diag_mat {n} (v: Vector n): Matrix n n :=
       | dep_nil =>
         fun h2 => False_rect _ (eq_ind (S m) _ (fun h3 => (O_S m h3)) _ h1 h2)
       | @dep_cons _ n0 h l =>
-        fun h2 => 
+        fun h2 =>
           eq_rec (S m) _
                  (fun _ (h3 : S n0 = S m) =>
                     eq_rec_r _
@@ -3063,7 +3063,7 @@ Proof.
       * unfold mat_transpose. rewrite dep_transpose_app, dep_map_dot_prod_app.
         autorewrite with matrix vector. unfold mat_transpose.
         rewrite dep_transpose_app, dep_map_dot_prod_cons, dep_map_dot_prod_app.
-        now autorewrite with matrix vector. 
+        now autorewrite with matrix vector.
       * do 2 f_equal. unfold mat_transpose.
         rewrite dep_transpose_app, dep_map_dot_prod_app.
         autorewrite with matrix vector. unfold mat_transpose.
