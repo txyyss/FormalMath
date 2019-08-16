@@ -13,13 +13,16 @@ $(SOURCE:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
 	@$(COQC) $(COQ_FLAG) $*.v
 
-dep:
+.PHONY: dep
+.depend dep:
+	@echo 'COQDEP ... > .depend'
 	@$(COQDEP) $(COQ_FLAG) $(SOURCE) > .depend
 
 all: $(SOURCE:%.v=%.vo)
 
+.PHONY: clean
 clean:
-	@rm $(VO_FILE) $(GLOB_FILE) $(VOAUX_FILE) $(AUX_FILE)
+	@rm $(VO_FILE) $(GLOB_FILE) $(VOAUX_FILE) $(AUX_FILE) .depend
 
 .DEFAULT_GOAL := all
 

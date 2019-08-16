@@ -38,7 +38,7 @@ Proof.
   - simpl. apply Nat.sub_diag.
   - rewrite <- Nat.succ_le_mono in H. rewrite Nat.sub_succ, Nat.sub_succ_l.
     + now rewrite IHm.
-    + apply Nat.le_sub_l.  
+    + apply Nat.le_sub_l.
 Qed.
 
 Lemma lt_sub_1_sub_lt: forall m n, m < n -> n - 1 - m < n.

@@ -81,6 +81,11 @@ Proof. intros. unfold vec_neg. now simpl. Qed.
 
 Hint Rewrite @vec_neg_cons: vector.
 
+Lemma vec_neg_zero: forall {n}, vec_neg (@vec_zero n) = vec_zero.
+Proof. induction n; intros; autorewrite with vector; [|rewrite IHn, Ropp_0]; easy. Qed.
+
+Hint Rewrite @vec_neg_zero: vector.
+
 Lemma vec_add_inv: forall {n} (v: Vector n), vec_add v (vec_neg v) = vec_zero.
 Proof.
   apply dep_list_ind_1. 1: easy. intros. autorewrite with vector.
@@ -1025,7 +1030,7 @@ Qed.
 
 (** * Square Matrix Theory *)
 
-Lemma sq_mat_left_right_inverse_eq: forall {n} (A B C: Matrix n n),
+Lemma mat_left_right_inverse_eq: forall {n} (A B C: Matrix n n),
     mat_mul B A = identity_mat -> mat_mul A C = identity_mat -> B = C.
 Proof.
   intros. pose proof (mat_mul_assoc B A C). rewrite H, H0 in H1.
@@ -3263,5 +3268,24 @@ Lemma mat_inv_exists: forall {n} (mat: Matrix n n),
 Proof.
   intros. destruct (mat_left_inv_exists _ H) as [mat1 ?].
   destruct (mat_right_inv_exists _ H) as [mat2 ?].
-  pose proof (sq_mat_left_right_inverse_eq _ _ _ H0 H1). subst. now exists mat2.
+  pose proof (mat_left_right_inverse_eq _ _ _ H0 H1). subst. now exists mat2.
 Qed.
+
+Lemma mat_mul_identity_comm: forall {n} (A B: Matrix n n),
+    mat_mul A B = identity_mat -> mat_mul B A = identity_mat.
+Proof.
+  intros. destruct (mat_mul_identity_det _ _ H).
+  destruct (mat_inv_exists _ H0) as [invA [? ?]].
+  pose proof (mat_right_inv_unique _ _ _ H3 H). now subst.
+Qed.
+
+Definition orthogonal_mat {n: nat} (mat: Matrix n n): Prop :=
+  mat_mul (mat_transpose mat) mat = identity_mat.
+
+Lemma orthogonal_mat_spec_1: forall {n} (mat: Matrix n n),
+    orthogonal_mat mat <-> mat_mul (mat_transpose mat) mat = identity_mat.
+Proof. intros. now unfold orthogonal_mat. Qed.
+
+Lemma orthogonal_mat_spec_2: forall {n} (mat: Matrix n n),
+    orthogonal_mat mat <-> mat_mul mat (mat_transpose mat) = identity_mat.
+Proof. intros. unfold orthogonal_mat. split; apply mat_mul_identity_comm. Qed.
