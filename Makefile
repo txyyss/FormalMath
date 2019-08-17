@@ -8,6 +8,7 @@ VO_FILE := $(shell find "." -type f -name '*.vo')
 GLOB_FILE := $(shell find "." -type f -name '*.glob')
 VOAUX_FILE := $(shell find "." -type f -name '*.vo.aux')
 AUX_FILE := $(shell find "." -type f -name '*.aux')
+NATIVE_DIR := $(shell find "." -type d -name '.coq-native')
 
 $(SOURCE:%.v=%.vo): %.vo: %.v
 	@echo COQC $*.v
@@ -23,6 +24,7 @@ all: $(SOURCE:%.v=%.vo)
 .PHONY: clean
 clean:
 	@rm $(VO_FILE) $(GLOB_FILE) $(VOAUX_FILE) $(AUX_FILE) .depend
+	@rm -fr $(NATIVE_DIR)
 
 .DEFAULT_GOAL := all
 
