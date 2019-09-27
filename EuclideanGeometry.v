@@ -2,6 +2,7 @@
 (** * Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
 
 Require Import FormalMath.Matrix.
+Require Import FormalMath.Group.
 
 Open Scope R_scope.
 
@@ -10,9 +11,10 @@ Definition norm {n} (v: Vector n) := sqrt (vec_dot_prod v v).
 Definition distance {n} (x y: Vector n) := norm (vec_add x (vec_neg y)).
 
 Lemma polarization_identity: forall {n} (u v: Vector n),
-    vec_dot_prod u v = ((norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²) * / 2.
+    vec_dot_prod u v ==
+    ((norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²) * / 2.
 Proof.
-  intros. cut (2 * vec_dot_prod u v =
+  intros. cut (2 * vec_dot_prod u v ==
                (norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²).
   - intros. rewrite <- H, Rmult_comm, <- Rmult_assoc, Rinv_l, Rmult_1_l. 1: easy.
     apply not_0_IZR. discriminate.
@@ -22,8 +24,107 @@ Proof.
 Qed.
 
 Lemma vec_dot_prod_distance: forall {n} (u v: Vector n),
-    vec_dot_prod u v =
+    vec_dot_prod u v ==
     ((distance u vec_zero)² + (distance v vec_zero)² - (distance u v)²) * / 2.
 Proof.
   intros. unfold distance. autorewrite with vector. apply polarization_identity.
 Qed.
+
+Class Isometric {n} (f: Vector n -> Vector n) :=
+  {
+    iso_inv: Vector n -> Vector n;
+    iso_inj: forall x y, f x == f y -> x == y;
+    iso_surj: forall x, f (iso_inv x) == x;
+    distance_preserve: forall x y, distance x y == distance (f x) (f y)
+  }.
+
+Arguments iso_inv {_} _ {_}.
+Arguments iso_inj {_} _ {_}.
+Arguments iso_surj {_} _ {_}.
+
+Lemma preserve_dot_prod_isometric: forall {n} (f: Vector n -> Vector n),
+    preserve_dot_prod f -> Isometric f.
+Proof.
+  intros. pose proof H as S. apply preserve_dot_prod_mat_sig in H.
+  destruct H as [mat [[? ?] ?]]. exists (mat_vec_mul (mat_transpose mat)); intros.
+  - rewrite !H0 in H2. rewrite <- mat_vec_mul_identity, <- (mat_vec_mul_identity x).
+    now rewrite <- !H, <- !mat_vec_mul_assoc, H2.
+  - rewrite H0, mat_vec_mul_assoc.
+    rewrite <- orthogonal_mat_spec_1, orthogonal_mat_spec_2 in H.
+    now rewrite H, mat_vec_mul_identity.
+  - pose proof (preserve_dot_prod_linear _ S). destruct H2.
+    red in S. unfold distance.
+    rewrite <- !vec_neg_scal_mul, <- H3, <- H2, !vec_neg_scal_mul. unfold norm.
+    now rewrite S.
+Qed.
+
+Lemma isometric_fix_preserve_dot_prod: forall {n} (f: Vector n -> Vector n),
+    Isometric f -> f vec_zero == vec_zero -> preserve_dot_prod f.
+Proof.
+  intros. red. intros.
+  now rewrite !vec_dot_prod_distance, <- H0, <- !distance_preserve, H0.
+Qed.
+
+Definition Isometry (n: nat) := sigT (fun func => @Isometric n func).
+
+Section ISOMETRY.
+
+  Context {n: nat}.
+
+  Global Instance iso_equiv: Equiv (Isometry n) :=
+    fun f1 f2 => forall x, (projT1 f1) x == (projT1 f2) x.
+
+  Global Instance iso_binop: BinOp (Isometry n).
+  Proof.
+    intros [f1] [f2].
+    refine (existT _ (fun x => f1 (f2 x))
+                   (Build_Isometric _ _ (fun x => (iso_inv f2) (iso_inv f1 x)) _ _ _));
+      intros.
+    - apply (iso_inj f2), (iso_inj f1); auto.
+    - do 2 rewrite iso_surj; easy.
+    - transitivity (distance (f2 x) (f2 y)); apply distance_preserve.
+  Defined.
+
+  Global Instance iso_gunit: GrUnit (Isometry n).
+  Proof.
+    refine (existT _ (fun x => x) (Build_Isometric _ _ (fun x => x) _ _ _));
+      intros; auto.
+  Defined.
+
+  Global Instance iso_neg: Negate (Isometry n).
+  Proof.
+    intros [f].
+    refine (existT _ (iso_inv f) (Build_Isometric _ _ f _ _ _));
+      assert (forall x, iso_inv f (f x) == x) by
+        (intros; apply (iso_inj f), iso_surj); intros; auto.
+    - pose proof (iso_surj f x). pose proof (iso_surj f y).
+      rewrite <- H0, H1 in H2; assumption.
+    - rewrite <- (iso_surj f x), <- (iso_surj f y), !H. symmetry.
+      apply distance_preserve.
+  Defined.
+
+  Instance: Setoid (Isometry n).
+  Proof. constructor; repeat intro; [| rewrite H | rewrite H, H0]; reflexivity. Qed.
+
+  Instance: Proper ((=) ==> (=) ==> (=)) iso_binop.
+  Proof.
+    repeat intro. unfold iso_binop. destruct x, y, x0, y0.
+    unfold equiv, iso_equiv in H, H0. simpl in *. rewrite H0, H. reflexivity.
+  Qed.
+
+  Instance: Proper ((=) ==> (=)) iso_neg.
+  Proof.
+    repeat intro. unfold iso_neg. destruct x, y. unfold equiv, iso_equiv in H.
+    simpl in *. apply (iso_inj x). rewrite iso_surj, H, iso_surj. reflexivity.
+  Qed.
+
+  Global Instance isometryGroup: Group (Isometry n).
+  Proof.
+    constructor; try apply _; intros; unfold bi_op, iso_binop, one, iso_gunit,
+                                      neg, iso_neg, equiv, iso_equiv.
+    - destruct x, y, z; intros; simpl. reflexivity.
+    - destruct x; intros; simpl; reflexivity.
+    - destruct x. intros; simpl. apply (iso_inj x). rewrite iso_surj; reflexivity.
+  Qed.
+
+End ISOMETRY.

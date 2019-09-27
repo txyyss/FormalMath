@@ -930,16 +930,23 @@ Proof.
     clear m3. revert l. apply dep_list_ind_1; intros; simpl; [| rewrite H, H0]; easy.
 Qed.
 
+Lemma linear_map_mat_sig: forall {n m} (f: Vector n -> Vector m),
+    linear_map f -> {mat: Matrix m n |
+                      unique (fun m => forall v, f v = mat_vec_mul m v) mat}.
+Proof.
+  intros. exists (mat_transpose (dep_map f identity_mat)).
+  assert (forall v, f v = mat_vec_mul (mat_transpose (dep_map f identity_mat)) v) by
+      (intro; rewrite <- linear_map_mat; auto; now autorewrite with matrix).
+  split; auto. intros m2 ?. apply mat_vec_mul_unique. intros.
+  now rewrite <- H0, <- H1.
+Qed.
+
 Lemma linear_map_mat_iff: forall {n m} (f: Vector n -> Vector m),
     linear_map f <->
     exists ! mat: Matrix m n, forall v, f v = mat_vec_mul mat v.
 Proof.
   intros. split; intros.
-  - exists (mat_transpose (dep_map f identity_mat)).
-    assert (forall v, f v = mat_vec_mul (mat_transpose (dep_map f identity_mat)) v) by
-        (intro; rewrite <- linear_map_mat; auto; now autorewrite with matrix).
-    split; auto. intros m2 ?. apply mat_vec_mul_unique. intros.
-    now rewrite <- H0, <- H1.
+  - apply linear_map_mat_sig in H. destruct H as [mat ?]. now exists mat.
   - destruct H as [mat [? ?]]. destruct (mat_vec_mul_linear_map mat). red in H1, H2.
     split; red; intros; rewrite !H; easy.
 Qed.
@@ -1006,6 +1013,25 @@ Proof.
     now rewrite !Rmult_0_r, !Rplus_0_l in H0.
 Qed.
 
+Lemma preserve_dot_prod_mat_sig: forall {m n} (f: Vector n -> Vector m),
+    preserve_dot_prod f ->
+    {mat: Matrix m n | 
+     unique (fun m => mat_mul (mat_transpose m) m = identity_mat /\
+                      forall v, f v = mat_vec_mul m v) mat}.
+Proof.
+  intros. pose proof H. apply preserve_dot_prod_linear in H0.
+  apply linear_map_mat_sig in H0. destruct H0 as [mat [? ?]]. exists mat.
+  split; [split|]; auto.
+  - red in H.
+    assert (forall u v,
+               vec_dot_prod (mat_vec_mul (mat_mul (mat_transpose mat) mat) u) v =
+               vec_dot_prod u v) by
+        (intros; now rewrite <- vec_dot_prod_mul, <- !H0).
+    apply mat_vec_mul_unique. intros u. autorewrite with matrix.
+    now apply vec_dot_prod_unique.
+  - intros. destruct H2. now apply H1.
+Qed.
+
 Lemma preserve_dot_prod_mat: forall {m n} (f: Vector n -> Vector m),
     preserve_dot_prod f <->
     exists ! mat: Matrix m n,
@@ -1013,17 +1039,7 @@ Lemma preserve_dot_prod_mat: forall {m n} (f: Vector n -> Vector m),
       forall v, f v = mat_vec_mul mat v.
 Proof.
   intros. split; intros.
-  - pose proof H. apply preserve_dot_prod_linear in H0.
-    rewrite linear_map_mat_iff in H0. destruct H0 as [mat [? ?]]. exists mat.
-    split; [split|]; auto.
-    + red in H.
-      assert (forall u v,
-                 vec_dot_prod (mat_vec_mul (mat_mul (mat_transpose mat) mat) u) v =
-                 vec_dot_prod u v) by
-          (intros; now rewrite <- vec_dot_prod_mul, <- !H0).
-      apply mat_vec_mul_unique. intros u. autorewrite with matrix.
-      now apply vec_dot_prod_unique.
-    + intros. destruct H2. now apply H1.
+  - apply preserve_dot_prod_mat_sig in H. destruct H as [mat ?]. now exists mat.
   - destruct H as [mat [[? ?] ?]]. pose proof (mat_vec_mul_preserve_dot_prod _ H).
     red in H2 |-* . intros. now rewrite !H0.
 Qed.
