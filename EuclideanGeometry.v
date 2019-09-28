@@ -65,6 +65,25 @@ Proof.
   now rewrite !vec_dot_prod_distance, <- H0, <- !distance_preserve, H0.
 Qed.
 
+Lemma translation_isometric: forall {n} (v: Vector n), Isometric (vec_add v).
+Proof.
+  intros. exists (vec_add (vec_neg v)); intros.
+  - rewrite <- vec_add_id_l, <- (vec_add_id_l x), <- (vec_add_inv (vec_neg v)).
+    autorewrite with vector. now rewrite !vec_add_assoc, H.
+  - rewrite <- vec_add_assoc. now autorewrite with vector.
+  - unfold distance. rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc,
+                     <- (vec_add_assoc v (vec_neg v)). now autorewrite with vector.
+Qed.
+
+Lemma ext_isometric: forall {n} (f g: Vector n -> Vector n),
+    (forall x, f x == g x) -> Isometric f -> Isometric g.
+Proof.
+  intros. exists (iso_inv f); intros.
+  - rewrite <- !H in H1. now apply iso_inj in H1.
+  - rewrite <- H. now apply iso_surj.
+  - rewrite <- !H. now apply distance_preserve.
+Qed.
+
 Definition Isometry (n: nat) := sigT (fun func => @Isometric n func).
 
 Section ISOMETRY.
@@ -128,3 +147,35 @@ Section ISOMETRY.
   Qed.
 
 End ISOMETRY.
+
+Lemma isometric_orthogonal_mat: forall {n} (f: Vector n -> Vector n),
+    Isometric f -> {mat_v: (Matrix n n * Vector n) |
+                    orthogonal_mat (fst mat_v) /\
+                    forall x, f x == vec_add (mat_vec_mul (fst mat_v) x) (snd mat_v)}.
+Proof.
+  intros. remember (existT _ _ (translation_isometric (vec_neg (f vec_zero)))) as T.
+  remember (existT _ _ H) as A. remember (T & A). destruct s as [B ?H].
+  assert (B == (fun x : Vector n => vec_add (vec_neg (f vec_zero)) (f x))). {
+    destruct T, A. unfold bi_op, iso_binop in Heqs.
+    apply EqdepFacts.eq_sigT_fst in Heqs. apply EqdepFacts.eq_sigT_fst in HeqT.
+    apply EqdepFacts.eq_sigT_fst in HeqA. now subst x x0. }
+  assert (B vec_zero == vec_zero) by
+      (subst B; rewrite vec_add_comm; now autorewrite with vector).
+  pose proof (isometric_fix_preserve_dot_prod _ H0 H2).
+  apply preserve_dot_prod_mat_sig in H3. destruct H3 as [mat [[? ?] ?]].
+  exists (mat, (f vec_zero)). simpl. rewrite orthogonal_mat_spec_1. split; auto.
+  intros. rewrite <- H4, H1, vec_add_comm, <- vec_add_assoc.
+  now autorewrite with vector.
+Qed.
+
+Lemma orthogonal_mat_isometric: forall {n} (mat: Matrix n n) (v: Vector n),
+    orthogonal_mat mat -> Isometric (fun x => vec_add (mat_vec_mul mat x) v).
+Proof.
+  intros. rewrite orthogonal_mat_spec_1 in H. apply mat_vec_mul_preserve_dot_prod in H.
+  apply preserve_dot_prod_isometric in H. remember (existT _ _ H) as R.
+  remember (existT _ _ (translation_isometric v)) as T. remember (T & R).
+  destruct s as [B ?H]. destruct R, T. unfold bi_op, iso_binop in Heqs.
+  apply EqdepFacts.eq_sigT_fst in Heqs. apply EqdepFacts.eq_sigT_fst in HeqT.
+  apply EqdepFacts.eq_sigT_fst in HeqR. subst x x0. apply (ext_isometric B); auto.
+  intros. subst. now rewrite vec_add_comm.
+Qed.

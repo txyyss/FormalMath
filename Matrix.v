@@ -2944,6 +2944,18 @@ Qed.
 
 Hint Rewrite @vec_neg_scal_mul: vector.
 
+Lemma vec_neg_double: forall {n} (v: Vector n), vec_neg (vec_neg v) = v.
+Proof.
+  intros. rewrite <- !vec_neg_scal_mul, vec_scal_mul_assoc.
+  assert (-1 * -1 = 1)%R by ring. rewrite H. now autorewrite with vector.
+Qed.
+
+Hint Rewrite @vec_neg_double: vector.
+
+Lemma vec_neg_add: forall {n} (v1 v2: Vector n),
+    vec_neg (vec_add v1 v2) = vec_add (vec_neg v1) (vec_neg v2).
+Proof. intros. now rewrite <- !vec_neg_scal_mul, vec_scal_mul_add_distr_l. Qed.
+
 Lemma dep_map_dot_prod_add':
   forall {m n : nat} (mat1 mat2 : Matrix m n) (v: Vector n),
   dep_map (vec_dot_prod v) (mat_add mat1 mat2) =
