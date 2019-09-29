@@ -1015,7 +1015,7 @@ Qed.
 
 Lemma preserve_dot_prod_mat_sig: forall {m n} (f: Vector n -> Vector m),
     preserve_dot_prod f ->
-    {mat: Matrix m n | 
+    {mat: Matrix m n |
      unique (fun m => mat_mul (mat_transpose m) m = identity_mat /\
                       forall v, f v = mat_vec_mul m v) mat}.
 Proof.

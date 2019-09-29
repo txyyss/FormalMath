@@ -149,9 +149,11 @@ Section ISOMETRY.
 End ISOMETRY.
 
 Lemma isometric_orthogonal_mat: forall {n} (f: Vector n -> Vector n),
-    Isometric f -> {mat_v: (Matrix n n * Vector n) |
-                    orthogonal_mat (fst mat_v) /\
-                    forall x, f x == vec_add (mat_vec_mul (fst mat_v) x) (snd mat_v)}.
+    Isometric f ->
+    {mat_v: (Matrix n n * Vector n) |
+     unique (fun mv => orthogonal_mat (fst mv) /\
+                       forall x, f x == vec_add (mat_vec_mul (fst mv) x) (snd mv))
+            mat_v}.
 Proof.
   intros. remember (existT _ _ (translation_isometric (vec_neg (f vec_zero)))) as T.
   remember (existT _ _ H) as A. remember (T & A). destruct s as [B ?H].
@@ -163,9 +165,14 @@ Proof.
       (subst B; rewrite vec_add_comm; now autorewrite with vector).
   pose proof (isometric_fix_preserve_dot_prod _ H0 H2).
   apply preserve_dot_prod_mat_sig in H3. destruct H3 as [mat [[? ?] ?]].
-  exists (mat, (f vec_zero)). simpl. rewrite orthogonal_mat_spec_1. split; auto.
-  intros. rewrite <- H4, H1, vec_add_comm, <- vec_add_assoc.
-  now autorewrite with vector.
+  exists (mat, (f vec_zero)). red. split; intros.
+  - rewrite orthogonal_mat_spec_1. split; auto. intros.
+    rewrite <- H4, H1, vec_add_comm, <- vec_add_assoc. now autorewrite with vector.
+  - destruct x' as [mat2 v]. simpl in *. destruct H6. f_equal.
+    + apply H5. split. 1: apply H6. intros. subst B. rewrite !H7.
+      autorewrite with matrix vector. rewrite vec_add_comm, vec_add_assoc.
+      now autorewrite with vector.
+    + rewrite H7. now autorewrite with matrix vector.
 Qed.
 
 Lemma orthogonal_mat_isometric: forall {n} (mat: Matrix n n) (v: Vector n),
