@@ -6,9 +6,9 @@ Require Export Coq.Lists.SetoidList.
 
 (******************************* Hint *******************************)
 
-Hint Unfold Proper respectful.
-Hint Unfold Reflexive Symmetric Transitive.
-Hint Constructors PreOrder.
+Hint Unfold Proper respectful : core.
+Hint Unfold Reflexive Symmetric Transitive: core.
+Hint Constructors PreOrder: core.
 
 Ltac auto_symm :=
   match goal with
@@ -37,6 +37,8 @@ Typeclasses Transparent Equiv.
 
 Infix "=" := equiv : type_scope.
 
+Declare Scope math_scope.
+
 Notation "(=)" := equiv (only parsing) : math_scope.
 Notation "( x =)" := (equiv x) (only parsing) : math_scope.
 Notation "(= x )" := (fun y => equiv y x) (only parsing) : math_scope.
@@ -44,11 +46,11 @@ Notation "(= x )" := (fun y => equiv y x) (only parsing) : math_scope.
 Delimit Scope math_scope with math.
 Global Open Scope math_scope.
 
-Hint Extern 2 (?x = ?x) => reflexivity.
-Hint Extern 2 (?x = ?y) => auto_symm.
-Hint Extern 2 (?x = ?y) => auto_trans.
+Hint Extern 2 (?x = ?x) => reflexivity: core.
+Hint Extern 2 (?x = ?y) => auto_symm: core.
+Hint Extern 2 (?x = ?y) => auto_trans: core.
 
-Instance equiv_default_relation `{Equiv A} : DefaultRelation (=) | 3.
+Instance equiv_default_relation `{Equiv A} : DefaultRelation (=) | 3. Defined.
 
 Infix "==" := eq (at level 70, no associativity) : math_scope.
 Notation "(==)" := eq (only parsing) : math_scope.
@@ -92,12 +94,12 @@ End SETOID_MORPHISM_PROP.
 
 Arguments sm_proper {A Ae B Be f Setoid_Morphism} _ _ _.
 
-Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f := f)).
+Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f := f)): core.
 
 Class Cast A B := cast: A -> B.
 Arguments cast _ _ {Cast} _.
 Notation "' x" := (cast _ _ x) (at level 20) : math_scope.
-Instance: Params (@cast) 3.
+Instance: Params (@cast) 3. Defined.
 Typeclasses Transparent Cast.
 
 Definition Cardinals (A : Type) `{s : Setoid A} (n: nat) : Prop :=

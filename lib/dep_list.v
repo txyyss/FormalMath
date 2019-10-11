@@ -12,8 +12,10 @@ Inductive dep_list (A: Type): nat -> Type :=
 | dep_nil: dep_list A O
 | dep_cons: forall n: nat, A -> dep_list A n -> dep_list A (S n).
 
-Arguments dep_nil [_].
+Arguments dep_nil {_}.
 Arguments dep_cons [_ _] _ _.
+
+Declare Scope dep_list_scope.
 
 Module DepListNotations.
   Notation "{| |}" := dep_nil (format "{| |}"): dep_list_scope.
