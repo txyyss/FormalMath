@@ -2,7 +2,6 @@ Global Generalizable All Variables.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.PArith.PArith.
-Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Require Import FormalMath.Word.
 Require Import FormalMath.lib.List_ext.

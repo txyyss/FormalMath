@@ -6,3 +6,7 @@
 *.cmi
 *.cmx
 *.cmxs
+*.vok
+*.vos
+.lia.cache
+.nia.cache

@@ -5,7 +5,6 @@ Require Import Coq.Lists.List.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.Arith.Arith.
-Require Import Coq.omega.Omega.
 Require Import FormalMath.lib.Coqlib.
 
 Inductive dep_list (A: Type): nat -> Type :=

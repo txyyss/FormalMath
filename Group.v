@@ -32,6 +32,9 @@ Class AbelianGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A}
     bi_op_comm : forall x y, x & y = y & x
   }.
 
+Hint Rewrite @one_left: group.
+Hint Rewrite @neg_left: group.
+
 (* Coercion abgroup_as_group : AbelianGroup >-> Group. *)
 
 Section GROUP_PROP.
@@ -76,7 +79,7 @@ Section GROUP_PROP.
   Lemma neg_op : forall x y, neg (x & y) = neg y & neg x.
   Proof.
     intros. symmetry. apply neg_unique.
-    rewrite <- op_assoc, (op_assoc x y (neg y)), neg_right, one_right, neg_right. auto.
+    rewrite <- op_assoc, (op_assoc x y (neg y)), neg_right, one_right, neg_right; auto.
   Qed.
 
   Lemma neg_one : neg one = one.
@@ -132,6 +135,11 @@ Section GROUP_PROP.
 
 End GROUP_PROP.
 
+Hint Rewrite @neg_right: group.
+Hint Rewrite @one_right: group.
+Hint Rewrite @neg_one: group.
+Hint Rewrite @double_neg: group.
+
 (****************************** Group Homomorphism ******************************)
 
 Section GROUP_HOMOMORPHISM.
@@ -164,7 +172,8 @@ Section GROUP_HOMOMORPHISMS_PROP.
 
   Lemma preserve_negate : forall x, f (neg x) = neg (f x).
   Proof.
-    intros. destruct GH. rewrite (eq_left (f x)), <- preserve_gr_op, 2!neg_right.
+    intros. destruct GH. rewrite (eq_left (f x)), <- preserve_gr_op.
+    autorewrite with group; [| eauto..].
     apply preserve_gr_unit.
   Qed.
 

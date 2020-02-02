@@ -186,3 +186,14 @@ Proof.
   apply EqdepFacts.eq_sigT_fst in HeqR. subst x x0. apply (ext_isometric B); auto.
   intros. subst. now rewrite vec_add_comm.
 Qed.
+
+Lemma isometric_is_affine: forall {n} (f: Vector n -> Vector n),
+    Isometric f -> affine_map f.
+Proof.
+  intros. apply isometric_orthogonal_mat in H. destruct H as [[mat v] [[? ?] _]].
+  simpl in *. apply (affine_map_ext (fun x => vec_add v (mat_vec_mul mat x))).
+  - intros. now rewrite H0, vec_add_comm.
+  - apply affine_map_compose.
+    + apply linear_map_is_affine, mat_vec_mul_linear_map.
+    + apply vec_add_is_affine.
+Qed.

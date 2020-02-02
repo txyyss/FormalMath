@@ -43,3 +43,21 @@ Proof.
   - now rewrite <- plus_n_O.
   - now rewrite IHn, plus_Snm_nSm.
 Qed.
+
+Lemma fold_right_ext: forall {A B: Type} (g f: B -> A -> A) a l,
+    (forall x y, f x y = g x y) -> fold_right f a l = fold_right g a l.
+Proof. intros. induction l; simpl; [| rewrite H, IHl]; easy. Qed.
+
+Lemma fold_right_split: forall {A B: Type} (f: A -> A -> A) (g h: B -> A) a l,
+    f a a = a -> (forall x y, f x y = f y x) ->
+    (forall x y z, f (f x y) z = f x (f y z)) ->
+    fold_right (fun x => f (f (g x) (h x))) a l =
+    f (fold_right (fun x => f (g x)) a l) (fold_right (fun x => f (h x)) a l).
+Proof.
+  intros. induction l; simpl; auto. rewrite IHl, !H1. f_equal.
+  now rewrite <- (H1 (h a0)), (H0 (h a0)), H1.
+Qed.
+
+Lemma fold_right_map: forall {A B C: Type} (f: B -> A -> A) (g: C -> B) a l,
+    fold_right (fun x => f (g x)) a l = fold_right f a (map g l).
+Proof. intros. induction l; simpl; [|rewrite IHl]; easy. Qed.

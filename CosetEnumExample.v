@@ -1,6 +1,5 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.PArith.PArith.
-Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Require Import FormalMath.Word.
 Require Import FormalMath.CosetEnum.

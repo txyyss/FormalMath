@@ -7,6 +7,8 @@ Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.Lists.List.
 Require Export FormalMath.lib.Coqlib.
 Require Export FormalMath.lib.dep_list.
+Require Export FormalMath.lib.Reals_ext.
+Require Export FormalMath.lib.List_ext.
 
 Import DepListNotations.
 
@@ -353,6 +355,63 @@ Definition preserve_vec_scal_mul {m n} (f: Vector m -> Vector n): Prop :=
 
 Definition linear_map {m n} (f: Vector m -> Vector n): Prop :=
   preserve_vec_add f /\ preserve_vec_scal_mul f.
+
+Definition affine_map {m n} (f: Vector m -> Vector n): Prop :=
+  forall l: list (R * Vector m),
+    fold_right (fun x => Rplus (fst x)) 0%R l = 1%R ->
+    f (fold_right (fun x => vec_add (vec_scal_mul (fst x) (snd x))) vec_zero l) =
+    fold_right (fun x => vec_add (vec_scal_mul (fst x) (f (snd x)))) vec_zero l.
+
+Lemma linear_map_is_affine:
+  forall {m n} (f: Vector m -> Vector n), linear_map f -> affine_map f.
+Proof.
+  intros. destruct H. red in H, H0 |- *. intros. clear H1. induction l; simpl.
+  - rewrite <- (vec_scal_mul_zero_l vec_zero), H0. now autorewrite with vector.
+  - now rewrite H, H0, IHl.
+Qed.
+
+Lemma vec_add_is_affine: forall {n} (v: Vector n), affine_map (vec_add v).
+Proof.
+  intros. red. intros.
+  rewrite (fold_right_ext
+             (fun x => vec_add (vec_add (vec_scal_mul (fst x) v)
+                                        (vec_scal_mul (fst x) (snd x))))
+             (fun x => vec_add (vec_scal_mul (fst x) (vec_add v (snd x))))).
+  - rewrite fold_right_split.
+    + f_equal.
+      assert (fold_right (fun x : R * Vector n => vec_add (vec_scal_mul (fst x) v))
+                         vec_zero l
+              = vec_scal_mul
+                  (fold_right (fun x : R * Vector n => Rplus (fst x)) 0%R l) v). {
+        clear. induction l; simpl.
+        - now autorewrite with vector.
+        - now rewrite IHl, vec_scal_mul_add_distr_r. }
+      rewrite H0, H. now autorewrite with vector.
+    + apply vec_add_id_r.
+    + apply vec_add_comm.
+    + apply vec_add_assoc.
+  - intros. now rewrite vec_scal_mul_add_distr_l.
+Qed.
+
+Lemma affine_map_compose:
+  forall {m n l} (f: Vector m -> Vector n) (g: Vector n -> Vector l),
+    affine_map f -> affine_map g -> affine_map (fun x => g (f x)).
+Proof.
+  intros. unfold affine_map in *. intros. rewrite H; auto.
+  assert (fold_right (fun x => vec_add (vec_scal_mul (fst x) (f (snd x))))
+                     vec_zero l0 =
+          fold_right (fun x => vec_add (vec_scal_mul (fst x) (snd x)))
+                     vec_zero (map (fun x => (fst x, f (snd x))) l0)) by
+      (rewrite <- fold_right_map; now simpl).
+  rewrite H2, H0; rewrite <- fold_right_map; now simpl.
+Qed.
+
+Lemma affine_map_ext: forall {m n} (f g: Vector m -> Vector n),
+    (forall x, f x = g x) -> affine_map f -> affine_map g.
+Proof.
+  intros. unfold affine_map in *. intros. rewrite <- H, H0; auto.
+  apply fold_right_ext. intros; now rewrite H.
+Qed.
 
 (** * General Matrix Theory *)
 
@@ -1151,6 +1210,8 @@ Proof.
   - simpl. vm_compute. ring.
   - autorewrite with dep_list vector. now rewrite IHn, Rmult_1_r, Rplus_0_r.
 Qed.
+
+Hint Rewrite @det_identity: matrix.
 
 Lemma det_transpose: forall {n} (A: Matrix n n), det (mat_transpose A) = det A.
 Proof.
@@ -3317,3 +3378,45 @@ Proof. intros. now unfold orthogonal_mat. Qed.
 Lemma orthogonal_mat_spec_2: forall {n} (mat: Matrix n n),
     orthogonal_mat mat <-> mat_mul mat (mat_transpose mat) = identity_mat.
 Proof. intros. unfold orthogonal_mat. split; apply mat_mul_identity_comm. Qed.
+
+Lemma orthogonal_mat_det: forall {n} (mat: Matrix n n),
+    orthogonal_mat mat -> det mat = 1%R \/ det mat = (-1)%R.
+Proof.
+  intros. red in H. pose proof (det_mul (mat_transpose mat) mat). rewrite H in H0.
+  autorewrite with matrix in H0. rewrite Rmult_sqr in H0. symmetry in H0.
+  apply Rsqr_eq. now rewrite Rsqr_1.
+Qed.
+
+(** * Special and Concrete Matrix *)
+
+Local Ltac decomp_mat_eq :=
+  repeat match goal with
+         | H: dep_cons _ _ = dep_cons _ _ |- _ =>
+           apply dep_cons_eq_inv in H; destruct H
+         | H: dep_nil = dep_nil |- _ => clear H
+         end.
+
+Lemma orthogonal_mat_dim2: forall mat: Matrix 2 2,
+    orthogonal_mat mat ->
+    exists x, (- PI <= x <= PI)%R /\
+              (mat = {|{|cos x; (- sin x)%R|}; {|sin x; cos x|}|} \/
+               mat = {|{|cos x; sin x|}; {|sin x; (- cos x)%R|}|}).
+Proof.
+  intros. pose proof H. rewrite orthogonal_mat_spec_1 in H.
+  rewrite orthogonal_mat_spec_2 in H0. unfold Matrix in mat. dep_list_decomp.
+  rename mat3 into p. rename mat1 into q. rename mat0 into t. rename mat2 into u.
+  vm_compute in H, H0. replace R0 with 0%R in H, H0 by now vm_compute.
+  replace R1 with 1%R in H, H0 by now vm_compute. rewrite !Rplus_0_l in H, H0.
+  decomp_mat_eq. clear H11 H5. rewrite !Rmult_sqr in *.
+  destruct (Rsqr_sum_1_cos_sin _ _ H) as [x [? [? ?]]]. subst. exists x. split; auto.
+  apply cos2_sum_1_sin in H0. apply sin2_sum_1_cos in H9. clear H3 H1.
+  destruct H0, H9; subst; [| now right | now left |].
+  - rewrite Rmult_comm, <- double in H7. apply Rmult_integral in H7.
+    destruct H7. 1: exfalso; pose proof R2_neq_0; now apply H1.
+    apply Rmult_integral in H0.
+    destruct H0; rewrite H0, Ropp_0; [right | left]; easy.
+  - rewrite Rmult_opp_opp, Rmult_comm, <- double in H7. apply Rmult_integral in H7.
+    destruct H7. 1: exfalso; pose proof R2_neq_0; now apply H1.
+    apply Rmult_integral in H0.
+    destruct H0; rewrite H0, Ropp_0; [left | right]; easy.
+Qed.
