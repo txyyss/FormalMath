@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Arith.
+Require Import Coq.Sorting.Permutation.
 Import ListNotations.
 
 Fixpoint flatten {A: Type} (l: list (list A)): list A :=
@@ -61,3 +62,39 @@ Qed.
 Lemma fold_right_map: forall {A B C: Type} (f: B -> A -> A) (g: C -> B) a l,
     fold_right (fun x => f (g x)) a l = fold_right f a (map g l).
 Proof. intros. induction l; simpl; [|rewrite IHl]; easy. Qed.
+
+Lemma fold_right_perm: forall {A} (f: A -> A -> A) a l1 l2,
+    (forall x y, f x y = f y x) -> (forall x y z, f (f x y) z = f x (f y z)) ->
+    Permutation l1 l2 -> fold_right f a l1 = fold_right f a l2.
+Proof.
+  intros. induction H1; simpl; auto.
+  - now rewrite IHPermutation.
+  - now rewrite <- !H0, (H x y).
+  - now rewrite IHPermutation1.
+Qed.
+
+Lemma fold_right_distr: forall {A B: Type} (f: B -> A -> A) (g: A -> A -> A) b a l,
+    (forall z x y, f z (g x y) = g (f z x) (f z y)) ->
+    f b (fold_right g a l) = fold_right g (f b a) (map (f b) l).
+Proof. intros. induction l; simpl; [| rewrite H, IHl]; easy. Qed.
+
+Lemma map_binary_func: forall {A B C: Type} (f: A -> B -> C) a l,
+    map (f a) l = map (fun x => f (fst x) (snd x)) (combine (repeat a (length l)) l).
+Proof. intros. induction l; simpl; [| rewrite IHl]; easy. Qed.
+
+Lemma map_fst_combine: forall {A B: Type} (l1: list A) (l2: list B),
+    length l1 <= length l2 -> map fst (combine l1 l2) = l1.
+Proof.
+  intros A B. induction l1, l2; simpl; intros; auto.
+  - inversion H.
+  - apply le_S_n in H. now rewrite IHl1.
+Qed.
+
+Lemma map_binary_snd_combine:
+  forall {A B C D: Type} (l1: list A) (l2: list D) (f: A -> B -> C) (g: D -> B),
+    map (fun x => f (fst x) (g (snd x))) (combine l1 l2) =
+    map (fun x => f (fst x) (snd x)) (combine l1 (map g l2)).
+Proof.
+  intros. revert l2. induction l1; intros; simpl; auto.
+  destruct l2; simpl; auto. now rewrite IHl1.
+Qed.

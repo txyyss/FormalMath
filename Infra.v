@@ -116,6 +116,8 @@ Proof.
   red. intros. reflexivity.
 Qed.
 
+Definition SetoidFinite (A: Type) `{s: Setoid A} : Prop := exists n, Cardinals A n.
+
 Class Inverse `(A -> B) : Type := inverse: B -> A.
 Arguments inverse {A B} _ {Inverse} _.
 Typeclasses Transparent Inverse.

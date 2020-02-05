@@ -3,6 +3,9 @@
 
 Require Import FormalMath.Matrix.
 Require Import FormalMath.Group.
+Require Import FormalMath.FiniteGroup.
+Require Import Coq.Sorting.Permutation.
+Require Import Coq.Lists.SetoidPermutation.
 
 Open Scope R_scope.
 
@@ -90,8 +93,11 @@ Section ISOMETRY.
 
   Context {n: nat}.
 
+  Global Instance iso_rep: Cast (Isometry n) (Vector n -> Vector n) :=
+    fun x => projT1 x.
+
   Global Instance iso_equiv: Equiv (Isometry n) :=
-    fun f1 f2 => forall x, (projT1 f1) x == (projT1 f2) x.
+    fun f1 f2 => forall x, (' f1) x == (' f2) x.
 
   Global Instance iso_binop: BinOp (Isometry n).
   Proof.
@@ -127,14 +133,15 @@ Section ISOMETRY.
 
   Instance: Proper ((=) ==> (=) ==> (=)) iso_binop.
   Proof.
-    repeat intro. unfold iso_binop. destruct x, y, x0, y0.
+    repeat intro. unfold cast, iso_rep, iso_binop. destruct x, y, x0, y0.
     unfold equiv, iso_equiv in H, H0. simpl in *. rewrite H0, H. reflexivity.
   Qed.
 
   Instance: Proper ((=) ==> (=)) iso_neg.
   Proof.
-    repeat intro. unfold iso_neg. destruct x, y. unfold equiv, iso_equiv in H.
-    simpl in *. apply (iso_inj x). rewrite iso_surj, H, iso_surj. reflexivity.
+    repeat intro. unfold cast, iso_rep, iso_neg. destruct x, y.
+    unfold equiv, iso_equiv in H. simpl in *. apply (iso_inj x).
+    rewrite iso_surj, H, iso_surj. reflexivity.
   Qed.
 
   Global Instance isometryGroup: Group (Isometry n).
@@ -143,7 +150,8 @@ Section ISOMETRY.
                                       neg, iso_neg, equiv, iso_equiv.
     - destruct x, y, z; intros; simpl. reflexivity.
     - destruct x; intros; simpl; reflexivity.
-    - destruct x. intros; simpl. apply (iso_inj x). rewrite iso_surj; reflexivity.
+    - destruct x. intros; unfold cast, iso_rep. simpl.
+      apply (iso_inj x). rewrite iso_surj; reflexivity.
   Qed.
 
 End ISOMETRY.
@@ -196,4 +204,52 @@ Proof.
   - apply affine_map_compose.
     + apply linear_map_is_affine, mat_vec_mul_linear_map.
     + apply vec_add_is_affine.
+Qed.
+
+Lemma isometry_subgroup_fix_one_point:
+  forall {n} P `{!SubGroupCondition (Isometry n) P},
+    SetoidFinite (Subpart (Isometry n) P) ->
+    exists c, forall (g: Subpart (Isometry n) P), (''g) c == c.
+Proof.
+  intros n P SGC ?. destruct H as [m [l [? [? ?]]]].
+  remember (vec_scal_mul
+              (/ INR m)
+              (@fold_right (Vector n) _ vec_add
+                           vec_zero (map (fun x => (''x) vec_zero) l))) as c. exists c.
+  intros [[g]]. unfold cast, iso_rep, subgroup_rep. simpl. rewrite Heqc at 1.
+  rewrite (fold_right_distr (fun x y => (@vec_scal_mul x n y))).
+  2: intros; apply vec_scal_mul_add_distr_l. autorewrite with vector.
+  rewrite (map_binary_func (fun x y => (@vec_scal_mul x n y))).
+  rewrite <- fold_right_map, (isometric_is_affine _ i).
+  - rewrite fold_right_map, map_binary_snd_combine with
+        (f := fun x y => (@vec_scal_mul x n y)), map_map, map_length.
+    replace (length l) with
+        (length (map (fun x : Subpart (Isometry n) P => g ((' (' x)) vec_zero)) l)) by
+        now rewrite map_length.
+    rewrite <- (map_binary_func (fun x y => (@vec_scal_mul x n y))).
+    replace vec_zero with (@vec_scal_mul (/ INR m) n vec_zero) by
+        now rewrite vec_scal_mul_zero_r.
+    rewrite <- (fold_right_distr (fun x y => (@vec_scal_mul x n y))).
+    2: intros; apply vec_scal_mul_add_distr_l. autorewrite with vector. subst c.
+    f_equal. apply fold_right_perm.
+    + apply vec_add_comm.
+    + apply vec_add_assoc.
+    + remember (exist _ (existT _ g i) p) as gg.
+      replace (map (fun x => g ((' (' x)) vec_zero)) l)
+        with (map (fun x : Subpart (Isometry n) P => (''x) vec_zero) (map (gg &) l)).
+      * remember (fun x : Subpart (Isometry n) P => (' (' x)) vec_zero) as f.
+        assert (forall (l1 l2: list (Subpart (Isometry n) P)),
+                   PermutationA (=) l1 l2 -> Permutation (map f l1) (map f l2)). {
+          subst f. clear. intros. induction H; simpl; try constructor.
+          - rewrite H. now constructor.
+          - apply perm_trans with
+                (map (fun x : Subpart (Isometry n) P => (' (' x)) vec_zero) l₂); auto.
+          } apply H2. symmetry. now apply finite_group_left_perm.
+      * rewrite map_map. apply map_ext. intros [[a]]. subst gg.
+        unfold cast, iso_rep, subgroup_rep. now simpl.
+  - rewrite fold_right_map, map_fst_combine. 2: now rewrite repeat_length, map_length.
+    assert (forall r k, fold_right Rplus 0 (repeat r k) == Rmult (INR k) r). {
+      intros. induction k. 1: simpl; ring. rewrite S_INR. simpl. rewrite IHk. ring. }
+    rewrite map_length, H0, H2. apply Rinv_r, not_0_INR. destruct SGC, non_empty.
+    specialize (H1 (exist _ x H3)). intro. subst m. now destruct l.
 Qed.
