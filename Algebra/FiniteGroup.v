@@ -1,4 +1,4 @@
-Require Import FormalMath.Group.
+Require Import FormalMath.Algebra.Group.
 Require Import Coq.Lists.SetoidList.
 Require Import Coq.Lists.SetoidPermutation.
 

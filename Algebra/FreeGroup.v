@@ -1,5 +1,5 @@
-Require Export FormalMath.Word.
-Require Export FormalMath.Group.
+Require Export FormalMath.Algebra.Word.
+Require Export FormalMath.Algebra.Group.
 
 Section FREE_GROUP.
 

@@ -1,8 +1,8 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.PArith.PArith.
 Require Import Coq.micromega.Lia.
-Require Import FormalMath.FreeGroup.
-Require Import FormalMath.CosetEnum.
+Require Import FormalMath.Algebra.FreeGroup.
+Require Import FormalMath.Algebra.CosetEnum.
 Require Import FormalMath.lib.List_ext.
 Import ListNotations.
 

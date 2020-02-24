@@ -1,8 +1,8 @@
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.PArith.PArith.
 Require Import Coq.Lists.List.
-Require Import FormalMath.Word.
-Require Import FormalMath.CosetEnum.
+Require Import FormalMath.Algebra.Word.
+Require Import FormalMath.Algebra.CosetEnum.
 Require Import FormalMath.lib.List_ext.
 Import ListNotations.
 

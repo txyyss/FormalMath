@@ -1,9 +1,9 @@
 (** * Lɪʙʀᴀʀʏ ᴀʙᴏᴜᴛ Isᴏᴍᴇᴛʀɪᴇs ᴏғ Eᴜᴄʟɪᴅᴇᴀɴ Sᴘᴀᴄᴇ *)
 (** * Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
 
-Require Import FormalMath.Matrix.
-Require Import FormalMath.Group.
-Require Import FormalMath.FiniteGroup.
+Require Import FormalMath.Algebra.Matrix.
+Require Import FormalMath.Algebra.Group.
+Require Import FormalMath.Algebra.FiniteGroup.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
 

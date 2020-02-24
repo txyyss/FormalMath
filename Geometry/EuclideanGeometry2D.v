@@ -1,5 +1,5 @@
 Require Import Coq.Reals.Reals.
-Require Import FormalMath.Group.
+Require Import FormalMath.Algebra.Group.
 
 Definition Point := (R * R)%type.
 

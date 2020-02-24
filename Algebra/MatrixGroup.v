@@ -1,8 +1,8 @@
 (** * Lɪʙʀᴀʀʏ ᴏғ Mᴀᴛʀɪx Gʀᴏᴜᴘ *)
 (** * Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
 
-Require Import FormalMath.Matrix.
-Require Import FormalMath.Group.
+Require Import FormalMath.Algebra.Matrix.
+Require Import FormalMath.Algebra.Group.
 
 Section ORTHOGONAL_GROUP.
 
