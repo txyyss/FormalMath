@@ -88,13 +88,16 @@ Proof. induction n; intros; autorewrite with vector; [|rewrite IHn, Ropp_0]; eas
 
 Hint Rewrite @vec_neg_zero: vector.
 
-Lemma vec_add_inv: forall {n} (v: Vector n), vec_add v (vec_neg v) = vec_zero.
+Lemma vec_add_inv1: forall {n} (v: Vector n), vec_add v (vec_neg v) = vec_zero.
 Proof.
   apply dep_list_ind_1. 1: easy. intros. autorewrite with vector.
   now rewrite H, Rplus_opp_r.
 Qed.
 
-Hint Rewrite @vec_add_inv: vector.
+Lemma vec_add_inv2: forall {n} (v: Vector n), vec_add (vec_neg v) v = vec_zero.
+Proof. intros. rewrite vec_add_comm. apply vec_add_inv1. Qed.
+
+Hint Rewrite @vec_add_inv1 @vec_add_inv2: vector.
 
 Lemma vec_add_neg_zero_iff: forall {n} (u v: Vector n),
     vec_add u (vec_neg v) = vec_zero <-> u = v.

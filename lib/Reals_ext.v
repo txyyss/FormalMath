@@ -1,9 +1,15 @@
-(** * The following code comes from https://github.com/coq/coq/pull/9803 *)
+(** * Part of the following code comes from https://github.com/coq/coq/pull/9803 *)
 
 Require Import Coq.Reals.Reals.
 Require Import Coq.micromega.Lra.
 
 Local Open Scope R_scope.
+
+Lemma Rdiv_simpl_l: forall (r1 r2: R), r1 <> 0 -> r2 / r1 * r1 = r2.
+Proof.
+  intros. unfold Rdiv. rewrite Rmult_assoc, (Rmult_comm (/ r1)).
+  rewrite <- Rinv_r_sym; auto. apply Rmult_1_r.
+Qed.
 
 Lemma sqrt_neg_0 x: x <= 0 -> sqrt(x) = 0.
 Proof.

@@ -4,34 +4,110 @@
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.FiniteGroup.
+Require Import FormalMath.Topology.MetricSpace.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
 
 Open Scope R_scope.
 
-Definition norm {n} (v: Vector n) := sqrt (vec_dot_prod v v).
+Section EuclideanDistance.
 
-Definition distance {n} (x y: Vector n) := norm (vec_add x (vec_neg y)).
+  Context {n: nat}.
 
-Lemma polarization_identity: forall {n} (u v: Vector n),
-    vec_dot_prod u v ==
-    ((norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²) * / 2.
-Proof.
-  intros. cut (2 * vec_dot_prod u v ==
-               (norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²).
-  - intros. rewrite <- H, Rmult_comm, <- Rmult_assoc, Rinv_l, Rmult_1_l. 1: easy.
-    apply not_0_IZR. discriminate.
-  - unfold norm. rewrite !Rsqr_sqrt; [|apply vec_dot_prod_nonneg..].
-    rewrite vec_dot_prod_add_r, !vec_dot_prod_add_l. autorewrite with vector.
-    ring_simplify. rewrite (vec_dot_prod_comm v). apply double.
-Qed.
+  Definition norm (v: Vector n) := sqrt (vec_dot_prod v v).
 
-Lemma vec_dot_prod_distance: forall {n} (u v: Vector n),
-    vec_dot_prod u v ==
-    ((distance u vec_zero)² + (distance v vec_zero)² - (distance u v)²) * / 2.
-Proof.
-  intros. unfold distance. autorewrite with vector. apply polarization_identity.
-Qed.
+  Lemma Rabs_norm: forall (v: Vector n), Rabs (norm v) == norm v.
+  Proof. intros. unfold norm. rewrite Rabs_pos_eq; auto. apply sqrt_pos. Qed.
+
+  Theorem Cauchy_Schwarz_ineq: forall (u v: Vector n),
+      Rabs (vec_dot_prod u v) <= norm u * norm v.
+  Proof.
+    intros. cut ((vec_dot_prod u v)² <= (norm u)² * (norm v)²).
+    - intros. rewrite <- Rsqr_mult in H. apply Rsqr_le_abs_0 in H.
+      now rewrite Rabs_mult, !Rabs_norm in H.
+    - unfold norm. rewrite !Rsqr_sqrt; [|apply vec_dot_prod_nonneg..].
+      destruct (vec_eq_dec v vec_zero).
+      + subst. autorewrite with vector. rewrite Rsqr_0, Rmult_0_r. apply Rle_refl.
+      + assert (vec_dot_prod v v =/= 0). {
+          intro. apply vec_dot_prod_zero in H. now apply n0. }
+        remember ((vec_dot_prod u v) / (vec_dot_prod v v)) as l.
+        pose proof (vec_dot_prod_nonneg (vec_add u (vec_neg (vec_scal_mul l v)))).
+        rewrite !vec_dot_prod_add_r, !vec_dot_prod_add_l, !vec_dot_prod_neg_r,
+        !vec_dot_prod_neg_l, !vec_dot_prod_scal_l, !vec_dot_prod_scal_r in H0.
+        rewrite Ropp_involutive in H0. rewrite Heql in H0 at 4.
+        rewrite Rdiv_simpl_l in H0; auto. rewrite (vec_dot_prod_comm u v) in H0 at 2.
+        rewrite Rplus_opp_l, Rplus_0_r in H0.
+        apply (Rplus_le_compat_r (l * vec_dot_prod u v)) in H0.
+        rewrite Rplus_assoc, Rplus_opp_l, Rplus_0_l, Rplus_0_r in H0.
+        assert (l * vec_dot_prod u v == (vec_dot_prod u v)² / vec_dot_prod v v). {
+          rewrite Rmult_comm. subst l. unfold Rsqr, Rdiv. now rewrite Rmult_assoc. }
+        rewrite H1 in H0. clear Heql H1.
+        apply (Rmult_le_compat_r (vec_dot_prod v v)) in H0.
+        * rewrite Rdiv_simpl_l in H0; auto.
+        * apply vec_dot_prod_nonneg.
+  Qed.
+
+  Lemma norm_tri_ineq: forall (x y: Vector n), norm (vec_add x y) <= norm x + norm y.
+  Proof.
+    intros. cut (vec_dot_prod (vec_add x y) (vec_add x y) <= (norm x + norm y)²).
+    - intros. rewrite <- (Rsqr_sqrt (vec_dot_prod (vec_add x y) (vec_add x y))) in H.
+      + apply Rsqr_le_abs_0 in H. rewrite !Rabs_pos_eq in H; auto.
+        * apply Rplus_le_le_0_compat; apply sqrt_pos.
+        * apply sqrt_pos.
+      + apply vec_dot_prod_nonneg.
+    - rewrite !vec_dot_prod_add_r, !vec_dot_prod_add_l.
+      assert (0 <= 2) by apply Rlt_le, Rlt_0_2.
+      apply Rle_trans with
+          (r2 := ((norm x)² + (norm y)² + 2 * Rabs (vec_dot_prod x y))).
+      + unfold norm. rewrite !Rsqr_sqrt; [|apply vec_dot_prod_nonneg..].
+        rewrite !Rplus_assoc. apply Rplus_le_compat_l. rewrite <- Rplus_assoc.
+        rewrite (Rplus_comm (vec_dot_prod y y)). apply Rplus_le_compat_r.
+        rewrite (vec_dot_prod_comm y), <- double. apply Rmult_le_compat_l; auto.
+        apply RRle_abs.
+      + rewrite Rsqr_plus. apply Rplus_le_compat_l. rewrite Rmult_assoc.
+        apply Rmult_le_compat_l; auto. apply Cauchy_Schwarz_ineq.
+  Qed.
+
+  Definition distance (x y: Vector n) := norm (vec_add x (vec_neg y)).
+
+  Global Instance distanceMetric: Metric distance.
+  Proof.
+    constructor; intros; unfold distance; unfold norm.
+    - apply sqrt_pos.
+    - split; intro.
+      + apply sqrt_eq_0 in H. 2: apply vec_dot_prod_nonneg.
+        apply vec_dot_prod_zero in H. now rewrite vec_add_neg_zero_iff in H.
+      + subst. autorewrite with vector. apply sqrt_0.
+    - rewrite <- (vec_neg_double x) at 1 2. rewrite <- vec_neg_add.
+      autorewrite with vector. rewrite Ropp_involutive. now rewrite vec_add_comm.
+    - remember (vec_add x (vec_neg y)) as vx.
+      remember (vec_add y (vec_neg z)) as vy.
+      assert (vec_add x (vec_neg z) == vec_add vx vy). {
+        subst. rewrite <- vec_add_assoc. rewrite (vec_add_assoc x).
+        now autorewrite with vector. } rewrite H. clear. apply norm_tri_ineq.
+  Qed.
+
+  Lemma polarization_identity: forall (u v: Vector n),
+      vec_dot_prod u v ==
+      ((norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²) * / 2.
+  Proof.
+    intros. cut (2 * vec_dot_prod u v ==
+                 (norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²).
+    - intros. rewrite <- H, Rmult_comm, <- Rmult_assoc, Rinv_l, Rmult_1_l. 1: easy.
+      apply not_0_IZR. discriminate.
+    - unfold norm. rewrite !Rsqr_sqrt; [|apply vec_dot_prod_nonneg..].
+      rewrite vec_dot_prod_add_r, !vec_dot_prod_add_l. autorewrite with vector.
+      ring_simplify. rewrite (vec_dot_prod_comm v). apply double.
+  Qed.
+
+  Lemma vec_dot_prod_distance: forall (u v: Vector n),
+      vec_dot_prod u v ==
+      ((distance u vec_zero)² + (distance v vec_zero)² - (distance u v)²) * / 2.
+  Proof.
+    intros. unfold distance. autorewrite with vector. apply polarization_identity.
+  Qed.
+
+End EuclideanDistance.
 
 Class Isometric {n} (f: Vector n -> Vector n) :=
   {
@@ -71,8 +147,8 @@ Qed.
 Lemma translation_isometric: forall {n} (v: Vector n), Isometric (vec_add v).
 Proof.
   intros. exists (vec_add (vec_neg v)); intros.
-  - rewrite <- vec_add_id_l, <- (vec_add_id_l x), <- (vec_add_inv (vec_neg v)).
-    autorewrite with vector. now rewrite !vec_add_assoc, H.
+  - now rewrite <- vec_add_id_l, <- (vec_add_id_l x), <- (vec_add_inv1 (vec_neg v)),
+    vec_neg_double, !vec_add_assoc, H.
   - rewrite <- vec_add_assoc. now autorewrite with vector.
   - unfold distance. rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc,
                      <- (vec_add_assoc v (vec_neg v)). now autorewrite with vector.
