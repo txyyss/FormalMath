@@ -3,6 +3,7 @@
 Generalizable All Variables.
 
 Require Export FormalMath.lib.Ensembles_ext.
+Require Import Coq.Logic.ClassicalChoice.
 
 Class OpenSet (A: Type) := open: Ensemble A -> Prop.
 Typeclasses Transparent OpenSet.
@@ -37,6 +38,26 @@ Proof.
     assert (In (Intersection b1 b2) x) by (split; easy).
     specialize (B1 _ _ _ H3 H6 H9). destruct B1 as [b3 [? [? ?]]].
     exists b3. unfold Included in H12. repeat split; auto; destruct (H12 _ H13); auto.
+Qed.
+
+Lemma topology_basis_open_is_all_union: forall A (B: Family A),
+    topology_basis B ->
+    forall S, basis_to_open B S <->
+              exists (F: Family A), Included F B /\ S = FamilyUnion F.
+Proof.
+  intros. destruct H as [?B ?B]. unfold basis_to_open. split; intros.
+  - assert (forall m: {x | In S x},
+               exists b, In B b /\ In b (proj1_sig m) /\ Included b S). {
+      intros. destruct m. simpl. now apply H. } destruct (choice _ H0) as [f ?].
+    exists (imageFamily f). split.
+    + repeat intro. destruct H2. subst. now destruct (H1 x).
+    + rewrite <- indexed_to_family_union. apply Extensionality_Ensembles.
+      split; red; intros.
+      * destruct (H1 (exist _ x H2)) as [? [? ?]]. simpl in *.
+        exists (exist _ x H2); auto.
+      * destruct H2. destruct (H1 i) as [? [? ?]]. auto.
+  - destruct H as [F [? ?]]. destruct (B0 x) as [b [? ?]]. rewrite H1 in H0.
+    inversion H0. subst. exists S0. repeat split; auto. repeat intro. exists S0; auto.
 Qed.
 
 Section TopologicalSpaceProp.

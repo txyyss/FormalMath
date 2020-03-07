@@ -4,6 +4,7 @@
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.FiniteGroup.
+Require Import FormalMath.Topology.TopologicalSpace.
 Require Import FormalMath.Topology.MetricSpace.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
@@ -68,11 +69,12 @@ Section EuclideanDistance.
         apply Rmult_le_compat_l; auto. apply Cauchy_Schwarz_ineq.
   Qed.
 
-  Definition distance (x y: Vector n) := norm (vec_add x (vec_neg y)).
+  Global Instance eucDis: DistanceFunc (Vector n) :=
+    fun x y => norm (vec_add x (vec_neg y)).
 
-  Global Instance distanceMetric: Metric distance.
+  Global Instance distanceMetric: Metric (Vector n).
   Proof.
-    constructor; intros; unfold distance; unfold norm.
+    constructor; intros; unfold d, eucDis, norm.
     - apply sqrt_pos.
     - split; intro.
       + apply sqrt_eq_0 in H. 2: apply vec_dot_prod_nonneg.
@@ -86,6 +88,11 @@ Section EuclideanDistance.
         subst. rewrite <- vec_add_assoc. rewrite (vec_add_assoc x).
         now autorewrite with vector. } rewrite H. clear. apply norm_tri_ineq.
   Qed.
+
+  Global Instance eucOpenSet: OpenSet (Vector n) := basis_to_open openBallBasis.
+
+  Global Instance eucTopology: TopologicalSpace (Vector n).
+  Proof. apply topology_basis_TopologicalSpace, openBallBasis_topology_basis. Qed.
 
   Lemma polarization_identity: forall (u v: Vector n),
       vec_dot_prod u v ==
@@ -101,10 +108,9 @@ Section EuclideanDistance.
   Qed.
 
   Lemma vec_dot_prod_distance: forall (u v: Vector n),
-      vec_dot_prod u v ==
-      ((distance u vec_zero)² + (distance v vec_zero)² - (distance u v)²) * / 2.
+      vec_dot_prod u v == ((d u vec_zero)² + (d v vec_zero)² - (d u v)²) * / 2.
   Proof.
-    intros. unfold distance. autorewrite with vector. apply polarization_identity.
+    intros. unfold d, eucDis. autorewrite with vector. apply polarization_identity.
   Qed.
 
 End EuclideanDistance.
@@ -114,7 +120,7 @@ Class Isometric {n} (f: Vector n -> Vector n) :=
     iso_inv: Vector n -> Vector n;
     iso_inj: forall x y, f x == f y -> x == y;
     iso_surj: forall x, f (iso_inv x) == x;
-    distance_preserve: forall x y, distance x y == distance (f x) (f y)
+    distance_preserve: forall x y, d x y == d (f x) (f y)
   }.
 
 Arguments iso_inv {_} _ {_}.
@@ -132,7 +138,7 @@ Proof.
     rewrite <- orthogonal_mat_spec_1, orthogonal_mat_spec_2 in H.
     now rewrite H, mat_vec_mul_identity.
   - pose proof (preserve_dot_prod_linear _ S). destruct H2.
-    red in S. unfold distance.
+    red in S. unfold d, eucDis.
     rewrite <- !vec_neg_scal_mul, <- H3, <- H2, !vec_neg_scal_mul. unfold norm.
     now rewrite S.
 Qed.
@@ -150,7 +156,7 @@ Proof.
   - now rewrite <- vec_add_id_l, <- (vec_add_id_l x), <- (vec_add_inv1 (vec_neg v)),
     vec_neg_double, !vec_add_assoc, H.
   - rewrite <- vec_add_assoc. now autorewrite with vector.
-  - unfold distance. rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc,
+  - unfold d, eucDis. rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc,
                      <- (vec_add_assoc v (vec_neg v)). now autorewrite with vector.
 Qed.
 
@@ -183,7 +189,7 @@ Section ISOMETRY.
       intros.
     - apply (iso_inj f2), (iso_inj f1); auto.
     - do 2 rewrite iso_surj; easy.
-    - transitivity (distance (f2 x) (f2 y)); apply distance_preserve.
+    - transitivity (d (f2 x) (f2 y)); apply distance_preserve.
   Defined.
 
   Global Instance iso_gunit: GrUnit (Isometry n).
