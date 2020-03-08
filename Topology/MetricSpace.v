@@ -72,4 +72,9 @@ Section MetricTopology.
       + apply H2. apply (openBall_Included _ (Rmin r1' r2')); auto. apply Rmin_r.
   Qed.
 
+  Global Instance metricOpenSet: OpenSet A := basis_to_open openBallBasis.
+
+  Global Instance metricTopology: TopologicalSpace A.
+  Proof. apply topology_basis_TopologicalSpace, openBallBasis_topology_basis. Qed.
+
 End MetricTopology.

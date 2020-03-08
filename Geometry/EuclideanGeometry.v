@@ -89,11 +89,6 @@ Section EuclideanDistance.
         now autorewrite with vector. } rewrite H. clear. apply norm_tri_ineq.
   Qed.
 
-  Global Instance eucOpenSet: OpenSet (Vector n) := basis_to_open openBallBasis.
-
-  Global Instance eucTopology: TopologicalSpace (Vector n).
-  Proof. apply topology_basis_TopologicalSpace, openBallBasis_topology_basis. Qed.
-
   Lemma polarization_identity: forall (u v: Vector n),
       vec_dot_prod u v ==
       ((norm u)² + (norm v)² - (norm (vec_add u (vec_neg v)))²) * / 2.

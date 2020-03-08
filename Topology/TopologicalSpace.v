@@ -77,4 +77,26 @@ Section TopologicalSpaceProp.
     } rewrite H1. apply any_union_open. intros. now destruct H2.
   Qed.
 
+  Definition closed (u: Ensemble A): Prop := open (Complement u).
+
+  Lemma closed_compl_open: forall (S: Ensemble A), closed (Complement S) -> open S.
+  Proof. intros. red in H. now rewrite Complement_Complement in H. Qed.
+
+  Lemma full_closed: closed Full_set.
+  Proof. red. rewrite Full_compl_empty. apply empty_open. Qed.
+
+  Lemma empty_closed: closed Empty_set.
+  Proof. red. rewrite Empty_compl_full. apply full_open. Qed.
+
+  Lemma any_intersection_closed: forall (f: Family A),
+      (forall s, In f s -> closed s) -> closed (FamilyIntersection f).
+  Proof.
+    intros. red. rewrite family_intersection_compl_union. apply any_union_open.
+    intros. red in H0. specialize (H _ H0). now apply closed_compl_open.
+  Qed.
+
+  Lemma union_closed: forall (s1 s2: Ensemble A),
+      closed s1 -> closed s2 -> closed (Union s1 s2).
+  Proof. intros. red. rewrite De_Morgan_law1. apply intersection_open; auto. Qed.
+
 End TopologicalSpaceProp.
