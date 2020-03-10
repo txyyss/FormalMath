@@ -4,8 +4,7 @@
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.FiniteGroup.
-Require Import FormalMath.Topology.TopologicalSpace.
-Require Import FormalMath.Topology.MetricSpace.
+Require Import FormalMath.Topology.Topology.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
 

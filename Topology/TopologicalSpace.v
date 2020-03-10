@@ -99,4 +99,44 @@ Section TopologicalSpaceProp.
       closed s1 -> closed s2 -> closed (Union s1 s2).
   Proof. intros. red. rewrite De_Morgan_law1. apply intersection_open; auto. Qed.
 
+  Definition interior (S: Ensemble A): Ensemble A :=
+    FamilyUnion (fun U => open U /\ Included U S).
+
+  Lemma interior_open: forall S, open (interior S).
+  Proof. intro. apply any_union_open. intros. red in H. now destruct H. Qed.
+
+  Lemma interior_Included: forall S, Included (interior S) S.
+  Proof. repeat intro. destruct H. destruct H. auto with sets. Qed.
+
+  Lemma open_interior_self: forall S, open S -> interior S = S.
+  Proof.
+    intros. apply Extensionality_Ensembles. split.
+    - apply interior_Included.
+    - repeat intro. exists S; auto with sets.
+  Qed.
+
+  Lemma interior_maximal: forall U S,
+      open U -> Included U S -> Included U (interior S).
+  Proof. repeat intro. exists U; auto with sets. Qed.
+
+  Definition closure (S: Ensemble A): Ensemble A :=
+    FamilyIntersection (fun U => closed U /\ Included S U).
+
+  Lemma closure_closed: forall S, closed (closure S).
+  Proof. intros. apply any_intersection_closed. intros. red in H. now destruct H. Qed.
+
+  Lemma closure_Included: forall S, Included S (closure S).
+  Proof. repeat intro. constructor. intros U ?. destruct H0. auto with sets. Qed.
+
+  Lemma closed_closure_self: forall S, closed S -> closure S = S.
+  Proof.
+    intros. apply Extensionality_Ensembles. split.
+    - repeat intro. destruct H0. apply H0. auto with sets.
+    - apply closure_Included.
+  Qed.
+
+  Lemma closure_minimal: forall U S,
+      closed U -> Included S U -> Included (closure S) U.
+  Proof. repeat intro. destruct H1. apply H1. auto with sets. Qed.
+
 End TopologicalSpaceProp.
