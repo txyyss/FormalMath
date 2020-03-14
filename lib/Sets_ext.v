@@ -11,6 +11,7 @@ Arguments Couple {_}.
 Arguments Complement {_}.
 
 Arguments Im {_ _}.
+Arguments injective {_ _}.
 
 Lemma Full_compl_empty: forall (A: Type), @Complement A Full_set = Empty_set.
 Proof.
@@ -31,6 +32,24 @@ Proof.
   intros. apply Extensionality_Ensembles. split; repeat intro.
   - hnf in H. constructor; intro; apply H; auto with sets.
   - destruct H. destruct H0; [apply H | apply H1]; easy.
+Qed.
+
+Lemma injective_image_intersection: forall (U V: Type) (X1 X2: Ensemble U) (f: U -> V),
+    injective f -> Im (Intersection X1 X2) f = Intersection (Im X1 f) (Im X2 f).
+Proof.
+  intros. apply Extensionality_Ensembles. split; repeat intro.
+  - destruct H0. destruct H0. split; exists x; auto.
+  - destruct H0. destruct H0, H1. exists x; auto.
+    assert (x0 = x) by (apply H; rewrite <- H2, <- H3; easy). subst. split; auto.
+Qed.
+
+Lemma intersection_distr: forall (U: Type) (A B C: Ensemble U),
+    Intersection A (Intersection B C) =
+    Intersection (Intersection A B) (Intersection A C).
+Proof.
+  intros. apply Extensionality_Ensembles. split; repeat intro; destruct H.
+  - destruct H0. split; split; auto.
+  - destruct H, H0. split; [|split]; auto.
 Qed.
 
 Definition Family (A: Type) := Ensemble (Ensemble A).
@@ -66,6 +85,16 @@ Proof.
   - destruct H. red in H. intro. destruct H1. specialize (H1 _ H). now apply H1.
 Qed.
 
+Lemma image_family_union: forall (U V: Type) (F: Family U) (f: U -> V),
+    Im (FamilyUnion F) f = FamilyUnion (Im F (fun u => Im u f)).
+Proof.
+  intros. apply Extensionality_Ensembles. split; repeat intro; destruct H.
+  - destruct H. exists (Im S f).
+    + exists S; auto.
+    + exists x; auto.
+  - destruct H. subst. destruct H0. exists x; auto. exists x0; auto.
+Qed.
+
 Definition IndexedFamily (Idx A: Type) := Idx -> Ensemble A.
 
 Inductive IndexedUnion {Idx A: Type} (F: IndexedFamily Idx A): Ensemble A :=
@@ -83,4 +112,14 @@ Proof.
   intros. apply Extensionality_Ensembles. split; red; intros; destruct H.
   - exists (F i); auto. exists i; auto. constructor.
   - destruct H. subst. now exists x0.
+Qed.
+
+Lemma intersection_indexed_union:
+  forall (Idx A: Type) (F: IndexedFamily Idx A) (S: Ensemble A),
+    Intersection S (IndexedUnion F) =
+    IndexedUnion (fun id => Intersection S (F id)).
+Proof.
+  intros. apply Extensionality_Ensembles. split; repeat intro; destruct H.
+  - destruct H0. exists i. now split.
+  - destruct H. split; auto. now exists i.
 Qed.

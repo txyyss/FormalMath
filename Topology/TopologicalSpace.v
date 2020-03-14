@@ -2,7 +2,7 @@
 
 Generalizable All Variables.
 
-Require Export FormalMath.lib.Ensembles_ext.
+Require Export FormalMath.lib.Sets_ext.
 Require Import Coq.Logic.ClassicalChoice.
 
 Class OpenSet (A: Type) := open: Ensemble A -> Prop.
@@ -140,3 +140,11 @@ Section TopologicalSpaceProp.
   Proof. repeat intro. destruct H1. apply H1. auto with sets. Qed.
 
 End TopologicalSpaceProp.
+
+Definition connected (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
+  forall (S: Ensemble A), open S -> closed S -> S = Empty_set \/ S = Full_set.
+
+Definition compact (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
+  forall (C: Family A),
+    (forall U, In C U -> open U) -> FamilyUnion C = Full_set ->
+    exists (fC: Family A), Finite _ fC /\ Included fC C /\ FamilyUnion fC = Full_set.

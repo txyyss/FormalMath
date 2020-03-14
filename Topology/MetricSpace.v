@@ -77,4 +77,7 @@ Section MetricTopology.
   Global Instance metricTopology: TopologicalSpace A.
   Proof. apply topology_basis_TopologicalSpace, openBallBasis_topology_basis. Qed.
 
+  Definition metric_bounded (S: Ensemble A): Prop :=
+    exists M, forall a1 a2, In S a1 -> In S a2 -> d a1 a2 <= M.
+
 End MetricTopology.
