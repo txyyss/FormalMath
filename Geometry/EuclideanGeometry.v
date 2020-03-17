@@ -4,6 +4,7 @@
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.FiniteGroup.
+Require Import FormalMath.Algebra.GroupAction.
 Require Import FormalMath.Topology.Topology.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
@@ -282,12 +283,34 @@ Proof.
     + apply vec_add_is_affine.
 Qed.
 
+Section IsometryAction.
+
+  Context {n: nat}.
+
+  Global Instance isometry_act: GrAct (Isometry n) (Vector n) := fun g x => ('g) x.
+
+  Instance: Proper ((=) ==> (==) ==> (==)) isometry_act.
+  Proof.
+    intros [x] [y] ? a b ?. unfold isometry_act. subst. red in H.
+    unfold iso_equiv in H. unfold cast, iso_rep in *. simpl in *. apply H.
+  Qed.
+
+  Global Instance isometryGroupAction: GroupAction (Isometry n) (Vector n).
+  Proof.
+    constructor; auto.
+    - apply _.
+    - intros [g] [h] ?. vm_compute. easy.
+  Qed.
+
+End IsometryAction.
+
 Lemma isometry_subgroup_fix_one_point:
   forall {n} P `{!SubGroupCondition (Isometry n) P},
     SetoidFinite (Subpart (Isometry n) P) ->
-    exists c, forall (g: Subpart (Isometry n) P), (''g) c == c.
+    exists c, forall (g: Subpart (Isometry n) P), g ⊙ c == c.
 Proof.
   intros n P SGC ?. destruct H as [m [l [? [? ?]]]].
+  unfold gr_act, subgroup_act, gr_act, isometry_act.
   remember (vec_scal_mul
               (/ INR m)
               (@fold_right (Vector n) _ vec_add
