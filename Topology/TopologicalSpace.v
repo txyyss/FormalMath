@@ -60,7 +60,7 @@ Proof.
     inversion H0. subst. exists S0. repeat split; auto. repeat intro. exists S0; auto.
 Qed.
 
-Section TopologicalSpaceProp.
+Section TOPOLOGICAL_SPACE_PROP.
 
   Context `{T: TopologicalSpace A}.
 
@@ -139,7 +139,15 @@ Section TopologicalSpaceProp.
       closed U -> Included S U -> Included (closure S) U.
   Proof. repeat intro. destruct H1. apply H1. auto with sets. Qed.
 
-End TopologicalSpaceProp.
+  Definition isolated (x: A): Prop := open (Singleton x).
+
+  Definition isolated_in_set (x: A) (S: Ensemble A): Prop :=
+    In S x /\ exists U, open U /\ Intersection U S = Singleton x.
+
+  Definition discrete (U: Ensemble A): Prop :=
+    forall x, In U x -> isolated_in_set x U.
+
+End TOPOLOGICAL_SPACE_PROP.
 
 Definition connected (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
   forall (S: Ensemble A), open S -> closed S -> S = Empty_set \/ S = Full_set.
@@ -147,4 +155,4 @@ Definition connected (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
 Definition compact (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
   forall (C: Family A),
     (forall U, In C U -> open U) -> FamilyUnion C = Full_set ->
-    exists (fC: Family A), Finite _ fC /\ Included fC C /\ FamilyUnion fC = Full_set.
+    exists (fC: Family A), Finite fC /\ Included fC C /\ FamilyUnion fC = Full_set.

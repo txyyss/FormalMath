@@ -9,9 +9,12 @@ Arguments Full_set {_}.
 Arguments Included {_}.
 Arguments Couple {_}.
 Arguments Complement {_}.
+Arguments Singleton {_}.
 
 Arguments Im {_ _}.
 Arguments injective {_ _}.
+
+Arguments Finite {_}.
 
 Lemma Full_compl_empty: forall (A: Type), @Complement A Full_set = Empty_set.
 Proof.

@@ -1,4 +1,5 @@
 Require Import FormalMath.Algebra.Group.
+Require Import FormalMath.lib.Sets_ext.
 
 Class GrAct (A X: Type) := gr_act : A -> X -> X.
 Infix "⊙" := gr_act (at level 50): math_scope.
@@ -10,6 +11,24 @@ Class GroupAction (A X: Type) `{G: Group A} {Ga: GrAct A X}: Prop := {
   gr_act_prop :> Proper ((=) ==> (==) ==> (==)) (⊙);
   gr_act_ident: forall x: X, one ⊙ x == x;
   gr_act_compat: forall (g h: A) (x: X), (g & h) ⊙ x == g ⊙ (h ⊙ x); }.
+
+Section GROUPACTION_PROP.
+
+  Variable (A X: Type).
+  Context `{GA: GroupAction A X}.
+
+  Definition orbit (x: X): Ensemble X := Im Full_set (⊙ x).
+
+  Lemma orbit_the_same: forall (g: A) (x: X), orbit x == orbit (g ⊙ x).
+  Proof.
+    intros. apply Extensionality_Ensembles. split; repeat intro; unfold orbit in *.
+    - destruct H as [g' ?]. exists (g' & (neg g)). 1: constructor.
+      now rewrite <- gr_act_compat, op_assoc, neg_left, one_right.
+    - destruct H as [g' ?]. exists (g' & g). 1: constructor.
+      now rewrite gr_act_compat.
+  Qed.
+
+End GROUPACTION_PROP.
 
 Section SUBGROUP_ACTION.
 

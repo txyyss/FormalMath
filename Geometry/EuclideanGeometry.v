@@ -11,7 +11,7 @@ Require Import Coq.Lists.SetoidPermutation.
 
 Open Scope R_scope.
 
-Section EuclideanDistance.
+Section EUCLIDEAN_DISTANCE.
 
   Context {n: nat}.
 
@@ -108,7 +108,7 @@ Section EuclideanDistance.
     intros. unfold d, eucDis. autorewrite with vector. apply polarization_identity.
   Qed.
 
-End EuclideanDistance.
+End EUCLIDEAN_DISTANCE.
 
 Class Isometric {n} (f: Vector n -> Vector n) :=
   {
@@ -283,7 +283,7 @@ Proof.
     + apply vec_add_is_affine.
 Qed.
 
-Section IsometryAction.
+Section ISOMETRY_ACTION.
 
   Context {n: nat}.
 
@@ -302,7 +302,7 @@ Section IsometryAction.
     - intros [g] [h] ?. vm_compute. easy.
   Qed.
 
-End IsometryAction.
+End ISOMETRY_ACTION.
 
 Lemma isometry_subgroup_fix_one_point:
   forall {n} P `{!SubGroupCondition (Isometry n) P},
@@ -352,3 +352,34 @@ Proof.
     rewrite map_length, H0, H2. apply Rinv_r, not_0_INR. destruct SGC, non_empty.
     specialize (H1 (exist _ x H3)). intro. subst m. now destruct l.
 Qed.
+
+Class TilingAxioms {n: nat} (pat: Ensemble (Vector n)) (P: Isometry n -> Prop)
+      {SGC: SubGroupCondition (Isometry n) P}: Prop := {
+  pattern_int_nonempty: interior pat =/= Empty_set;
+  pattern_connected: connected_region pat;
+  pattern_compact: compact_region pat;
+  cover_all: IndexedUnion (fun g: Subpart (Isometry n) P => Im pat (g ⊙)) == Full_set;
+  edge_overlap: forall g h: Subpart (Isometry n) P,
+      Intersection (Im (interior pat) (g ⊙))
+                   (Im (interior pat) (h ⊙)) =/= Empty_set ->
+      Im pat (g ⊙) == Im pat (h ⊙);
+  }.
+
+Section TILING_PROP.
+
+  Context {n: nat}.
+  Variable pat : Ensemble (Vector n).
+  Variable P : Isometry n -> Prop.
+  Context {SGC: SubGroupCondition (Isometry n) P}.
+  Hypothesis TiA: TilingAxioms pat P.
+
+  (* 1.7.5.1 in Geometry I *)
+
+  Lemma tiling_group_acts_discretely:
+    forall (x: Vector n), discrete (orbit (Subpart (Isometry n) P) _ x).
+  Proof.
+    intros x. red. intros y ?. unfold orbit in H. destruct H as [g ?].
+    rewrite (orbit_the_same _ _ g). rewrite <- H0. clear x g H H0. rename y into x.
+  Abort.
+
+End TILING_PROP.

@@ -16,7 +16,7 @@ Class Metric (A: Type) {DF: DistanceFunc A}: Prop :=
     metric_trig_ineq: forall x y z, d x z <= d x y + d y z
   }.
 
-Section MetricTopology.
+Section METRIC_TOPOLOGY.
 
   Context `{M: Metric A}.
 
@@ -80,4 +80,40 @@ Section MetricTopology.
   Definition metric_bounded (S: Ensemble A): Prop :=
     exists M, forall a1 a2, In S a1 -> In S a2 -> d a1 a2 <= M.
 
-End MetricTopology.
+  Lemma metric_open_In: forall (x: A) (U: Ensemble A),
+      open U -> In U x -> exists r, 0 < r /\ Included (openBall x r) U.
+  Proof.
+    intros. unfold open, metricOpenSet, basis_to_open in H. specialize (H _ H0).
+    destruct H as [b [[y ?] [? ?]]]. apply openBall_In_nest in H.
+    destruct H as [r' [? ?]]. exists r'. split; auto.
+    apply Inclusion_is_transitive with (openBall y r); auto.
+  Qed.
+
+  Lemma openBall_open: forall x r, open (openBall x r).
+  Proof.
+    intros. unfold open, metricOpenSet, basis_to_open. intros y ?.
+    exists (openBall x r). split; [|split]; auto.
+    - constructor.
+    - auto with sets.
+  Qed.
+
+  Lemma metric_isolated_in_set: forall (x: A) (S: Ensemble A),
+      isolated_in_set x S <->
+      exists eta: R, Intersection (openBall x eta) S = Singleton x.
+  Proof.
+    intros. split; intros.
+    - red in H. destruct H as [? [U [? ?]]].
+      assert (In U x). {
+        pose proof (In_singleton _ x). rewrite <- H1 in H2. now destruct H2. }
+      destruct (metric_open_In _ _ H0 H2) as [r [? ?]]. exists r.
+      apply Extensionality_Ensembles. split.
+      + rewrite <- H1. repeat intro. destruct H5. split; auto.
+      + repeat intro. inversion H5. subst x0. split; auto. unfold openBall. red.
+        now rewrite metric_zero.
+    - destruct H as [eta ?]. red. split.
+      + assert (Included (Singleton x) (Intersection (openBall x eta) S)) by
+            (rewrite H; auto with sets). now destruct (H0 _ (In_singleton _ x)).
+      + exists (openBall x eta). split; auto. apply openBall_open.
+  Qed.
+
+End METRIC_TOPOLOGY.
