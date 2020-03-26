@@ -1,5 +1,6 @@
 Require Export Coq.Sets.Ensembles.
 Require Export Coq.Sets.Image.
+Require Coq.Logic.FinFun.
 
 Arguments In {_}.
 Arguments Union {_}.
@@ -10,6 +11,8 @@ Arguments Included {_}.
 Arguments Couple {_}.
 Arguments Complement {_}.
 Arguments Singleton {_}.
+Arguments Add {_}.
+Arguments Setminus {_}.
 
 Arguments Im {_ _}.
 Arguments injective {_ _}.
@@ -98,6 +101,24 @@ Proof.
   - destruct H. subst. destruct H0. exists x; auto. exists x0; auto.
 Qed.
 
+Definition interSum {A: Type} (U S: Ensemble A): Ensemble {x : A | In S x} :=
+  fun m => In U (proj1_sig m).
+
+Definition FamilyIntersectSet {A: Type} (F: Family A) (S: Ensemble A):
+  Family {x : A | In S x} := fun U => exists f, In F f /\ U = interSum f S.
+
+Lemma union_FIS: forall {A} (F: Family A) (S: Ensemble A),
+    FamilyUnion (FamilyIntersectSet F S) = interSum (FamilyUnion F) S.
+Proof.
+  intros. apply Extensionality_Ensembles. split; repeat intro.
+  - unfold interSum. red. destruct H as [U ?]. destruct H as [f [? ?]]. subst U.
+    unfold interSum in H0. red in H0. exists f; easy.
+  - unfold interSum in H. red in H. destruct x as [x ?]. simpl in H.
+    destruct H as [U ?]. exists (interSum U S).
+    + exists U. split; auto.
+    + unfold interSum. red. now simpl.
+Qed.
+
 Definition IndexedFamily (Idx A: Type) := Idx -> Ensemble A.
 
 Inductive IndexedUnion {Idx A: Type} (F: IndexedFamily Idx A): Ensemble A :=
@@ -125,4 +146,76 @@ Proof.
   intros. apply Extensionality_Ensembles. split; repeat intro; destruct H.
   - destruct H0. exists i. now split.
   - destruct H. split; auto. now exists i.
+Qed.
+
+Lemma Finite_iff: forall {A} (S: Ensemble A),
+    Finite S <-> exists l, forall x, In S x -> List.In x l.
+Proof.
+  intros. split; intros.
+  - induction H.
+    + exists nil. intros. inversion H.
+    + destruct IHFinite as [l ?]. exists (List.cons x l). intros y ?. destruct H2.
+      * right. now apply H1.
+      * inversion H2. subst x0. now left.
+  - destruct H as [l ?]. revert S H. induction l; intros.
+    + replace S with (@Empty_set A). 1: constructor. apply Extensionality_Ensembles.
+      split; repeat intro.
+      * inversion H0.
+      * specialize (H _ H0). inversion H.
+    + destruct (classic (In S a)). 
+      * specialize (IHl (Setminus S (Singleton a))).
+        replace S with (Add (Setminus S (Singleton a)) a).
+        -- constructor.
+           ++ apply IHl. intros. destruct H1. specialize (H _ H1). destruct H; auto.
+              subst. exfalso. apply H2. constructor.
+           ++ intro. destruct H1. apply H2. constructor.
+        -- apply Extensionality_Ensembles. split; repeat intro.
+           ++ destruct H1.
+              ** destruct H1. auto.
+              ** inversion H1. now subst.
+           ++ destruct (classic (x = a)).
+              ** subst. right. constructor.
+              ** left. split; auto. intro. inversion H3. subst. now apply H2.
+      * apply IHl. intros. specialize (H _ H1). destruct H; auto.
+        subst. contradiction.
+Qed.
+
+Definition sumAdd {A: Type} (S: Ensemble A) (a: A) (b: {x: A | In S x}):
+  {x : A | In (Add S a) x} := let (y, i) := b in exist _ y (Add_intro1 A S a y i).
+
+Lemma finite_sig_iff: forall {A} (S: Ensemble A),
+    Finite S <-> FinFun.Finite {x: A | In S x}.
+Proof.
+  intros. split.
+  - intros; induction H.
+    + exists nil. intros [a]. inversion i.
+    + rename A0 into S. destruct IHFinite as [l ?]. red in H1.
+      exists (List.cons (exist _ x (Add_intro2 A S x)) (List.map (sumAdd S x) l)).
+      red. intros [y]. destruct i.
+      * right. specialize (H1 (exist _ x0 i)).
+        apply (List.in_map (sumAdd S x)) in H1.
+        replace (exist (fun x1 : A => In (Add S x) x1) x0
+                       (Union_introl A S (Singleton x) x0 i)) with
+            (sumAdd S x (exist (In S) x0 i)); auto.
+        unfold sumAdd. f_equal. apply proof_irrelevance.
+      * left. inversion i. subst x0. f_equal. apply proof_irrelevance.
+  - intros. destruct H as [l ?]. red in H. rewrite Finite_iff.
+    exists (List.map (@proj1_sig A (fun m => In S m)) l). intros.
+    specialize (H (exist _ x H0)).
+    apply (List.in_map (@proj1_sig A (fun m => In S m))) in H. now simpl in H.
+Qed.
+
+Lemma finite_type_full_iff: forall (A: Type),
+    FinFun.Finite A <-> FinFun.Finite {x : A | In Full_set x}.
+Proof.
+  intros. split; intros; red in H |- *; destruct H as [l ?]; red in H.
+  - exists (List.map (fun x => exist _ x (Full_intro A x)) l). red. intros.
+    destruct a as [x ?]. specialize (H x).
+    apply (List.in_map (fun y => exist _ y (Full_intro A y))) in H.
+    replace (exist (fun x0 : A => In Full_set x0) x i) with
+        (exist (In Full_set) x (Full_intro A x)); auto. f_equal.
+    apply proof_irrelevance.
+  - exists (List.map (@proj1_sig A (In Full_set)) l). red. intros.
+    specialize (H (exist _ a (Full_intro A a))).
+    apply (List.in_map (@proj1_sig A (In Full_set))) in H. now simpl in H.
 Qed.

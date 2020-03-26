@@ -356,8 +356,8 @@ Qed.
 Class TilingAxioms {n: nat} (pat: Ensemble (Vector n)) (P: Isometry n -> Prop)
       {SGC: SubGroupCondition (Isometry n) P}: Prop := {
   pattern_int_nonempty: interior pat =/= Empty_set;
-  pattern_connected: connected_region pat;
-  pattern_compact: compact_region pat;
+  pattern_connected: connected_subspace pat;
+  pattern_compact: compact_subspace pat;
   cover_all: IndexedUnion (fun g: Subpart (Isometry n) P => Im pat (g ⊙)) == Full_set;
   edge_overlap: forall g h: Subpart (Isometry n) P,
       Intersection (Im (interior pat) (g ⊙))

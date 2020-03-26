@@ -147,12 +147,18 @@ Section TOPOLOGICAL_SPACE_PROP.
   Definition discrete (U: Ensemble A): Prop :=
     forall x, In U x -> isolated_in_set x U.
 
+  Definition connected: Prop :=
+    forall (S: Ensemble A), open S -> closed S -> S = Empty_set \/ S = Full_set.
+  
+  Definition compact: Prop :=
+    forall (C: Family A),
+      (forall U, In C U -> open U) -> FamilyUnion C = Full_set ->
+      exists (fC: Family A), Finite fC /\ Included fC C /\ FamilyUnion fC = Full_set.
+
+  Definition compact_set (S: Ensemble A): Prop :=
+    forall (C: Family A),
+      (forall U, In C U -> open U) -> Included S (FamilyUnion C) ->
+      exists (fC: Family A), Finite fC /\ Included fC C /\
+                             Included S (FamilyUnion fC).
+
 End TOPOLOGICAL_SPACE_PROP.
-
-Definition connected (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
-  forall (S: Ensemble A), open S -> closed S -> S = Empty_set \/ S = Full_set.
-
-Definition compact (A: Type) (Ao: OpenSet A) (T: TopologicalSpace A): Prop :=
-  forall (C: Family A),
-    (forall U, In C U -> open U) -> FamilyUnion C = Full_set ->
-    exists (fC: Family A), Finite fC /\ Included fC C /\ FamilyUnion fC = Full_set.
