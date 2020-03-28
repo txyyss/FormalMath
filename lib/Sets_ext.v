@@ -105,17 +105,17 @@ Definition interSum {A: Type} (U S: Ensemble A): Ensemble {x : A | In S x} :=
   fun m => In U (proj1_sig m).
 
 Definition FamilyIntersectSet {A: Type} (F: Family A) (S: Ensemble A):
-  Family {x : A | In S x} := fun U => exists f, In F f /\ U = interSum f S.
+  Family {x : A | In S x} := Im F (fun f y => In f (proj1_sig y)).
 
 Lemma union_FIS: forall {A} (F: Family A) (S: Ensemble A),
     FamilyUnion (FamilyIntersectSet F S) = interSum (FamilyUnion F) S.
 Proof.
   intros. apply Extensionality_Ensembles. split; repeat intro.
-  - unfold interSum. red. destruct H as [U ?]. destruct H as [f [? ?]]. subst U.
-    unfold interSum in H0. red in H0. exists f; easy.
+  - unfold interSum. destruct x as [x ?]. inversion H. subst. clear H.
+    red. simpl. inversion H0. subst. clear H0. red in H1. simpl in H1. exists x0; auto.
   - unfold interSum in H. red in H. destruct x as [x ?]. simpl in H.
     destruct H as [U ?]. exists (interSum U S).
-    + exists U. split; auto.
+    + exists U; auto.
     + unfold interSum. red. now simpl.
 Qed.
 
@@ -162,7 +162,7 @@ Proof.
       split; repeat intro.
       * inversion H0.
       * specialize (H _ H0). inversion H.
-    + destruct (classic (In S a)). 
+    + destruct (classic (In S a)).
       * specialize (IHl (Setminus S (Singleton a))).
         replace S with (Add (Setminus S (Singleton a)) a).
         -- constructor.

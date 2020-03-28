@@ -149,7 +149,7 @@ Section TOPOLOGICAL_SPACE_PROP.
 
   Definition connected: Prop :=
     forall (S: Ensemble A), open S -> closed S -> S = Empty_set \/ S = Full_set.
-  
+
   Definition compact: Prop :=
     forall (C: Family A),
       (forall U, In C U -> open U) -> FamilyUnion C = Full_set ->

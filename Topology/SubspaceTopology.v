@@ -8,41 +8,42 @@ Section SUBSPACE_TOPOLOGY.
   Context `{T: TopologicalSpace A}.
 
   Definition subspace_open (S: Ensemble A): OpenSet {x: A | In S x} :=
-    fun u => exists (O: Ensemble A),
-        open O /\ Im u (@proj1_sig A _) = Intersection S O.
+    Im open (fun O y => In O (proj1_sig y)).
 
   Lemma subspace_topology:
     forall (S: Ensemble A), @TopologicalSpace {x: A | In S x} (subspace_open S).
   Proof.
-    intros. split; unfold open, subspace_open; intros.
-    - exists Full_set. split.
+    intros. split; unfold open; intros.
+    - exists Full_set.
       + apply full_open.
-      + apply Extensionality_Ensembles. split; repeat intro; destruct H.
-        * destruct x as [x ?]. simpl in *. subst. split; easy.
-        * exists (exist _ x H); easy.
-    - assert (forall m: {s : Ensemble {x : A | In S x} | In f s},
-                 exists O: Ensemble A,
-                   open O /\ Im (proj1_sig m) (@proj1_sig A _) = Intersection S O). {
-        intros [? ?]. apply H. now simpl. }
-      destruct (choice _ H0) as [func ?]. clear H H0. exists (IndexedUnion func).
-      split.
-      + rewrite indexed_to_family_union. apply any_union_open. intros.
-        unfold imageFamily in H. destruct H.
-        specialize (H1 x). destruct H1. now rewrite H0.
-      + rewrite intersection_indexed_union, indexed_to_family_union.
-        rewrite image_family_union. f_equal. unfold imageFamily.
-        apply Extensionality_Ensembles. split; repeat intro; destruct H.
-        * specialize (H1 (exist _ x H)). destruct H1. simpl in H2.
-          exists (exist _ x H). 1: constructor. now subst y.
-        * specialize (H1 x). destruct H1. destruct x as [s ?]. simpl in *.
-          exists s. auto. now subst y.
-    - destruct H as [O1 [? ?]]. destruct H0 as [O2 [? ?]].
-      exists (Intersection O1 O2). split.
+      + apply Extensionality_Ensembles. split; repeat intro; constructor.
+    - exists (FamilyUnion (fun O => open O /\
+                                    In (Im f (fun x => Im x (@proj1_sig A S)))
+                                       (Intersection S O))).
+      + apply any_union_open. intros. red in H0. now destruct H0.
+      + apply Extensionality_Ensembles. split; repeat intro.
+        * destruct H0. red. destruct x as [x ?]. red. simpl. specialize (H S0 H0).
+          red in H. destruct H as [O ?]. exists O.
+          -- red. split; auto. exists y; auto. apply Extensionality_Ensembles.
+             split; repeat intro.
+             ++ destruct H3. exists (exist _ x0 H3). 2: now simpl. subst y.
+                red. now simpl.
+             ++ destruct H3. destruct x0 as [y1 ?]. simpl in H4. subst y1.
+                split; auto. subst y. red in H3. now simpl in H3.
+          -- subst y. red in H1. now simpl in H1.
+        * red in H0. destruct x as [x ?]. simpl in H0. destruct H0 as [O ?]. red in H0.
+          destruct H0. inversion H2. subst. exists x0; auto.
+          pose proof (Intersection_intro A S O x i H1). rewrite H4 in H5.
+          inversion H5. subst. destruct x1 as [x ?]. simpl in *.
+          replace i with i0; auto. apply proof_irrelevance.
+    - unfold subspace_open in *. inversion H. subst. rename x into O1. clear H.
+      inversion H0. subst. rename x into O2. clear H0. exists (Intersection O1 O2).
       + now apply intersection_open.
-      + rewrite injective_image_intersection.
-        * rewrite intersection_distr. f_equal; auto.
-        * repeat intro. destruct x as [x ?]. destruct y as [y ?]. simpl in H3. subst.
-          f_equal. apply proof_irrelevance.
+      + apply Extensionality_Ensembles. split; repeat intro.
+        * destruct x as [x ?]. inversion H0. subst. clear H0. red in H2, H3 |- *.
+          simpl in *. now split.
+        * destruct x as [x ?]. red in H0. simpl in H0.
+          destruct H0. now split; red; simpl.
   Qed.
 
   Definition connected_subspace (U: Ensemble A): Prop :=
@@ -62,21 +63,16 @@ Section SUBSPACE_TOPOLOGY.
       assert (forall U : Ensemble {x : A | In S x},
                  In (FamilyIntersectSet C S) U ->
                  @open {x : A | @In A S x} (subspace_open S) U). {
-        intros. unfold open, subspace_open. destruct H2 as [f [? ?]].
-        exists f. split. 1: now apply H0. subst U. apply Extensionality_Ensembles.
-        split; repeat intro.
-        - destruct H3. unfold interSum in H3. red in H3. destruct x as [x ?].
-          simpl in *. subst y. now constructor.
-        - destruct H3. exists (exist _ x H3). 2: now simpl. unfold interSum. red.
-          now simpl. } specialize (H H2). clear H2.
+        intros. unfold open. inversion H2. subst. rename x into U. clear H2.
+        exists U; auto. now apply H0. } specialize (H H2). clear H2.
       assert (FamilyUnion (FamilyIntersectSet C S) = @Full_set {x : A | In S x}). {
         apply Extensionality_Ensembles. split; repeat intro. 1: constructor.
         rewrite union_FIS. destruct x as [x ?]. clear H2. unfold interSum.
         red. simpl. auto. } specialize (H H2). clear H2. destruct H as [fCS [? [? ?]]].
       assert (forall su: { x | In fCS x},
                  exists f, In C f /\ proj1_sig su = interSum f S). {
-        intros. destruct su as [x ?]. specialize (H2 x i).
-        destruct H2 as [f' [? ?]]. simpl. exists f'. now split. } clear H2.
+        intros. destruct su as [x ?]. specialize (H2 x i). simpl. inversion H2. subst.
+        exists x0. split; auto. } clear H2.
       destruct (choice _ H4) as [func ?]. clear H4. exists (imageFamily func).
       split; [|split].
       + unfold imageFamily. apply finite_image.
@@ -90,10 +86,15 @@ Lemma isolated_in_subspace_in_set:
     isolated_in_subspace x S H -> isolated_in_set x S.
 Proof.
   intros. red in H0 |- *. red in H0. split; auto. unfold open, subspace_open in H0.
-  destruct H0 as [O [? ?]]. exists O. split; auto. rewrite Intersection_commutative.
-  rewrite <- H1. apply Extensionality_Ensembles. split; repeat intro.
-  - destruct H2. inversion H2. subst x0. simpl in H3. subst y. constructor.
-  - inversion H2. subst x0. exists (exist _ x H). 1: constructor. now simpl.
+  inversion H0. subst. clear H0. rename x0 into O. exists O. split; auto.
+  apply Extensionality_Ensembles.
+  assert (Included (@Singleton {y : A | In S y} (exist (In S) x H))
+                   (@Singleton {y : A | In S y} (exist (In S) x H))) by
+      now repeat intro. split; repeat intro.
+  - destruct H3. rewrite H2 in H0 at 1. red in H0.
+    specialize (H0 (exist _ x0 H4) H3). inversion H0. constructor.
+  - inversion H3. subst x0. split; auto. rewrite H2 in H0 at 2.
+    specialize (H0 (exist _ x H)). red in H0. simpl in H0. apply H0. constructor.
 Qed.
 
 Lemma isolated_in_set_in_subspace:
@@ -101,9 +102,12 @@ Lemma isolated_in_set_in_subspace:
       isolated_in_subspace x S (proj1 H).
 Proof.
   intros. pose proof H. red in H0 |- *. destruct H0 as [? [U [? ?]]]. red.
-  unfold open, subspace_open. exists U. split; auto.
-  rewrite Intersection_commutative, H2. apply Extensionality_Ensembles.
+  unfold open, subspace_open. exists U; auto. apply Extensionality_Ensembles.
+  assert (Included (Singleton x) (Singleton x)) by now repeat intro.
   split; repeat intro.
-  - destruct H3. inversion H3. subst x0. simpl in H4. subst. constructor.
-  - exists (exist _ x (proj1 H)). 1: constructor. inversion H3. subst. now simpl.
+  - inversion H4. subst x0. red. simpl. rewrite <- H2 in H3 at 2.
+    specialize (H3 x (In_singleton A x)). now destruct H3.
+  - red in H4. destruct x0 as [y ?]. simpl in H4. rewrite <- H2 in H3 at 1.
+    specialize (H3 _ (Intersection_intro A _ _ _ H4 i)). inversion H3. subst y.
+    replace i with (proj1 H). 1: constructor. apply proof_irrelevance.
 Qed.
