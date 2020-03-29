@@ -77,7 +77,31 @@ Section SUBSPACE_TOPOLOGY.
       split; [|split].
       + unfold imageFamily. apply finite_image.
         now rewrite finite_sig_iff, <- finite_type_full_iff, <- finite_sig_iff.
-  Abort.
+      + unfold imageFamily. repeat intro. inversion H4. subst. specialize (H2 x0).
+        now destruct H2.
+      + unfold imageFamily. repeat intro.
+        assert (In (@Full_set {x: A | In S x}) (exist _ x H4)) by constructor.
+        rewrite <- H3 in H5. inversion H5. subst. specialize (H2 (exist _ S0 H6)).
+        simpl in H2. destruct H2. exists (func (exist (In fCS) S0 H6)).
+        * exists (exist _ S0 H6); auto. constructor.
+        * rewrite H8 in H7. unfold interSum in H7. red in H7. now simpl in H7.
+    - red. intros.
+      remember (fun O => open O /\ In C (interSum O S)) as CC.
+      assert (forall U, In CC U -> open U). {
+        intros. subst. red in H2. now destruct H2. }
+      assert (Included S (FamilyUnion CC)). {
+        rewrite HeqCC. repeat intro.
+        assert (In (FamilyUnion C) (exist _ x H3)) by (rewrite H1; constructor).
+        inversion H4. subst x0. specialize (H0 _ H5). hnf in H0. inversion H0. subst y.
+        subst S0. red in H6. simpl in H6. rename x0 into O. exists O; auto. red.
+        split; auto. } specialize (H _ H2 H3). clear H2 H3.
+      destruct H as [fCF [? [? ?]]]. exists (FamilyIntersectSet fCF S). repeat split.
+      + now apply finite_image.
+      + repeat intro. unfold FamilyIntersectSet in H4. inversion H4. subst. clear H4.
+        specialize (H2 x0 H5). red in H2. destruct H2. apply H4.
+      + rewrite union_FIS. apply Extensionality_Ensembles. split; repeat intro.
+        1: constructor. unfold interSum. red. destruct x as [x ?]. simpl; auto.
+  Qed.
 
 End SUBSPACE_TOPOLOGY.
 
