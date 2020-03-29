@@ -17,25 +17,15 @@ Section SUBSPACE_TOPOLOGY.
     - exists Full_set.
       + apply full_open.
       + apply Extensionality_Ensembles. split; repeat intro; constructor.
-    - exists (FamilyUnion (fun O => open O /\
-                                    In (Im f (fun x => Im x (@proj1_sig A S)))
-                                       (Intersection S O))).
+    - exists (FamilyUnion (fun O => open O /\ In f (interSum O S))).
       + apply any_union_open. intros. red in H0. now destruct H0.
       + apply Extensionality_Ensembles. split; repeat intro.
-        * destruct H0. red. destruct x as [x ?]. red. simpl. specialize (H S0 H0).
+        * red. inversion H0. subst. destruct x as [x ?]. simpl. specialize (H S0 H1).
           red in H. destruct H as [O ?]. exists O.
-          -- red. split; auto. exists y; auto. apply Extensionality_Ensembles.
-             split; repeat intro.
-             ++ destruct H3. exists (exist _ x0 H3). 2: now simpl. subst y.
-                red. now simpl.
-             ++ destruct H3. destruct x0 as [y1 ?]. simpl in H4. subst y1.
-                split; auto. subst y. red in H3. now simpl in H3.
-          -- subst y. red in H1. now simpl in H1.
+          -- red. split; auto. subst y; auto.
+          -- subst y. red in H2. now simpl in H2.
         * red in H0. destruct x as [x ?]. simpl in H0. destruct H0 as [O ?]. red in H0.
-          destruct H0. inversion H2. subst. exists x0; auto.
-          pose proof (Intersection_intro A S O x i H1). rewrite H4 in H5.
-          inversion H5. subst. destruct x1 as [x ?]. simpl in *.
-          replace i with i0; auto. apply proof_irrelevance.
+          destruct H0. exists (interSum O S); auto.
     - unfold subspace_open in *. inversion H. subst. rename x into O1. clear H.
       inversion H0. subst. rename x into O2. clear H0. exists (Intersection O1 O2).
       + now apply intersection_open.
