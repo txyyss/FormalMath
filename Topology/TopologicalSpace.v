@@ -3,6 +3,7 @@
 Generalizable All Variables.
 
 Require Export FormalMath.lib.Sets_ext.
+Require Import FormalMath.lib.FiniteType.
 Require Import Coq.Logic.ClassicalChoice.
 
 Class OpenSet (A: Type) := open: Ensemble A -> Prop.
@@ -59,6 +60,13 @@ Proof.
   - destruct H as [F [? ?]]. destruct (B0 x) as [b [? ?]]. rewrite H1 in H0.
     inversion H0. subst. exists S0. repeat split; auto. repeat intro. exists S0; auto.
 Qed.
+
+Class HausdorffSpace (A: Type) {Ao: OpenSet A}: Type :=
+  Hausdorff_prop: forall (x1 x2: A),
+    x1 <> x2 ->
+    { U1U2: Ensemble A * Ensemble A |
+      let (U1, U2) := U1U2 in open U1 /\ open U2 /\ In U1 x1 /\ In U2 x2 /\
+                              Intersection U1 U2 = Empty_set }.
 
 Section TOPOLOGICAL_SPACE_PROP.
 
@@ -119,6 +127,12 @@ Section TOPOLOGICAL_SPACE_PROP.
       open U -> Included U S -> Included U (interior S).
   Proof. repeat intro. exists U; auto with sets. Qed.
 
+  Lemma Included_interior_open: forall S, Included S (interior S) -> open S.
+  Proof.
+    intros. replace S with (interior S). 1: apply interior_open.
+    apply Extensionality_Ensembles. split; auto. apply interior_Included.
+  Qed.
+
   Definition closure (S: Ensemble A): Ensemble A :=
     FamilyIntersection (fun U => closed U /\ Included S U).
 
@@ -160,5 +174,30 @@ Section TOPOLOGICAL_SPACE_PROP.
       (forall U, In C U -> open U) -> Included S (FamilyUnion C) ->
       exists (fC: Family A), Finite fC /\ Included fC C /\
                              Included S (FamilyUnion fC).
+
+  Lemma compact_set_on_indexed_covers:
+    forall (S: Ensemble A) (Idx: Type) (C: IndexedFamily Idx A),
+      compact_set S ->
+      (forall idx: Idx, open (C idx)) -> Included S (IndexedUnion C) ->
+      exists idxSet: Ensemble Idx,
+        Finite idxSet /\
+        Included S (IndexedUnion (fun i: {x: Idx | In idxSet x} => C (proj1_sig i))).
+  Proof.
+    intros. destruct (H (imageFamily C)) as [subcover].
+    - intros. destruct H2. subst y. apply H0.
+    - now rewrite indexed_to_family_union in H1.
+    - destruct H2 as [? []].
+  Abort.    
+
+  (* Theorem 26.3 of Topolygy *)
+  Lemma compact_of_Hausdorff_closed:
+    forall {Hau: HausdorffSpace A} (S: Ensemble A), compact_set S -> closed S.
+  Proof.
+    intros. red. apply Included_interior_open. repeat intro.
+    assert (forall y, In S y -> y <> x). {
+      intros. hnf in H0. intro. apply H0. now subst. }
+    remember (fun yS: {z: A | In S z} =>
+                proj1_sig (Hausdorff_prop (proj1_sig yS) x (H1 _ (proj2_sig yS)))).
+  Abort.
 
 End TOPOLOGICAL_SPACE_PROP.

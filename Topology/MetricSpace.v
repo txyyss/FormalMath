@@ -23,6 +23,12 @@ Section METRIC_TOPOLOGY.
   Lemma metric_zero: forall x, d x x = 0.
   Proof. intros. now rewrite metric_zero_iff. Qed.
 
+  Lemma metric_pos: forall x y, x <> y -> 0 < d x y.
+  Proof.
+    intros. destruct (Rle_lt_or_eq_dec _ _ (metric_nonneg x y)); auto.
+    exfalso. apply H. now rewrite <- metric_zero_iff.
+  Qed.
+
   Definition openBall (x: A) (epsl: R): Ensemble A := fun y => d x y < epsl.
 
   Lemma openBall_In_nest: forall x y r,
@@ -114,6 +120,23 @@ Section METRIC_TOPOLOGY.
       + assert (Included (Singleton x) (Intersection (openBall x eta) S)) by
             (rewrite H; auto with sets). now destruct (H0 _ (In_singleton _ x)).
       + exists (openBall x eta). split; auto. apply openBall_open.
+  Qed.
+
+  Global Instance metricHausdorff: HausdorffSpace A.
+  Proof.
+    repeat intro. exists ((openBall x1 (d x1 x2 / 2)), (openBall x2 (d x1 x2 / 2))).
+    assert (0 < d x1 x2 / 2). {
+      unfold Rdiv. apply Rmult_lt_0_compat. 1: now apply metric_pos.
+      apply pos_half_prf. } repeat split.
+    - apply openBall_open.
+    - apply openBall_open.
+    - hnf. now rewrite metric_zero.
+    - hnf. now rewrite metric_zero.
+    - apply Extensionality_Ensembles. split; repeat intro. 2: inversion H1.
+      destruct H1. hnf in H1, H2. pose proof (Rplus_lt_compat _ _ _ _ H1 H2).
+      rewrite <- double_var, (metric_sym x2 x) in H3.
+      pose proof (metric_trig_ineq x1 x x2). pose proof (Rle_lt_trans _ _ _ H4 H3).
+      exfalso. now apply (Rlt_irrefl (d x1 x2)).
   Qed.
 
 End METRIC_TOPOLOGY.
