@@ -64,9 +64,8 @@ Qed.
 Class HausdorffSpace (A: Type) {Ao: OpenSet A}: Type :=
   Hausdorff_prop: forall (x1 x2: A),
     x1 <> x2 ->
-    { U1U2: Ensemble A * Ensemble A |
-      let (U1, U2) := U1U2 in open U1 /\ open U2 /\ In U1 x1 /\ In U2 x2 /\
-                              Intersection U1 U2 = Empty_set }.
+    { U1: Ensemble A & { U2: Ensemble A |
+      open U1 /\ open U2 /\ In U1 x1 /\ In U2 x2 /\ Intersection U1 U2 = Empty_set } }.
 
 Section TOPOLOGICAL_SPACE_PROP.
 
@@ -186,10 +185,44 @@ Section TOPOLOGICAL_SPACE_PROP.
     intros. destruct (H (imageFamily C)) as [subcover].
     - intros. destruct H2. subst y. apply H0.
     - now rewrite indexed_to_family_union in H1.
-    - destruct H2 as [? []].
-  Abort.    
+    - destruct H2 as [? []]. apply Finite_FiniteT in H2.
+      destruct (finite_choice _ _
+                              (fun (U:{x:Ensemble A | In subcover x}) (a:Idx) =>
+                                 proj1_sig U = C a)) as [choice_fun]; auto.
+      + intros. destruct x as [x]. simpl. apply H3 in i. destruct i. exists x; auto.
+      + exists (Im Full_set choice_fun). split.
+        * apply FiniteT_img; auto. intros. apply classic.
+        * repeat intro. apply H4 in H6. destruct H6.
+          assert (In (Im Full_set choice_fun) (choice_fun (exist _ S0 H6))). {
+            exists (exist _ S0 H6); constructor. }
+          exists (exist _ (choice_fun (exist _ S0 H6)) H8). simpl. now rewrite <- H5.
+  Qed.
 
-  (* Theorem 26.3 of Topolygy *)
+  Lemma finite_intersection_open: forall {Idx: Type} (F:IndexedFamily Idx A),
+      FiniteT Idx -> (forall i: Idx, open (F i)) -> open (IndexedIntersection F).
+  Proof.
+    intros. induction H.
+    - rewrite empty_indexed_intersection. apply full_open.
+    - assert (IndexedIntersection F =
+              Intersection (IndexedIntersection (fun x => F (Some x))) (F None)). {
+        apply Extensionality_Ensembles; split; red; intros.
+        - destruct H1. constructor.
+          + constructor. intros; apply H1.
+          + apply H1.
+        - destruct H1. destruct H1. constructor. intros.
+          destruct i; [apply H1 | apply H2]. }
+      rewrite H1. apply intersection_open.
+      + apply IHFiniteT. intros; apply H0.
+      + apply H0.
+    - destruct H1.
+      assert (IndexedIntersection F = IndexedIntersection (fun x => F (f x))). {
+        apply Extensionality_Ensembles; split; red; intros.
+        - constructor. destruct H3. intro; apply H3.
+        - constructor. destruct H3. intro; rewrite <- H2 with i. apply H3. }
+      rewrite H3. apply IHFiniteT. intro; apply H0.
+  Qed.
+
+  (* Theorem 26.3 of Topology *)
   Lemma compact_of_Hausdorff_closed:
     forall {Hau: HausdorffSpace A} (S: Ensemble A), compact_set S -> closed S.
   Proof.
@@ -197,7 +230,34 @@ Section TOPOLOGICAL_SPACE_PROP.
     assert (forall y, In S y -> y <> x). {
       intros. hnf in H0. intro. apply H0. now subst. }
     remember (fun yS: {z: A | In S z} =>
-                proj1_sig (Hausdorff_prop (proj1_sig yS) x (H1 _ (proj2_sig yS)))).
-  Abort.
+                let whole := Hausdorff_prop (proj1_sig yS) x (H1 _ (proj2_sig yS)) in
+                (projT1 whole, proj1_sig (projT2 whole))).
+    remember ((fun x: {z : A | In S z} => fst (p x)) :
+                IndexedFamily {z : A | In S z} A) as V.
+    assert (forall idx: {z: A | In S z}, open (V idx)). {
+      intros. subst. simpl. destruct idx as [z]. simpl. unfold Hausdorff_prop.
+      destruct Hau. destruct s. destruct a. simpl. easy. }
+    assert (Included S (IndexedUnion V)). {
+      repeat intro. exists (exist _ x0 H3). subst. simpl. unfold Hausdorff_prop.
+      destruct Hau. destruct s. simpl. tauto. }
+    destruct (compact_set_on_indexed_covers _ _ _ H H2 H3) as [idxSet []].
+    remember ((fun x: {z : A | In S z} => snd (p x)) :
+                IndexedFamily {z : A | In S z} A) as U.
+    hnf. exists (IndexedIntersection
+                   (fun i : {x : {z : A | In S z} | In idxSet x} => U (proj1_sig i))).
+    - hnf. split.
+      + apply finite_intersection_open.
+        * now apply Finite_FiniteT.
+        * intros. subst. simpl. unfold Hausdorff_prop. destruct Hau. simpl.
+          destruct s as [? [? []]]. now simpl.
+      + repeat intro. specialize (H5 _ H7). inversion H5. subst x1. clear H5.
+        inversion H6. subst x1. clear H6. specialize (H5 i). subst. simpl in H5, H8.
+        unfold Hausdorff_prop in H8, H5. destruct Hau. simpl in H8, H5.
+        destruct s. simpl in H5. destruct a as [_ [_ [_ [_ ?]]]].
+        assert (In (Intersection x1 x2) x0) by now constructor. rewrite H6 in H9.
+        inversion H9.
+    - hnf. constructor. intros. destruct i. simpl. subst. simpl. unfold Hausdorff_prop.
+      destruct x0. simpl. destruct Hau. simpl. destruct s. simpl. tauto.
+  Qed.
 
 End TOPOLOGICAL_SPACE_PROP.

@@ -6,9 +6,9 @@ Require Export Coq.Lists.SetoidList.
 
 (******************************* Hint *******************************)
 
-Hint Unfold Proper respectful : core.
-Hint Unfold Reflexive Symmetric Transitive: core.
-Hint Constructors PreOrder: core.
+#[export] Hint Unfold Proper respectful : core.
+#[export] Hint Unfold Reflexive Symmetric Transitive: core.
+#[export] Hint Constructors PreOrder: core.
 
 Ltac auto_symm :=
   match goal with
@@ -21,13 +21,13 @@ Ltac auto_trans :=
   end.
 
 Ltac exist_hyp := match goal with [ H : sig ?P |- ?P _  ] => exact (proj2_sig H) end.
-Hint Extern 0 => exist_hyp : core typeclass_instances.
+#[export] Hint Extern 0 => exist_hyp : core typeclass_instances.
 
 Ltac exist_proj1 :=
   match goal with
     | [ |- context [proj1_sig ?x] ] => apply (proj2_sig x)
   end.
-Hint Extern 0 => exist_proj1 : core typeclass_instances.
+#[export] Hint Extern 0 => exist_proj1 : core typeclass_instances.
 
 (******************************* Equality *******************************)
 
@@ -46,9 +46,9 @@ Notation "(= x )" := (fun y => equiv y x) (only parsing) : math_scope.
 Delimit Scope math_scope with math.
 Global Open Scope math_scope.
 
-Hint Extern 2 (?x = ?x) => reflexivity: core.
-Hint Extern 2 (?x = ?y) => auto_symm: core.
-Hint Extern 2 (?x = ?y) => auto_trans: core.
+#[export] Hint Extern 2 (?x = ?x) => reflexivity: core.
+#[export] Hint Extern 2 (?x = ?y) => auto_symm: core.
+#[export] Hint Extern 2 (?x = ?y) => auto_trans: core.
 
 Instance equiv_default_relation `{Equiv A} : DefaultRelation (=) | 3. Defined.
 
@@ -94,7 +94,7 @@ End SETOID_MORPHISM_PROP.
 
 Arguments sm_proper {A Ae B Be f Setoid_Morphism} _ _ _.
 
-Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f := f)): core.
+#[export] Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f := f)): core.
 
 Class Cast A B := cast: A -> B.
 Arguments cast _ _ {Cast} _.

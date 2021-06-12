@@ -55,7 +55,7 @@ Proof.
   destruct H1. destruct x; [left | right]; easy.
 Qed.
 
-Lemma EqDec_Finite_FiniteT: forall {X:Type} (S:Ensemble X),
+Lemma EqDec_Finite_FiniteT: forall {X:Type} (S: Ensemble X),
     (forall a b: X, {a = b} + {a <> b}) -> Finite S -> FiniteT {x: X | In S x}.
 Proof.
   intros. induction H.
@@ -74,14 +74,14 @@ Proof.
                  end). apply bij_finite with _ g.
     + now apply add_finite.
     + assert (h:forall x0:X, In (Add A x) x0 -> { In A x0 } + { x0 = x }). {
-        intros. destruct (X0 x0 x). 1: right; auto. left.
-        destruct H3; auto. inversion H3. now subst. }
+        clear -X0. intros. destruct (X0 x0 x). 1: right; auto. left.
+        destruct H; auto. inversion H. now subst. }
       pose (ginv := fun s:{x0: X | In (Add A x) x0} =>
                       match s return option {x: X | In A x} with
                       | exist _ x0 i => match (h x0 i) with
-                                      | left iA => Some (exist _ x0 iA)
-                                      | right _ => None
-                                      end
+                                        | left iA => Some (exist _ x0 iA)
+                                        | right _ => None
+                                        end
                       end). exists ginv.
       * intro; destruct x0.
         -- destruct s. simpl. remember (h x0 (H1 x0 i)) as sum; destruct sum.
@@ -92,7 +92,6 @@ Proof.
         -- generalize (H1 x0 i0); intro. now destruct (proof_irrelevance _ i i1).
         -- destruct e. now destruct (proof_irrelevance _ H2 i).
 Qed.
-
 
 Lemma Finite_FiniteT: forall {X:Type} (S:Ensemble X),
     Finite S -> FiniteT {x: X | In S x}.
@@ -113,15 +112,15 @@ Proof.
                  end). apply bij_finite with _ g.
     + now apply add_finite.
     + assert (h:forall x0:X, In (Add A x) x0 -> { In A x0 } + { x0 = x }). {
-        intros; apply exclusive_dec.
+        clear -H0. intros; apply exclusive_dec.
         - intuition. subst; auto.
-        - destruct H3. 1: now left. inversion H3. now right. }
+        - destruct H. 1: now left. inversion H. now right. }
       pose (ginv := fun s:{x0: X | In (Add A x) x0} =>
                       match s return option {x: X | In A x} with
                       | exist _ x0 i => match (h x0 i) with
-                                      | left iA => Some (exist _ x0 iA)
-                                      | right _ => None
-                                      end
+                                        | left iA => Some (exist _ x0 iA)
+                                        | right _ => None
+                                        end
                       end). exists ginv.
       * intro; destruct x0.
         -- destruct s. simpl. remember (h x0 (H1 x0 i)) as sum; destruct sum.
@@ -131,4 +130,59 @@ Proof.
       * intro. unfold ginv. destruct y. destruct (h x0 i); simpl.
         -- generalize (H1 x0 i0); intro. now destruct (proof_irrelevance _ i i1).
         -- destruct e. now destruct (proof_irrelevance _ H2 i).
+Qed.
+
+Lemma finite_or_exists: forall (X:Type) (P: X -> Prop),
+    FiniteT X -> (forall x:X, (P x) \/ (~ P x)) ->
+    (exists x:X, P x) \/ (forall x:X, ~ P x).
+Proof.
+  intros. revert P H0. induction H.
+  - right. destruct x.
+  - intros. case (IHFiniteT (fun x:T => P (Some x)) (fun x:T => H0 (Some x))).
+    + left. destruct H1. exists (Some x). assumption.
+    + intro. case (H0 None).
+      * left. exists None. assumption.
+      * right. destruct x.
+        -- apply H1.
+        -- assumption.
+  - destruct H0. intros.
+    case (IHFiniteT (fun x:X => P (f x)) (fun x:X => H2 (f x))).
+    + left. destruct H3. exists (f x). assumption.
+    + right. intro. rewrite <- H1 with x. apply H3.
+Qed.
+
+Lemma FiniteT_img: forall (X Y:Type) (f:X->Y),
+    FiniteT X -> (forall y1 y2:Y, y1=y2 \/ y1<>y2) ->
+    Finite (Im Full_set f).
+Proof.
+  intros. induction H.
+  - replace (Im Full_set f) with (@Empty_set Y). 1: constructor.
+    apply Extensionality_Ensembles; split; red; intros; destruct H. destruct x.
+  - assert ((exists x:T, f (Some x) = f None) \/ (forall x:T, f (Some x) <> f None)).
+    + apply finite_or_exists; auto.
+    + case H1.
+      * intro. pose (g := fun (x:T) => f (Some x)).
+        replace (Im Full_set f) with (Im Full_set g). 1: apply IHFiniteT.
+        apply Extensionality_Ensembles; split; red; intros.
+        -- destruct H3. subst. exists (Some x); easy.
+        -- destruct H3. subst. destruct x.
+           ++ exists t; easy.
+           ++ destruct H2. exists x.
+              ** constructor.
+              ** destruct H3. subst g. symmetry. assumption.
+      * intros. pose (g := fun x:T => f (Some x)).
+        replace (Im Full_set f) with (Add (Im Full_set g) (f None)).
+        -- constructor.
+           ++ apply IHFiniteT.
+           ++ red; intro. destruct H3. contradiction (H2 x). symmetry; assumption.
+        -- apply Extensionality_Ensembles; split; red; intros.
+           ++ red; intros. destruct H3, H3; [exists (Some x) | exists None]; easy.
+           ++ red; intros. destruct H3. destruct x.
+              ** left. exists t; easy.
+              ** right. auto with sets.
+  - pose (g := fun (x:X) => f (f0 x)).
+    replace (Im Full_set f) with (Im Full_set g). 1: apply IHFiniteT.
+    apply Extensionality_Ensembles; split; red; intros.
+    + destruct H2. exists (f0 x); easy.
+    + destruct H2, H1. subst. rewrite <- H4 with x. now exists (g0 x).
 Qed.

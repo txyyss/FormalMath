@@ -124,7 +124,7 @@ Section METRIC_TOPOLOGY.
 
   Global Instance metricHausdorff: HausdorffSpace A.
   Proof.
-    repeat intro. exists ((openBall x1 (d x1 x2 / 2)), (openBall x2 (d x1 x2 / 2))).
+    repeat intro. exists (openBall x1 (d x1 x2 / 2)), (openBall x2 (d x1 x2 / 2)).
     assert (0 < d x1 x2 / 2). {
       unfold Rdiv. apply Rmult_lt_0_compat. 1: now apply metric_pos.
       apply pos_half_prf. } repeat split.

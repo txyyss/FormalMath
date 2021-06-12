@@ -124,6 +124,10 @@ Definition IndexedFamily (Idx A: Type) := Idx -> Ensemble A.
 Inductive IndexedUnion {Idx A: Type} (F: IndexedFamily Idx A): Ensemble A :=
   IndexedUnion_intro: forall (i: Idx) (x: A), In (F i) x -> In (IndexedUnion F) x.
 
+Inductive IndexedIntersection {Idx A: Type} (F: IndexedFamily Idx A): Ensemble A :=
+  IndexedIntersection_intro: forall (x: A),
+    (forall i: Idx, In (F i) x) -> In (IndexedIntersection F) x.
+
 Lemma empty_indexed_union: forall {A:Type} (F:IndexedFamily False A),
     IndexedUnion F = Empty_set.
 Proof. intros. apply Extensionality_Ensembles. split; red; intros; now destruct H. Qed.
@@ -218,4 +222,12 @@ Proof.
   - exists (List.map (@proj1_sig A (In Full_set)) l). red. intros.
     specialize (H (exist _ a (Full_intro A a))).
     apply (List.in_map (@proj1_sig A (In Full_set))) in H. now simpl in H.
+Qed.
+
+
+Lemma empty_indexed_intersection: forall {T:Type} (F:IndexedFamily False T),
+    IndexedIntersection F = Full_set.
+Proof.
+  intros. apply Extensionality_Ensembles; red; split; red; intros; constructor.
+  intros. easy.
 Qed.
