@@ -49,10 +49,10 @@ Section TWO_GEN_COSET_ENUM.
                            (compress (coset_enumration_r T_gens_rep nil 16))).
 
   Lemma T_group_size: num_coset T_group = 12.
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Lemma T_group_rep_test: one_mult_all_rep T_group = gen_pos_list (num_coset T_group).
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Compute (print_coset_table T_group).
 
@@ -68,10 +68,10 @@ Section TWO_GEN_COSET_ENUM.
   Compute (num_coset O_group).
 
   Lemma O_group_size: num_coset O_group = 24.
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Lemma O_group_rep_test: one_mult_all_rep O_group = gen_pos_list (num_coset O_group).
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Compute (generator_permutations O_group).
 
@@ -87,10 +87,10 @@ Section TWO_GEN_COSET_ENUM.
   Compute (num_coset I_group).
 
   Lemma I_group_size: num_coset I_group = 60.
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Lemma I_group_rep_test: one_mult_all_rep I_group = gen_pos_list (num_coset I_group).
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Compute (generator_permutations I_group).
 
@@ -107,11 +107,11 @@ Section TWO_GEN_COSET_ENUM.
     standardize (compress (coset_enumration_r F4_gens_rep nil 1500)).
 
   Lemma F4_group_size: num_coset F4_group = 1152.
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Lemma F4_group_rep_test: one_mult_all_rep F4_group =
                            gen_pos_list (num_coset F4_group).
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   (* The Symmetry Group of the 600-Cell *)
   Definition H4_gens :=
@@ -125,11 +125,11 @@ Section TWO_GEN_COSET_ENUM.
   Definition H4_group := compress (coset_enumration_r H4_gens_rep nil 19000).
 
   Lemma H4_group_size: num_coset H4_group = 14400.
-  Proof. idtac "Computing H4 group...". Time native_compute. reflexivity. Qed.
+  Proof. idtac "Computing H4 group...". Time vm_compute. reflexivity. Qed.
 
   Lemma H4_group_rep_test: one_mult_all_rep H4_group =
                            gen_pos_list (num_coset H4_group).
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Definition test1_gens := [repeat (Pe X) 3; repeat (Pe Y) 3;
                               [Ne X; Ne Y; Pe X; Pe Y]].
@@ -140,8 +140,8 @@ Section TWO_GEN_COSET_ENUM.
     Eval vm_compute in (map (map alphabet_to_positive) test1_sub_gens).
   Definition test1_group :=
     standardize (compress (coset_enumration_r test1_gens_rep test1_sub_gens_rep 10)).
-  Eval native_compute in (num_coset test1_group).
-  Eval native_compute in (print_coset_table test1_group).
+  Eval vm_compute in (num_coset test1_group).
+  Eval vm_compute in (print_coset_table test1_group).
 
   Definition test2_gens := [repeat (Pe X) 2; repeat (Pe Y) 3;
                               flatten (repeat [Pe X; Pe Y] 3)].
@@ -152,18 +152,18 @@ Section TWO_GEN_COSET_ENUM.
     Eval vm_compute in (map (map alphabet_to_positive) test2_sub_gens).
   Definition test2_group :=
     standardize (compress (coset_enumration_r test2_gens_rep test2_sub_gens_rep 10)).
-  Eval native_compute in (num_coset test2_group).
-  Eval native_compute in (print_coset_table test2_group).
+  Eval vm_compute in (num_coset test2_group).
+  Eval vm_compute in (print_coset_table test2_group).
 
   Definition test3_gens := [repeat (Pe X) 2 ++ repeat (Pe Y) 2;
                               repeat (Pe X) 3 ++ repeat (Pe Y) 5].
   Definition test3_gens_rep :=
     Eval vm_compute in (map (map alphabet_to_positive) test3_gens).
   Definition test3_group := compress (coset_enumration_r test3_gens_rep nil 15).
-  Eval native_compute in (num_coset test3_group).
-  Eval native_compute in (print_coset_table test3_group).
+  Eval vm_compute in (num_coset test3_group).
+  Eval vm_compute in (print_coset_table test3_group).
   Definition test3_std_group := standardize test3_group.
-  Eval native_compute in (print_coset_table test3_std_group).
+  Eval vm_compute in (print_coset_table test3_std_group).
 
 End TWO_GEN_COSET_ENUM.
 
@@ -199,13 +199,13 @@ Section THREE_GEN_COSET_ENUM.
   Definition Ih_group := compress (coset_enumration_r Ih_gens_rep nil 210).
 
   Lemma Ih_group_size: num_coset Ih_group = 120.
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
   Lemma Ih_group_rep_test: one_mult_all_rep Ih_group =
                            gen_pos_list (num_coset Ih_group).
-  Proof. native_compute. reflexivity. Qed.
+  Proof. vm_compute. reflexivity. Qed.
 
-  Eval native_compute in (num_coset Ih_group).
+  Eval vm_compute in (num_coset Ih_group).
 
   Definition Ih_sub_gens := [[Pe A]].
 
@@ -215,7 +215,7 @@ Section THREE_GEN_COSET_ENUM.
   Definition Ih_sub_group :=
     compress (coset_enumration_r Ih_gens_rep Ih_sub_gens_rep 210).
 
-  Eval native_compute in (num_coset Ih_sub_group).
+  Eval vm_compute in (num_coset Ih_sub_group).
 
   (* Linear Group L_2(27) *)
   Definition L_2_27_gens :=
@@ -231,6 +231,6 @@ Section THREE_GEN_COSET_ENUM.
   Definition L_2_27_group := compress (coset_enumration_r L_2_27_gens_rep nil 21750).
 
   Lemma L_2_27_group_size: num_coset L_2_27_group = 9828.
-  Proof. idtac "Compute L_2(27) group...". Time native_compute. reflexivity. Qed.
+  Proof. idtac "Compute L_2(27) group...". Time vm_compute. reflexivity. Qed.
 
 End THREE_GEN_COSET_ENUM.

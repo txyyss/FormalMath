@@ -40,7 +40,7 @@ Section TWO_GEN_COSET_ENUM.
   Definition M11_group := compress (coset_enumration_r M11_gens_rep nil 385500).
 
   Lemma M11_group_size: num_coset M11_group = 7920.
-  Proof. idtac "Computing M11 group...". Time native_compute. reflexivity. Qed.
+  Proof. idtac "Computing M11 group...". Time vm_compute. reflexivity. Qed.
 
 End TWO_GEN_COSET_ENUM.
 
@@ -76,6 +76,6 @@ Section THREE_GEN_COSET_ENUM.
   Definition M12_group := compress (coset_enumration_r M12_gens_rep nil 573200).
 
   Lemma M12_group_size: num_coset M12_group = 95040.
-  Proof. idtac "Computing M12 group...". Time native_compute. reflexivity. Qed.
+  Proof. idtac "Computing M12 group...". Time vm_compute. reflexivity. Qed.
 
 End THREE_GEN_COSET_ENUM.

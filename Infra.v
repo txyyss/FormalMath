@@ -50,7 +50,7 @@ Global Open Scope math_scope.
 #[export] Hint Extern 2 (?x = ?y) => auto_symm: core.
 #[export] Hint Extern 2 (?x = ?y) => auto_trans: core.
 
-Instance equiv_default_relation `{Equiv A} : DefaultRelation (=) | 3. Defined.
+#[export] Instance equiv_default_relation `{Equiv A} : DefaultRelation (=) | 3. Defined.
 
 Infix "==" := eq (at level 70, no associativity) : math_scope.
 Notation "(==)" := eq (only parsing) : math_scope.
@@ -99,7 +99,7 @@ Arguments sm_proper {A Ae B Be f Setoid_Morphism} _ _ _.
 Class Cast A B := cast: A -> B.
 Arguments cast _ _ {Cast} _.
 Notation "' x" := (cast _ _ x) (at level 20) : math_scope.
-Instance: Params (@cast) 3. Defined.
+#[export] Instance: Params (@cast) 3. Defined.
 Typeclasses Transparent Cast.
 
 Definition Cardinals (A : Type) `{s : Setoid A} (n: nat) : Prop :=

@@ -50,16 +50,16 @@ Proof.
     apply distance_preserve.
 Defined.
 
-Instance: Setoid Isometry.
+#[local] Instance: Setoid Isometry.
 Proof. constructor; repeat intro; [| rewrite H | rewrite H, H0]; reflexivity. Qed.
 
-Instance: Proper ((=) ==> (=) ==> (=)) iso_binop.
+#[local] Instance: Proper ((=) ==> (=) ==> (=)) iso_binop.
 Proof.
   repeat intro. unfold iso_binop. destruct x, y, x0, y0.
   unfold equiv, iso_equiv in H, H0. simpl in *. rewrite H0, H. reflexivity.
 Qed.
 
-Instance: Proper ((=) ==> (=)) iso_neg.
+#[local] Instance: Proper ((=) ==> (=)) iso_neg.
 Proof.
   repeat intro. unfold iso_neg. destruct x, y. unfold equiv, iso_equiv in H.
   simpl in *. apply (injective x). rewrite surjective, H, surjective. reflexivity.

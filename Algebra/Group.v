@@ -32,8 +32,8 @@ Class AbelianGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A}
     bi_op_comm : forall x y, x & y = y & x
   }.
 
-Hint Rewrite @one_left: group.
-Hint Rewrite @neg_left: group.
+#[export] Hint Rewrite @one_left: group.
+#[export] Hint Rewrite @neg_left: group.
 
 (* Coercion abgroup_as_group : AbelianGroup >-> Group. *)
 
@@ -135,10 +135,10 @@ Section GROUP_PROP.
 
 End GROUP_PROP.
 
-Hint Rewrite @neg_right: group.
-Hint Rewrite @one_right: group.
-Hint Rewrite @neg_one: group.
-Hint Rewrite @double_neg: group.
+#[export] Hint Rewrite @neg_right: group.
+#[export] Hint Rewrite @one_right: group.
+#[export] Hint Rewrite @neg_one: group.
+#[export] Hint Rewrite @double_neg: group.
 
 (****************************** Group Homomorphism ******************************)
 
@@ -190,7 +190,7 @@ Class SubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
 
 Definition Subpart (A: Type) (P: A -> Prop) := {x: A | P x}.
 
-Instance subgroup_rep {A P}: Cast (Subpart A P) A := fun x => proj1_sig x.
+#[export] Instance subgroup_rep {A P}: Cast (Subpart A P) A := fun x => proj1_sig x.
 
 Section SUBGROUP.
 
@@ -268,13 +268,13 @@ End SUBGROUP.
 Inductive RightCoset A (P: A -> Prop) := right_coset_inject: A -> RightCoset A P.
 Arguments right_coset_inject {A P} _.
 
-Instance right_coset_rep {A P}: Cast (RightCoset A P) A :=
+#[export] Instance right_coset_rep {A P}: Cast (RightCoset A P) A :=
   fun x => match x with right_coset_inject x => x end.
 
 Inductive LeftCoset A (P: A -> Prop) := left_coset_inject: A -> LeftCoset A P.
 Arguments left_coset_inject {A P} _.
 
-Instance left_coset_rep {A P}: Cast (LeftCoset A P) A :=
+#[export] Instance left_coset_rep {A P}: Cast (LeftCoset A P) A :=
   fun x => match x with left_coset_inject x => x end.
 
 Section COSET.
@@ -348,7 +348,7 @@ Class NormalSubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
 Inductive Quotient A (P: A -> Prop) := quotient_inject: A -> Quotient A P.
 Arguments quotient_inject {A P} _.
 
-Instance quotient_rep {A P}: Cast (Quotient A P) A :=
+#[export] Instance quotient_rep {A P}: Cast (Quotient A P) A :=
   fun x => match x with quotient_inject x => x end.
 
 Section QUOTIENT_GROUP.
