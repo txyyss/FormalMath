@@ -71,7 +71,7 @@ Lemma dep_map_cons: forall {A B: Type} (f: A -> B) {n: nat} (a: A) (dl: dep_list
     dep_map f (dep_cons a dl) = dep_cons (f a) (dep_map f dl).
 Proof. intros. now simpl. Qed.
 
-Hint Rewrite @dep_map_cons: dep_list.
+#[export] Hint Rewrite @dep_map_cons: dep_list.
 
 Definition dep_list_binop {A B C: Type} (f: A -> B -> C) {n: nat}
            (dl1: dep_list A n) (dl2: dep_list B n): dep_list C n :=
@@ -236,12 +236,12 @@ Lemma dep_list_binop_nil: forall {A B C} (f: A -> B -> C),
     dep_list_binop f dep_nil dep_nil = dep_nil.
 Proof. intros. unfold dep_list_binop. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_binop_nil: dep_list.
+#[export] Hint Rewrite @dep_list_binop_nil: dep_list.
 
 Lemma dep_map_nil: forall {A B: Type} (f: A -> B), dep_map f dep_nil = dep_nil.
 Proof. intros. now simpl. Qed.
 
-Hint Rewrite @dep_map_nil: dep_list.
+#[export] Hint Rewrite @dep_map_nil: dep_list.
 
 Lemma dep_list_binop_cons: forall
     {A B C} {n: nat} (a: A) (b: B)
@@ -250,7 +250,7 @@ Lemma dep_list_binop_cons: forall
     dep_cons (f a b) (dep_list_binop f v1 v2).
 Proof. intros. unfold dep_list_binop. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_binop_cons: dep_list.
+#[export] Hint Rewrite @dep_list_binop_cons: dep_list.
 
 Lemma dep_list_binop_app: forall
     {A B C} {m n: nat} (v1: dep_list A m) (v3: dep_list A n)
@@ -290,7 +290,7 @@ Lemma dep_map_repeat: forall {A B} (f: A -> B) (a: A) n,
     dep_map f (dep_repeat a n) = dep_repeat (f a) n.
 Proof. intros. induction n; simpl; [easy | now rewrite IHn]. Qed.
 
-Hint Rewrite @dep_map_repeat: dep_list.
+#[export] Hint Rewrite @dep_map_repeat: dep_list.
 
 Lemma dep_repeat_app: forall {A} (e: A) (m n: nat),
     dep_repeat e (m + n) = dep_app (dep_repeat e m) (dep_repeat e n).
@@ -310,7 +310,7 @@ Lemma dep_transpose_cons_row:
     dep_list_binop (dep_cons (n:=m)) v (dep_list_transpose mat).
 Proof. intros. now simpl. Qed.
 
-Hint Rewrite @dep_transpose_cons_row: dep_list.
+#[export] Hint Rewrite @dep_transpose_cons_row: dep_list.
 
 Lemma dep_transpose_cons_col:
   forall {A m n} (v: dep_list A m) (mat: dep_list (dep_list A n) m),
@@ -321,7 +321,7 @@ Proof.
   autorewrite with dep_list. rewrite H. now autorewrite with dep_list.
 Qed.
 
-Hint Rewrite @dep_transpose_cons_col: dep_list.
+#[export] Hint Rewrite @dep_transpose_cons_col: dep_list.
 
 Lemma dep_list_transpose_involutive: forall {A m n} (mat: dep_list (dep_list A n) m),
     dep_list_transpose (dep_list_transpose mat) = mat.
@@ -330,7 +330,7 @@ Proof.
   autorewrite with dep_list. now rewrite H.
 Qed.
 
-Hint Rewrite @dep_list_transpose_involutive: dep_list.
+#[export] Hint Rewrite @dep_list_transpose_involutive: dep_list.
 
 Lemma dep_list_transpose_double_map:
   forall {A B} (f: A -> B) {m n} (mat: dep_list (dep_list A n) m),
@@ -388,8 +388,8 @@ Lemma dep_colist_nil: forall {A} (a: A),
     dep_colist (dep_cons a dep_nil) = dep_cons dep_nil dep_nil.
 Proof. intros. easy. Qed.
 
-Hint Rewrite @dep_colist_cons: dep_list.
-Hint Rewrite @dep_colist_nil: dep_list.
+#[export] Hint Rewrite @dep_colist_cons: dep_list.
+#[export] Hint Rewrite @dep_colist_nil: dep_list.
 
 Lemma dep_list_binop_nest_cons:
   forall {A m n l} (a : A) (v : dep_list A m)
@@ -437,7 +437,7 @@ Lemma dep_colist_cons_one: forall {A} (a: A) (l: dep_list A O),
     dep_colist (dep_cons a l) = dep_cons dep_nil dep_nil.
 Proof. intros. dep_list_decomp. easy. Qed.
 
-Hint Rewrite @dep_colist_cons_one: dep_list.
+#[export] Hint Rewrite @dep_colist_cons_one: dep_list.
 
 Lemma dep_map_const: forall {A B} (b: B) {n} (l: dep_list A n),
     dep_map (fun _ => b) l = dep_repeat b n.
@@ -446,14 +446,14 @@ Proof.
   simpl. now rewrite H.
 Qed.
 
-Hint Rewrite @dep_map_const: dep_list.
+#[export] Hint Rewrite @dep_map_const: dep_list.
 
 Lemma dep_list_binop_const: forall {A B C} (c: C) {n: nat}
                                    (l1: dep_list A n) (l2: dep_list B n),
     dep_list_binop (fun _ _ => c) l1 l2 = dep_repeat c n.
 Proof. intros. unfold dep_list_binop. now autorewrite with dep_list. Qed.
 
-Hint Rewrite @dep_list_binop_const: dep_list.
+#[export] Hint Rewrite @dep_list_binop_const: dep_list.
 
 Lemma dep_colist_repeat: forall {A n} (a: A),
     dep_colist (dep_repeat a (S n)) = dep_repeat (dep_repeat a n) (S n).
@@ -464,7 +464,7 @@ Proof.
     autorewrite with dep_list. rewrite IHn. autorewrite with dep_list. now simpl.
 Qed.
 
-Hint Rewrite @dep_colist_repeat: dep_list.
+#[export] Hint Rewrite @dep_colist_repeat: dep_list.
 
 Lemma dep_list_binop_map_1: forall {A B C D} (g: D -> A) (f: A -> B -> C) {n}
                                    (l1: dep_list D n) (l2: dep_list B n),
@@ -605,7 +605,7 @@ Lemma dep_list_triop_nil: forall {A B C D} (f: A -> B -> C -> D),
     dep_list_triop f dep_nil dep_nil dep_nil = dep_nil.
 Proof. intros. unfold dep_list_triop. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_triop_nil: dep_list.
+#[export] Hint Rewrite @dep_list_triop_nil: dep_list.
 
 Lemma dep_list_triop_cons: forall
     {A B C D} {n: nat} (a: A) (b: B) (c: C)
@@ -614,7 +614,7 @@ Lemma dep_list_triop_cons: forall
     dep_cons (f a b c) (dep_list_triop f v1 v2 v3).
 Proof. intros. unfold dep_list_triop. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_triop_cons: dep_list.
+#[export] Hint Rewrite @dep_list_triop_cons: dep_list.
 
 Lemma dep_list_binop_triop: forall
     {A B C D E n} (f: A -> D -> E) (g: B -> C -> D) (l1: dep_list A n)
@@ -647,7 +647,7 @@ Lemma dep_list_quadruple_nil: forall {A B C D E} (f: A -> B -> C -> D -> E),
     dep_list_quadruple f dep_nil dep_nil dep_nil dep_nil = dep_nil.
 Proof. intros. unfold dep_list_quadruple. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_quadruple_nil: dep_list.
+#[export] Hint Rewrite @dep_list_quadruple_nil: dep_list.
 
 Lemma dep_list_quadruple_cons: forall
     {A B C D E} {n: nat} (a: A) (b: B) (c: C) (d: D) (f: A -> B -> C -> D -> E)
@@ -657,7 +657,7 @@ Lemma dep_list_quadruple_cons: forall
     dep_cons (f a b c d) (dep_list_quadruple f v1 v2 v3 v4).
 Proof. intros. unfold dep_list_quadruple. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_quadruple_cons: dep_list.
+#[export] Hint Rewrite @dep_list_quadruple_cons: dep_list.
 
 Lemma dep_list_triop_quadruple: forall
     {A B C D E F n} (f: A -> D -> E -> F) (g: B -> C -> D)
@@ -705,7 +705,7 @@ Lemma dep_list_quadruple_const: forall
     dep_list_quadruple (fun _ _ _ _ => c) l1 l2 l3 l4 = dep_repeat c n.
 Proof. intros. unfold dep_list_quadruple. now autorewrite with dep_list. Qed.
 
-Hint Rewrite @dep_list_quadruple_const: dep_list.
+#[export] Hint Rewrite @dep_list_quadruple_const: dep_list.
 
 Definition dep_list_quintuple {A B C D E F: Type} (f: A -> B -> C -> D -> E -> F)
            {n: nat} (dl1: dep_list A n) (dl2: dep_list B n) (dl3: dep_list C n)
@@ -719,7 +719,7 @@ Lemma dep_list_quintuple_nil: forall {A B C D E F} (f: A -> B -> C -> D -> E -> 
     dep_list_quintuple f dep_nil dep_nil dep_nil dep_nil dep_nil = dep_nil.
 Proof. intros. unfold dep_list_quintuple. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_quintuple_nil: dep_list.
+#[export] Hint Rewrite @dep_list_quintuple_nil: dep_list.
 
 Lemma dep_list_quintuple_cons: forall
     {A B C D E F} {n: nat} (a: A) (b: B) (c: C) (d: D) (e: E)
@@ -730,7 +730,7 @@ Lemma dep_list_quintuple_cons: forall
     = dep_cons (f a b c d e) (dep_list_quintuple f v1 v2 v3 v4 v5).
 Proof. intros. unfold dep_list_quintuple. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_quintuple_cons: dep_list.
+#[export] Hint Rewrite @dep_list_quintuple_cons: dep_list.
 
 Lemma dep_list_triop_quintuple: forall
     {A B C D E F G n} (f: A -> B -> F -> G) (g: C -> D -> E -> F) (l1: dep_list A n)
@@ -776,7 +776,7 @@ Lemma dep_list_sextuple_nil: forall {A B C D E F G}
     dep_list_sextuple f dep_nil dep_nil dep_nil dep_nil dep_nil dep_nil = dep_nil.
 Proof. intros. unfold dep_list_sextuple. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_sextuple_nil: dep_list.
+#[export] Hint Rewrite @dep_list_sextuple_nil: dep_list.
 
 Lemma dep_list_sextuple_cons: forall
     {A B C D E F G} {n: nat} (a: A) (b: B) (c: C) (d: D) (e: E) (f: F)
@@ -788,7 +788,7 @@ Lemma dep_list_sextuple_cons: forall
     dep_cons (fn a b c d e f) (dep_list_sextuple fn v1 v2 v3 v4 v5 v6).
 Proof. intros. unfold dep_list_sextuple. simpl. easy. Qed.
 
-Hint Rewrite @dep_list_sextuple_cons: dep_list.
+#[export] Hint Rewrite @dep_list_sextuple_cons: dep_list.
 
 Lemma dep_list_tri_quad_sextuple: forall
     {A B C D E F G H n} (f: A -> B -> G -> H) (g: C -> D -> E -> F -> G)
@@ -835,7 +835,7 @@ Definition dep_tl {A: Type} {n: nat} (l: dep_list A (S n)): dep_list A n :=
 Lemma dep_tl_cons: forall {A n} (a: A) (l: dep_list A n), dep_tl (dep_cons a l) = l.
 Proof. intros. easy. Qed.
 
-Hint Rewrite @dep_tl_cons: dep_list.
+#[export] Hint Rewrite @dep_tl_cons: dep_list.
 
 Lemma dep_tl_cons_col: forall {A m n} (v: dep_list A m)
                               (mat: dep_list (dep_list A n) m),
@@ -845,7 +845,7 @@ Proof.
   apply dep_list_ind_2; intros; autorewrite with dep_list; [| rewrite H]; easy.
 Qed.
 
-Hint Rewrite @dep_tl_cons_col: dep_list.
+#[export] Hint Rewrite @dep_tl_cons_col: dep_list.
 
 Fixpoint dep_nth {A: Type} (i: nat) {n: nat} (l: dep_list A n) (default: A) : A :=
   match i with
@@ -928,7 +928,7 @@ Proof. intros. now simpl. Qed.
 Lemma dep_nth_nil: forall {A} (i: nat) d, dep_nth i (@dep_nil A) d = d.
 Proof. intros. rewrite dep_nth_overflow; [easy | apply Nat.le_0_l]. Qed.
 
-Hint Rewrite @dep_nth_nil: dep_list.
+#[export] Hint Rewrite @dep_nth_nil: dep_list.
 
 Lemma dep_nth_list_binop: forall {A B C: Type} (f: A -> B -> C) {n: nat}
                                  (dl1: dep_list A n) (dl2: dep_list B n) i d1 d2 d,
