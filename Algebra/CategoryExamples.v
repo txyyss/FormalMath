@@ -4,9 +4,9 @@ Require Import FormalMath.Algebra.Group.
 (** * Chapter 1.4 Examples of categories *)
 
 (** 1 *)
-Section FunctionCategory.
+Section FUNCTION_CATEGORY.
 
-  Instance funArrow: Arrows Type := fun (A B: Type) => A -> B.
+  Instance funArrows: Arrows Type := fun (A B: Type) => A -> B.
   Instance funCatId: CatId Type := fun (A: Type) (x: A) => x.
   Instance funCatComp: CatComp Type :=
     fun (A B C : Type) (g : B ~> C) (f : A ~> B) (x : A) => g (f x).
@@ -20,12 +20,12 @@ Section FunctionCategory.
     - rewrite H0. rewrite H. easy.
   Qed.
 
-End FunctionCategory.
+End FUNCTION_CATEGORY.
 
 (** 4 *)
-Section RelationCategory.
+Section RELATION_CATEGORY.
 
-  Instance relArrow: Arrows Type := fun (A B: Type) => A -> B -> Prop.
+  Instance relArrows: Arrows Type := fun (A B: Type) => A -> B -> Prop.
   Instance relCatId: CatId Type := fun (A: Type) (x: A) => fun y => x == y.
   Instance relCatComp: CatComp Type :=
     fun (A B C : Type) (g : B ~> C) (f : A ~> B) (a : A) (c: C) =>
@@ -54,12 +54,12 @@ Section RelationCategory.
       + exists a0. now split.
   Qed.
 
-End RelationCategory.
+End RELATION_CATEGORY.
 
 (** 5: category 1 *)
-Section UnitCategory.
+Section UNIT_CATEGORY.
 
-  Instance unitArrow: Arrows unit := fun _ _ => unit.
+  Instance unitArrows: Arrows unit := fun _ _ => unit.
   Instance unitCatId: CatId unit := fun _ => tt.
   Instance unitCatComp: CatComp unit := fun _ _ _ _ _ => tt.
   Instance unitEq: forall A B: unit, Equiv (A ~> B) := fun _ _ => (==).
@@ -71,15 +71,15 @@ Section UnitCategory.
     - destruct f. easy.
   Qed.
 
-End UnitCategory.
+End UNIT_CATEGORY.
 
 (** 5: category 0 *)
-Section EmptyCategory.
+Section EMPTY_CATEGORY.
 
   Definition Empty_map {A: Empty_set -> Type} : forall x : Empty_set, A x :=
     fun x => match x with end.
 
-  Instance emptyArrow: Arrows Empty_set := Empty_map.
+  Instance emptyArrows: Arrows Empty_set := Empty_map.
   Instance emptyCatId: CatId Empty_set := Empty_map.
   Instance emptyCatComp: CatComp Empty_set := Empty_map.
   Instance emptyEq: forall A B: Empty_set, Equiv (A ~> B) := Empty_map.
@@ -87,19 +87,19 @@ Section EmptyCategory.
   Instance emptyCategory: Category Empty_set.
   Proof. constructor; exact Empty_map. Qed.
 
-End EmptyCategory.
+End EMPTY_CATEGORY.
 
 (** * Chapter 1.5 Isomorphisms *)
 
 (** Definition 1.4 *)
-Section GroupAsCategory.
+Section GROUP_AS_CATEGORY.
 
   Context `{G: Group A}.
 
   Instance groupArrow: Arrows unit := fun _ _ => A.
   Instance groupCatId: CatId unit := fun _ => one.
   Instance groupCatComp: CatComp unit := fun _ _ _ a b => a & b.
-  Instance groupEq: forall A B, Equiv (A ~> B) := fun _ _ => (=).
+  Instance groupCatEq: forall A B, Equiv (A ~> B) := fun _ _ => (=).
   Instance groupAsCategory: Category unit.
   Proof.
     constructor; intros.
@@ -113,4 +113,4 @@ Section GroupAsCategory.
   Lemma group_arrow_is_iso: forall `(f: x ~> y), iso_arrows f (neg f).
   Proof. repeat intro. red. split; [apply neg_left | apply neg_right]. Qed.
 
-End GroupAsCategory.
+End GROUP_AS_CATEGORY.

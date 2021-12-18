@@ -51,6 +51,21 @@ Section FUNCTOR.
 
 End FUNCTOR.
 
+Typeclasses Transparent Fmap.
+
+Section IDENTITY_FUNCTOR.
+
+  Context `{Category C}.
+
+  Instance idFmap: Fmap id := fun _ _ => id.
+
+  Instance idFunctor: Functor (id: C -> C) _.
+  Proof.
+    constructor; try apply _; try easy.
+    intros. constructor; try apply _; try easy.
+  Qed.
+
+End IDENTITY_FUNCTOR.
 
 (** * Chapter 1.5 Isomorphisms *)
 
@@ -58,6 +73,7 @@ Section ISOMORPHISM.
 
   Context `{Category C}.
 
+  (** Definition 1.3 *)
   Definition iso_arrows `(f: A ~> B) (g: B ~> A): Prop :=
     g >>> f = cat_id /\ f >>> g = cat_id.
 
@@ -73,3 +89,36 @@ Section ISOMORPHISM.
   Proof. intros. destruct H1. split; auto. Qed.
 
 End ISOMORPHISM.
+
+(** * Chapter 1.6 Constructions on categories *)
+
+(** 1: product *)
+Section PRODUCT_CATEGORY.
+
+  Context `{Category C} `{Category D}.
+  Instance prodArrows: Arrows (C * D) :=
+    fun p1 p2 => ((fst p1 ~> fst p2) * (snd p1 ~> snd p2))%type.
+  Instance prodCatId: CatId (C * D) := fun _ => (cat_id, cat_id).
+  Instance prodCatComp: CatComp (C * D) :=
+    fun _ _ _ a1 a2 => (fst a1 >>> fst a2, snd a1 >>> snd a2).
+  Instance prodCatEq: forall A B: (C * D), Equiv (A ~> B) :=
+    fun _ _ p1 p2 => fst p1 = fst p2 /\ snd p1 = snd p2.
+  Instance prodCatSetoid: forall A B: (C * D), Setoid (A ~> B).
+  Proof.
+    intros. constructor; red; unfold equiv, prodCatEq;
+      intros; split; try easy; destruct H3, H4; firstorder.
+  Qed.
+
+  Instance prodCategory: Category (C * D).
+  Proof.
+    constructor; intros; try apply _.
+    - repeat intro. destruct x, x0, y, y0, H3, H4. unfold comp, prodCatComp.
+      simpl in *. split; simpl.
+      + now rewrite H3, H4.
+      + now rewrite H5, H6.
+    - destruct h, g, f. split; simpl; apply comp_assoc.
+    - unfold comp, prodCatComp. destruct f. split; simpl; apply left_identity.
+    - unfold comp, prodCatComp. destruct f. split; simpl; apply right_identity.
+  Qed.
+
+End PRODUCT_CATEGORY.
