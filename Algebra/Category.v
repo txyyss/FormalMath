@@ -92,17 +92,17 @@ End ISOMORPHISM.
 
 (** * Chapter 1.6 Constructions on categories *)
 
-(** 1: product *)
+(** 1: product category *)
 Section PRODUCT_CATEGORY.
 
   Context `{Category C} `{Category D}.
   Instance prodArrows: Arrows (C * D) :=
     fun p1 p2 => ((fst p1 ~> fst p2) * (snd p1 ~> snd p2))%type.
+  Instance prodCatEq: forall A B: (C * D), Equiv (A ~> B) :=
+    fun _ _ p1 p2 => fst p1 = fst p2 /\ snd p1 = snd p2.
   Instance prodCatId: CatId (C * D) := fun _ => (cat_id, cat_id).
   Instance prodCatComp: CatComp (C * D) :=
     fun _ _ _ a1 a2 => (fst a1 >>> fst a2, snd a1 >>> snd a2).
-  Instance prodCatEq: forall A B: (C * D), Equiv (A ~> B) :=
-    fun _ _ p1 p2 => fst p1 = fst p2 /\ snd p1 = snd p2.
   Instance prodCatSetoid: forall A B: (C * D), Setoid (A ~> B).
   Proof.
     intros. constructor; red; unfold equiv, prodCatEq;
@@ -122,3 +122,155 @@ Section PRODUCT_CATEGORY.
   Qed.
 
 End PRODUCT_CATEGORY.
+
+(** 2: opposite category *)
+Section OPPOSITE_CATEGORY.
+
+  Context `{@Category C ArrowsC CatEquivC CatIdC CatCompC}.
+
+  Instance oppoArrows: Arrows C := flip ArrowsC.
+  Instance oppoCatEq: forall A B: C, Equiv (oppoArrows A B) :=
+    fun A B => CatEquivC B A.
+  Instance oppoCatId: @CatId C oppoArrows := CatIdC.
+  Instance oppoCatComp: @CatComp C oppoArrows := fun a b c => flip (CatCompC c b a).
+  Instance oppoCatSetoid: forall A B: C, Setoid (oppoArrows A B).
+  Proof. intros. change (Setoid (ArrowsC B A)). apply arrow_equiv. Qed.
+
+  Lemma oppoCategory: @Category C oppoArrows oppoCatEq oppoCatId oppoCatComp.
+  Proof.
+    constructor; try apply _; intros; unfold comp, oppoCatComp, Arrow,
+      oppoArrows, cat_id, oppoCatId, equiv, oppoCatEq,  flip.
+    - repeat intro. change (CatCompC c b a x0 x = CatCompC c b a y0 y).
+      now apply comp_proper.
+    - symmetry. apply comp_assoc.
+    - apply right_identity.
+    - apply left_identity.
+  Qed.
+
+End OPPOSITE_CATEGORY.
+
+(** 3: arrow category *)
+Section ARROW_CATEGORY.
+
+  Context `{Category C}.
+
+  Definition arrowObj := {domcod: C * C & fst domcod ~> snd domcod}.
+
+  Instance arrowArrows: Arrows arrowObj.
+  Proof.
+    intros [[A B] f] [[A' B'] f']. simpl in *.
+    exact {g: (A ~> A') * (B ~> B') | (snd g) >>> f = f' >>> (fst g)}.
+  Defined.
+
+  Instance arrowCatEq: forall (A B: arrowObj), Equiv (A ~> B).
+  Proof.
+    intros [[A B] f] [[A' B'] g]. unfold Arrow, arrowArrows.
+    intros [[g1 g2] ?H] [[g3 g4] ?H].
+    exact ((g1 = g3) /\ (g2 = g4)).
+  Defined.
+
+  Instance arrowCatId: CatId arrowObj.
+  Proof.
+    intros [[A B] f]. simpl in f. unfold Arrow, arrowArrows.
+    exists (cat_id, cat_id). simpl. now rewrite left_identity, right_identity.
+  Defined.
+
+  Instance arrowCatComp: CatComp arrowObj.
+  Proof.
+    intros [[A1 A2] fA] [[B1 B2] fB] [[C1 C2] fC].
+    intros [[h1 h2] ?H]. intros [[g1 g2] ?H]. unfold Arrow, arrowArrows.
+    exists (h1 >>> g1, h2 >>> g2). simpl in *.
+    now rewrite <- comp_assoc, H2, comp_assoc, H1, comp_assoc.
+  Defined.
+
+  Instance arrowCatSetoid: forall (A B: arrowObj), Setoid (A ~> B).
+  Proof.
+    intros [[A1 A2] fA] [[B1 B2] fB]. unfold Arrow, arrowArrows.
+    constructor; repeat intro.
+    - destruct x as [[g1 g2] ?H]. cbn. now split.
+    - destruct x as [[x1 x2] ?H]. destruct y as [[y1 y2] ?H]. simpl in *. cbn in *.
+      destruct H0. split; now symmetry.
+    - destruct x as [[x1 x2] ?H]. destruct y as [[y1 y2] ?H].
+      destruct z as [[z1 z2] ?H]. simpl in *. cbn in *. destruct H1, H2.
+      split; etransitivity; eauto.
+  Qed.
+
+  Instance arrowCategory: Category arrowObj.
+  Proof.
+    constructor; try apply _; intros.
+    - destruct a as [[a1 a2] fa]. destruct b as [[b1 b2] fb].
+      destruct c as [[c1 c2] fc]. repeat intro. cbn in x, y, x0, y0.
+      destruct x as [[gx1 gx2] ?H]. destruct y as [[gy1 gy2] ?H].
+      destruct x0 as [[gz1 gz2] ?H]. destruct y0 as [[gw1 gw2] ?H]. cbn in *.
+      destruct H1, H2. split.
+      + now rewrite H1, H2.
+      + now rewrite H7, H8.
+    - destruct a as [[a1 a2] fa]. destruct b as [[b1 b2] fb].
+      destruct c as [[c1 c2] fc]. destruct d as [[d1 d2] fd]. cbn in f, g, h.
+      destruct f as [[f1 f2] ?H]. destruct g as [[g1 g2] ?H].
+      destruct h as [[h1 h2] ?H]. cbn in *. split; apply comp_assoc.
+    - destruct a as [[a1 a2] fa]. destruct b as [[b1 b2] fb]. cbn in f.
+      destruct f as [[f1 f2] ?H]. cbn. split; apply left_identity.
+    - destruct a as [[a1 a2] fa]. destruct b as [[b1 b2] fb]. cbn in f.
+      destruct f as [[f1 f2] ?H]. cbn. split; apply right_identity.
+  Qed.
+
+End ARROW_CATEGORY.
+
+(** 4: slice category *)
+Section SLICE_CATEGORY.
+
+  Context `{Category C}.
+  Context {o : C}.
+
+  Definition sliceObj := {dom: C & dom ~> o}.
+
+  Instance sliceArrows: Arrows sliceObj.
+  Proof.
+    intros [A fA] [B fB]. exact {fab: A ~> B | fB >>> fab = fA}.
+  Defined.
+
+  Instance sliceCatEq: forall A B: sliceObj, Equiv (A ~> B).
+  Proof.
+    intros [A fA] [B fB]. unfold Arrow, sliceArrows.
+    intros [fab1 ?H] [fab2 ?H]. exact (fab1 = fab2).
+  Defined.
+
+  Instance sliceCatId: CatId sliceObj.
+  Proof.
+    intros [A f]. unfold Arrow, sliceArrows. exists cat_id. apply right_identity.
+  Defined.
+
+  Instance sliceCatComp: CatComp sliceObj.
+  Proof.
+    intros [X fX] [Y fY] [Z fZ]. cbn.
+    intros [fyz ?H]. intros [fxy ?H]. exists (fyz >>> fxy).
+    rewrite <- H2, <- H1. apply comp_assoc.
+  Defined.
+
+  Instance sliceCatSetoid: forall (A B: sliceObj), Setoid (A ~> B).
+  Proof.
+    intros [A fA] [B fB]. cbn. constructor; repeat intro.
+    - destruct x as [f ?H]. now cbn.
+    - destruct x as [fx ?H]. destruct y as [fy ?H]. cbn in *. now symmetry.
+    - destruct x as [fx ?H]. destruct y as [fy ?H]. destruct z as [fz ?H].
+      cbn in *. etransitivity; eauto.
+  Qed.
+
+  Instance sliceCategory: Category sliceObj.
+  Proof.
+    constructor; try apply _; intros.
+    - destruct a as [a fa]. destruct b as [b fb]. destruct c as [c fc].
+      repeat intro. cbn in x, y, x0, y0. destruct x as [fx ?H].
+      destruct y as [fy ?H]. destruct x0 as [fz ?H]. destruct y0 as [fw ?H].
+      cbn in *. now rewrite H1, H2.
+    - destruct a as [a fa]. destruct b as [b fb]. destruct c as [c fc].
+      destruct d as [d fd]. cbn in f, g, h. destruct f as [f ?H].
+      destruct g as [g ?H]. destruct h as [h ?H]. cbn. apply comp_assoc.
+    - destruct a as [a fa]. destruct b as [b fb]. cbn in f. destruct f as [f ?].
+      cbn. apply left_identity.
+    - destruct a as [a fa]. destruct b as [b fb]. cbn in f. destruct f as [f ?].
+      cbn. apply right_identity.
+  Qed.
+
+End SLICE_CATEGORY.
