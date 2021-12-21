@@ -149,6 +149,26 @@ Section PRODUCT_CATEGORY.
     - unfold comp, prodCatComp. destruct f. split; simpl; apply right_identity.
   Qed.
 
+  Instance fstFmap: Fmap fst := fun _ _ => fst.
+
+  Instance fstFunctor: Functor fst _.
+  Proof.
+    constructor; try apply _; intros.
+    - constructor; try apply _. repeat intro. destruct H3. apply H3.
+    - destruct a. reflexivity.
+    - destruct x, y, z, f, g. easy.
+  Qed.
+
+  Instance sndFmap: Fmap snd := fun _ _ => snd.
+
+  Instance sndFunctor: Functor snd _.
+  Proof.
+    constructor; try apply _; intros.
+    - constructor; try apply _. repeat intro. destruct H3. apply H4.
+    - destruct a. reflexivity.
+    - destruct x, y, z, f, g. easy.
+  Qed.
+
 End PRODUCT_CATEGORY.
 
 (** 2: opposite category *)
@@ -243,40 +263,77 @@ Section ARROW_CATEGORY.
       destruct f as [[f1 f2] ?H]. cbn. split; apply right_identity.
   Qed.
 
+  Instance domFmap: Fmap (C := arrowObj) (compose fst (@projT1 _ _)).
+  Proof.
+    repeat intro. destruct v as [[v1 v2] av]. destruct w as [[w1 w2] aw].
+    exact (fst (proj1_sig X)).
+  Defined.
+
+  Instance domFunctor: Functor (compose fst (@projT1 _ _)) _.
+  Proof.
+    constructor; try apply _; repeat intro.
+    - destruct a as [[a1 a2] aa]. destruct b as [[b1 b2] ab].
+      constructor; try apply _. repeat intro. cbn in x, y. cbn.
+      destruct x as [[x1 x2] ?H]. destruct y as [[y1 y2] ?H]. cbn in H1. simpl in *.
+      destruct H1. easy.
+    - destruct a as [[a1 a2] aa]. cbn. easy.
+    - destruct x as [[x1 x2] ax]. destruct y as [[y1 y2] ay].
+      destruct z as [[z1 z2] az]. cbn in f, g.
+      destruct g as [[g1 g2] ?H]. destruct f as [[f1 f2] ?H]. cbn. easy.
+  Qed.
+
+  Instance codFmap: Fmap (C := arrowObj) (compose snd (@projT1 _ _)).
+  Proof.
+    repeat intro. destruct v as [[v1 v2] av]. destruct w as [[w1 w2] aw].
+    exact (snd (proj1_sig X)).
+  Defined.
+
+  Instance codFunctor: Functor (compose snd (@projT1 _ _)) _.
+  Proof.
+    constructor; try apply _; repeat intro.
+    - destruct a as [[a1 a2] aa]. destruct b as [[b1 b2] ab].
+      constructor; try apply _. repeat intro. cbn in x, y. cbn.
+      destruct x as [[x1 x2] ?H]. destruct y as [[y1 y2] ?H]. cbn in H1. simpl in *.
+      destruct H1. easy.
+    - destruct a as [[a1 a2] aa]. cbn. easy.
+    - destruct x as [[x1 x2] ax]. destruct y as [[y1 y2] ay].
+      destruct z as [[z1 z2] az]. cbn in f, g.
+      destruct g as [[g1 g2] ?H]. destruct f as [[f1 f2] ?H]. cbn. easy.
+  Qed.
+
 End ARROW_CATEGORY.
 
 (** 4: slice category *)
 Section SLICE_CATEGORY.
 
   Context `{Category C}.
-  Context {o : C}.
 
-  Definition sliceObj := {dom: C & dom ~> o}.
+  Definition sliceObj (o: C) := {dom: C & dom ~> o}.
 
-  Instance sliceArrows: Arrows sliceObj.
+  Instance sliceArrows (o: C): Arrows (sliceObj o).
   Proof.
     intros [A fA] [B fB]. exact {fab: A ~> B | fB >>> fab = fA}.
   Defined.
 
-  Instance sliceCatEq: forall A B: sliceObj, Equiv (A ~> B).
+  Instance sliceCatEq (o: C): forall A B: (sliceObj o), Equiv (A ~> B).
   Proof.
     intros [A fA] [B fB]. unfold Arrow, sliceArrows.
     intros [fab1 ?H] [fab2 ?H]. exact (fab1 = fab2).
   Defined.
 
-  Instance sliceCatId: CatId sliceObj.
+  Instance sliceCatId (o: C): CatId (sliceObj o).
   Proof.
     intros [A f]. unfold Arrow, sliceArrows. exists cat_id. apply right_identity.
   Defined.
 
-  Instance sliceCatComp: CatComp sliceObj.
+  Instance sliceCatComp (o: C): CatComp (sliceObj o).
   Proof.
     intros [X fX] [Y fY] [Z fZ]. cbn.
     intros [fyz ?H]. intros [fxy ?H]. exists (fyz >>> fxy).
     rewrite <- H2, <- H1. apply comp_assoc.
   Defined.
 
-  Instance sliceCatSetoid: forall (A B: sliceObj), Setoid (A ~> B).
+  Instance sliceCatSetoid (o: C): forall (A B: sliceObj o), Setoid (A ~> B).
   Proof.
     intros [A fA] [B fB]. cbn. constructor; repeat intro.
     - destruct x as [f ?H]. now cbn.
@@ -285,7 +342,7 @@ Section SLICE_CATEGORY.
       cbn in *. etransitivity; eauto.
   Qed.
 
-  Instance sliceCategory: Category sliceObj.
+  Instance sliceCategory (o: C): Category (sliceObj o).
   Proof.
     constructor; try apply _; intros.
     - destruct a as [a fa]. destruct b as [b fb]. destruct c as [c fc].
@@ -300,6 +357,50 @@ Section SLICE_CATEGORY.
     - destruct a as [a fa]. destruct b as [b fb]. cbn in f. destruct f as [f ?].
       cbn. apply right_identity.
   Qed.
+
+  Instance sliceForgetFmap (o: C): Fmap (C := sliceObj o) (@projT1 _ _).
+  Proof.
+    repeat intro. destruct v as [v av]. destruct w as [w aw]. cbn in X.
+    cbn. exact (proj1_sig X).
+  Defined.
+
+  Instance sliceForgetFunctor (o: C): Functor (C := sliceObj o) (@projT1 _ _) _.
+  Proof.
+    constructor; try apply _; intros.
+    - destruct a as [a fa]. destruct b as [b fb]. constructor; try apply _.
+      repeat intro. cbn in x, y. destruct x as [fx ?H]. destruct y as [fy ?H].
+      cbn in *. easy.
+    - destruct a as [a fa]. cbn. easy.
+    - destruct x as [x fx]. destruct y as [y fy]. destruct z as [z fz].
+      cbn in f, g. destruct g as [fg ?H]. destruct f as [ff ?H]. cbn. easy.
+  Qed.
+
+  Section SLICE_COMP_FUNCTOR.
+
+    Context {c d: C} {g: c ~> d}.
+
+    Definition gM (f: sliceObj c) : sliceObj d.
+    Proof. destruct f as [X f]. exists X. exact (g >>> f). Defined.
+
+    Instance sliceCompFmap: Fmap gM.
+    Proof.
+      repeat intro. destruct v as [dv fv]. destruct w as [dw fw].
+      cbn. cbn in X. destruct X as [fab ?H]. exists fab.
+      rewrite <- comp_assoc. rewrite H1. easy.
+    Defined.
+
+    Instance sliceCompFunctor: Functor gM _.
+    Proof.
+      constructor; try apply _; intros.
+      - constructor; try apply _. repeat intro.
+        destruct a as [da fa]. destruct b as [db fb]. cbn in x, y.
+        destruct x as [fx ?H]. destruct y as [fy ?H]. cbn. cbn in H1. easy.
+      - destruct a as [da fa]. cbn. easy.
+      - destruct x as [x fx]. destruct y as [y fy]. destruct z as [z fz].
+        cbn in g0, f. destruct g0 as [fg ?H]. destruct f as [ff ?H]. cbn. easy.
+    Qed.
+
+  End SLICE_COMP_FUNCTOR.
 
 End SLICE_CATEGORY.
 
