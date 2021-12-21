@@ -1,3 +1,4 @@
+Require Import Coq.Logic.Eqdep.
 Require Import FormalMath.Algebra.Category.
 Require Import FormalMath.Algebra.Group.
 
@@ -7,11 +8,11 @@ Require Import FormalMath.Algebra.Group.
 Section FUNCTION_CATEGORY.
 
   Instance funArrows: Arrows Type := fun (A B: Type) => A -> B.
+  Instance funExtEq: forall A B: Type, Equiv (A ~> B) :=
+    fun (A B : Type) (f g : A ~> B) => forall x : A, f x == g x.
   Instance funCatId: CatId Type := fun (A: Type) (x: A) => x.
   Instance funCatComp: CatComp Type :=
     fun (A B C : Type) (g : B ~> C) (f : A ~> B) (x : A) => g (f x).
-  Instance funExtEq: forall A B: Type, Equiv (A ~> B) :=
-    fun (A B : Type) (f g : A ~> B) => forall x : A, f x == g x.
 
   Instance funCategory: Category Type.
   Proof.
@@ -26,12 +27,12 @@ End FUNCTION_CATEGORY.
 Section RELATION_CATEGORY.
 
   Instance relArrows: Arrows Type := fun (A B: Type) => A -> B -> Prop.
-  Instance relCatId: CatId Type := fun (A: Type) (x: A) => fun y => x == y.
+  Instance relIff: forall A B: Type, Equiv (A ~> B) :=
+    fun (A B : Type) (f g : A ~> B) => forall a b, f a b <-> g a b.
+  Instance relCatId: CatId Type := fun (A: Type) (x y: A) => x == y.
   Instance relCatComp: CatComp Type :=
     fun (A B C : Type) (g : B ~> C) (f : A ~> B) (a : A) (c: C) =>
       exists (b : B), f a b /\ g b c.
-  Instance relIff: forall A B: Type, Equiv (A ~> B) :=
-    fun (A B : Type) (f g : A ~> B) => forall a b, f a b <-> g a b.
 
   Instance relCategory: Category Type.
   Proof.
@@ -60,9 +61,9 @@ End RELATION_CATEGORY.
 Section UNIT_CATEGORY.
 
   Instance unitArrows: Arrows unit := fun _ _ => unit.
+  Instance unitEq: forall A B: unit, Equiv (A ~> B) := fun _ _ => (==).
   Instance unitCatId: CatId unit := fun _ => tt.
   Instance unitCatComp: CatComp unit := fun _ _ _ _ _ => tt.
-  Instance unitEq: forall A B: unit, Equiv (A ~> B) := fun _ _ => (==).
   Instance unitCategory: Category unit.
   Proof.
     constructor; repeat intro; hnf; auto.
@@ -89,6 +90,69 @@ Section EMPTY_CATEGORY.
 
 End EMPTY_CATEGORY.
 
+(** 6: All categories as a category *)
+Section CATEGORIES_AS_CATEGORY.
+
+  Record catObj: Type := {
+      obj:> Type;
+      cat_arrows: Arrows obj;
+      cat_equiv: forall a b: obj, Equiv (a ~> b);
+      cat_catid: CatId obj;
+      cat_catcomp: CatComp obj;
+      cat_category: Category obj
+    }.
+
+  Arguments Build_catObj _ {_ _ _ _ _}.
+  Existing Instance cat_arrows.
+  Hint Extern 0 (Equiv (_ ~> _)) => eapply @cat_equiv : typeclass_instances.
+  Existing Instance cat_catid.
+  Existing Instance cat_catcomp.
+  Existing Instance cat_category.
+
+  Record catArrow (a b: catObj): Type := {
+      cat_map :> obj a -> obj b;
+      cat_Fmap: Fmap cat_map;
+      cat_Functor: Functor cat_map _
+    }.
+
+  Arguments Build_catArrow {_ _} _ {_ _}.
+  Arguments cat_map {_ _} _ _.
+  Arguments cat_Fmap {_ _}.
+  Existing Instance cat_Fmap.
+  Existing Instance cat_Functor.
+
+  Instance catArrows: Arrows catObj := catArrow.
+
+  Instance catEquiv: forall a b: catObj, Equiv (a ~> b) :=
+    fun a b F1 F2 =>
+      {h: (cat_map F1 == cat_map F2) |
+        forall (v w: a) (ar: v ~> w),
+          @eq_rect (a -> b) F1 (fun m => m v ~> m w)
+                   (cat_Fmap F1 v w ar) F2 h = cat_Fmap F2 v w ar /\
+            @eq_rect (a -> b) F2 (fun m => m v ~> m w)
+                     (cat_Fmap F2 v w ar) F1 (symmetry h) = cat_Fmap F1 v w ar}.
+
+  Instance catCatId: CatId catObj := fun x => @Build_catArrow x x id _ _.
+
+  Instance catCatComp: CatComp catObj :=
+    fun x y z f g => @Build_catArrow x z (compose f g) _ _.
+
+  Instance catCategory: Category catObj.
+  Proof.
+    constructor; intros.
+    - constructor; repeat intro; unfold equiv, catEquiv in *.
+      + exists eq_refl. intros. now rewrite <- eq_rect_eq.
+      + destruct H as [h ?H]. exists (symmetry h). intros.
+        specialize (H v w ar). destruct H. split; auto.
+        assert (symmetry (symmetry h) == h) by apply UIP. now rewrite H1.
+      + destruct H as [?h ?H]. destruct H0 as [?h ?H].
+        exists (eq_trans h h0). intros. specialize (H v w ar). specialize (H0 v w ar).
+        destruct H, H0. rewrite <- !rew_compose. split.
+        *
+  Abort.
+
+End CATEGORIES_AS_CATEGORY.
+
 (** * Chapter 1.5 Isomorphisms *)
 
 (** Definition 1.4 *)
@@ -97,9 +161,9 @@ Section GROUP_AS_CATEGORY.
   Context `{G: Group A}.
 
   Instance groupArrow: Arrows unit := fun _ _ => A.
+  Instance groupCatEq: forall A B, Equiv (A ~> B) := fun _ _ => (=).
   Instance groupCatId: CatId unit := fun _ => one.
   Instance groupCatComp: CatComp unit := fun _ _ _ a b => a & b.
-  Instance groupCatEq: forall A B, Equiv (A ~> B) := fun _ _ => (=).
   Instance groupAsCategory: Category unit.
   Proof.
     constructor; intros.

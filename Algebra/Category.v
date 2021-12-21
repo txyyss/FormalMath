@@ -57,15 +57,43 @@ Section IDENTITY_FUNCTOR.
 
   Context `{Category C}.
 
-  Instance idFmap: Fmap id := fun _ _ => id.
+  #[global] Instance idFmap: Fmap id := fun _ _ => id.
 
-  Instance idFunctor: Functor (id: C -> C) _.
+  #[global] Instance idFunctor: Functor (id: C -> C) _.
   Proof.
     constructor; try apply _; try easy.
     intros. constructor; try apply _; try easy.
   Qed.
 
 End IDENTITY_FUNCTOR.
+
+Section COMPOSE_FUNCTOR.
+
+  Context
+    A B C
+    `{!Arrows A} `{!Arrows B} `{!Arrows C}
+    `{!CatId A} `{!CatId B} `{!CatId C}
+    `{!CatComp A} `{!CatComp B} `{!CatComp C}
+    `{forall a b: A, Equiv (a ~> b)}
+    `{forall a b: B, Equiv (a ~> b)}
+    `{forall a b: C, Equiv (a ~> b)}
+    `{!Functor (f: B -> C) f'} `{!Functor (g: A -> B) g'}.
+
+  #[global] Instance compFmap: Fmap (compose f g) :=
+    fun _ _ => compose (fmap f) (fmap g).
+
+  #[global] Instance compFunctor: Functor (compose f g) _.
+  Proof.
+    pose proof (functor_from g). pose proof (functor_to g). pose proof (functor_to f).
+    constructor; intros; try apply _; unfold fmap, compFmap.
+    - apply setoid_morphism_trans.
+      + apply (functor_morphism g).
+      + apply (functor_morphism f).
+    - unfold compose. repeat rewrite preserves_id; auto.
+    - unfold compose. repeat rewrite preserves_comp; auto.
+  Qed.
+
+End COMPOSE_FUNCTOR.
 
 (** * Chapter 1.5 Isomorphisms *)
 
@@ -274,3 +302,61 @@ Section SLICE_CATEGORY.
   Qed.
 
 End SLICE_CATEGORY.
+
+(** 4: coslice category *)
+Section COSLICE_CATEGORY.
+
+  Context `{Category C}.
+  Context {o : C}.
+
+  Definition cosliceObj := {cod: C & o ~> cod}.
+
+  Instance cosliceArrows: Arrows cosliceObj.
+  Proof.
+    intros [A fA] [B fB]. exact {fab: A ~> B | fab >>> fA = fB}.
+  Defined.
+
+  Instance cosliceCatEq: forall A B: cosliceObj, Equiv (A ~> B).
+  Proof.
+    intros [A fA] [B fB]. unfold Arrow, cosliceArrows.
+    intros [fab1 ?H] [fab2 ?H]. exact (fab1 = fab2).
+  Defined.
+
+  Instance cosliceCatId: CatId cosliceObj.
+  Proof.
+    intros [A f]. unfold Arrow, cosliceArrows. exists cat_id. apply left_identity.
+  Defined.
+
+  Instance cosliceCatComp: CatComp cosliceObj.
+  Proof.
+    intros [X fX] [Y fY] [Z fZ]. cbn.
+    intros [fyz ?H]. intros [fxy ?H]. exists (fyz >>> fxy).
+    rewrite <- H1, <- H2. symmetry. apply comp_assoc.
+  Defined.
+
+  Instance cosliceCatSetoid: forall (A B: cosliceObj), Setoid (A ~> B).
+  Proof.
+    intros [A fA] [B fB]. cbn. constructor; repeat intro.
+    - destruct x as [f ?H]. now cbn.
+    - destruct x as [fx ?H]. destruct y as [fy ?H]. cbn in *. now symmetry.
+    - destruct x as [fx ?H]. destruct y as [fy ?H]. destruct z as [fz ?H].
+      cbn in *. etransitivity; eauto.
+  Qed.
+
+  Instance cosliceCategory: Category cosliceObj.
+  Proof.
+    constructor; try apply _; intros.
+    - destruct a as [a fa]. destruct b as [b fb]. destruct c as [c fc].
+      repeat intro. cbn in x, y, x0, y0. destruct x as [fx ?H].
+      destruct y as [fy ?H]. destruct x0 as [fz ?H]. destruct y0 as [fw ?H].
+      cbn in *. now rewrite H1, H2.
+    - destruct a as [a fa]. destruct b as [b fb]. destruct c as [c fc].
+      destruct d as [d fd]. cbn in f, g, h. destruct f as [f ?H].
+      destruct g as [g ?H]. destruct h as [h ?H]. cbn. apply comp_assoc.
+    - destruct a as [a fa]. destruct b as [b fb]. cbn in f. destruct f as [f ?].
+      cbn. apply left_identity.
+    - destruct a as [a fa]. destruct b as [b fb]. cbn in f. destruct f as [f ?].
+      cbn. apply right_identity.
+  Qed.
+
+End COSLICE_CATEGORY.
