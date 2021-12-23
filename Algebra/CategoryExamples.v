@@ -1,4 +1,5 @@
 Require Import Coq.Logic.Eqdep.
+Require Export FormalMath.lib.Coqlib.
 Require Import FormalMath.Algebra.Category.
 Require Import FormalMath.Algebra.Group.
 
@@ -123,12 +124,6 @@ Section EMPTY_CATEGORY.
 
 End EMPTY_CATEGORY.
 
-Inductive sigT_relation {I: Type} {A: I -> Type}
-          (RA: forall i, relation (A i)): relation (sigT A) :=
-| sigT_relation_intro i a b:
-  RA i a b -> sigT_relation RA (existT _ i a) (existT _ i b).
-
-
 (** 6: All categories as a category *)
 Section CATEGORIES_AS_CATEGORY.
 
@@ -162,15 +157,11 @@ Section CATEGORIES_AS_CATEGORY.
 
   Instance catArrows: Arrows catObj := catArrow.
 
-  (* TODO: This is not a good definition, I can not prove transitivity. *)
   Instance catEquiv: forall a b: catObj, Equiv (a ~> b) :=
-    fun a b F1 F2 =>
-      {h: (cat_map F1 == cat_map F2) |
-        forall (v w: a) (ar: v ~> w),
-          @eq_rect (a -> b) F1 (fun m => m v ~> m w)
-                   (cat_Fmap F1 v w ar) F2 h = cat_Fmap F2 v w ar /\
-            @eq_rect (a -> b) F2 (fun m => m v ~> m w)
-                     (cat_Fmap F2 v w ar) F1 (symmetry h) = cat_Fmap F1 v w ar}.
+    fun a b F1 F2 => sigT_relation (@fmapEquiv (obj a) (cat_arrows a)
+                                               (obj b) (cat_arrows b) (cat_equiv b))
+                                   (existT _ (cat_map F1) (cat_Fmap F1))
+                                   (existT _ (cat_map F2) (cat_Fmap F2)).
 
   Instance catCatId: CatId catObj := fun x => @Build_catArrow x x id _ _.
 
@@ -181,15 +172,18 @@ Section CATEGORIES_AS_CATEGORY.
   Proof.
     constructor; intros.
     - constructor; repeat intro; unfold equiv, catEquiv in *.
-      + exists eq_refl. intros. now rewrite <- eq_rect_eq.
-      + destruct H as [h ?H]. exists (symmetry h). intros.
-        specialize (H v w ar). destruct H. split; auto.
-        assert (symmetry (symmetry h) == h) by apply UIP. now rewrite H1.
-      + destruct H as [?h ?H]. destruct H0 as [?h ?H].
-        exists (eq_trans h h0). intros. specialize (H v w ar). specialize (H0 v w ar).
-        destruct H, H0. rewrite <- !rew_compose. split.
-        *
-  Abort.
+      + now constructor.
+      + apply sigT_relation_symmetric; auto. apply _.
+      + eapply sigT_relation_transitive; eauto. apply _.
+    - repeat intro. unfold comp, catCatComp. apply path_sigT_relation in H.
+      destruct H, x, y. simpl in *. subst. simpl in *. apply path_sigT_relation in H0.
+      destruct H0, x0, y0. simpl in *. subst. simpl in *.
+      constructor. simpl. unfold fmapEquiv in *. intros.
+      unfold compFmap, fmap, compose. rewrite f0. apply f.
+    - unfold comp, catCatComp. constructor. simpl. unfold fmapEquiv. now intros.
+    - unfold comp, catCatComp. constructor. simpl. unfold fmapEquiv. now intros.
+    - unfold comp, catCatComp. constructor. simpl. unfold fmapEquiv. now intros.
+  Qed.
 
 End CATEGORIES_AS_CATEGORY.
 

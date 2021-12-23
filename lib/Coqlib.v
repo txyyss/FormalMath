@@ -1,4 +1,6 @@
 Require Import Coq.Arith.Arith.
+Require Import Coq.Relations.Relations.
+Require Import Coq.Classes.RelationClasses.
 
 Lemma lt_plus_S_l: forall (n m: nat), n < n + S m.
 Proof. intros. rewrite <- Nat.le_succ_l, <- Nat.add_succ_comm. apply le_plus_l. Qed.
@@ -72,4 +74,39 @@ Proof.
   intros. destruct H. assert (i < m) by (eapply lt_trans; eauto).
   split. 2: now apply lt_sub_1_sub_lt. apply sub_lt_mono_l. split; auto.
   apply Nat.le_add_le_sub_r. now rewrite Nat.add_1_r.
+Qed.
+
+(** The following definition of sigT_relation and related properties
+    come from Qinxiang Cao *)
+
+Inductive sigT_relation {I: Type} {A: I -> Type}
+          (RA: forall i, relation (A i)): relation (sigT A) :=
+| sigT_relation_intro i a b:
+  RA i a b -> sigT_relation RA (existT _ i a) (existT _ i b).
+
+Lemma path_sigT {I: Type} {A: I -> Type} (x y: sigT A) (H: x = y):
+  {p: projT1 x = projT1 y & eq_rect _ A (projT2 x) _ p = projT2 y}.
+Proof. exists (f_equal _ H). destruct H. easy. Qed.
+
+Lemma path_sigT_relation {I: Type} {A: I -> Type}
+      (RA: forall i, relation (A i)) (x y: sigT A) (H: sigT_relation RA x y):
+  {p: projT1 x = projT1 y & RA _ (eq_rect _ A (projT2 x) _ p) (projT2 y) }.
+Proof. inversion H. simpl in *. exists eq_refl. now simpl. Qed.
+
+#[export] Instance sigT_relation_reflexive {I: Type} {A: I -> Type}
+ (RA: forall i, relation (A i)) {_: forall i, Reflexive (RA i)}:
+  Reflexive (sigT_relation RA).
+Proof. repeat intro. destruct x. constructor. apply H. Qed.
+
+#[export] Instance sigT_relation_symmetric {I: Type} {A: I -> Type}
+ (RA: forall i, relation (A i)) {_: forall i, Symmetric (RA i)}:
+  Symmetric (sigT_relation RA).
+Proof. repeat intro. inversion H0. subst. constructor. now apply H. Qed.
+
+#[export] Instance sigT_relation_transitive {I: Type} {A: I -> Type}
+ (RA: forall i, relation (A i)) {_: forall i, Transitive (RA i)}:
+  Transitive (sigT_relation RA).
+Proof.
+  repeat intro. inversion H0; inversion H1. subst. apply path_sigT in H6.
+  destruct H6. simpl in *. subst. simpl in *. econstructor. eapply H; eassumption.
 Qed.
