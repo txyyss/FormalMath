@@ -49,6 +49,15 @@ Section FUNCTOR.
         fmap (g >>> f) = fmap g >>> fmap f
     }.
 
+  #[global] Instance fmapEquiv: Equiv Fmap :=
+    fun F1 F2 => forall (v w: C) (ar: v ~> w), F1 v w ar = F2 v w ar.
+
+  #[global] Instance fmapSetoid: Setoid Fmap.
+  Proof.
+    constructor; repeat intro; try easy.
+    specialize (H3 v w ar). specialize (H4 v w ar). now transitivity (y v w ar).
+  Qed.
+
 End FUNCTOR.
 
 Typeclasses Transparent Fmap.
@@ -358,6 +367,7 @@ Section SLICE_CATEGORY.
       cbn. apply right_identity.
   Qed.
 
+  (** * Chapter 1.9 Exercises 5 Question 1 *)
   Instance sliceForgetFmap (o: C): Fmap (C := sliceObj o) (@projT1 _ _).
   Proof.
     repeat intro. destruct v as [v av]. destruct w as [w aw]. cbn in X.
@@ -403,6 +413,42 @@ Section SLICE_CATEGORY.
   End SLICE_COMP_FUNCTOR.
 
 End SLICE_CATEGORY.
+
+(** * Chapter 1.9 Exercises 5 Question 2 *)
+Definition sliceToArrowObj {M: Type} {AM: Arrows M} (o: M) (so: sliceObj o): arrowObj.
+Proof.
+  destruct so. exists (x, o). exact a.
+Defined.
+
+Section SLICE_TO_ARROW_FUNCTOR.
+
+  Context `{Category C}.
+
+  Instance sliceToArrowFmap (o: C): @Fmap (sliceObj o) (sliceArrows o)
+                                          arrowObj arrowArrows (sliceToArrowObj o).
+  Proof.
+    repeat intro. destruct v as [v fv]. destruct w as [w fw].
+    destruct X as [fvw ?H]. cbn. exists (fvw, cat_id). simpl. rewrite H1.
+    apply left_identity.
+  Defined.
+
+  Instance sliceToArrowFunc (o: C):
+    @Functor (sliceObj o) (sliceArrows o) (sliceCatEq o) (sliceCatId o)
+             (sliceCatComp o) arrowObj arrowArrows arrowCatEq arrowCatId arrowCatComp
+             (sliceToArrowObj o) _.
+  Proof.
+    pose proof (sliceCategory o). pose proof arrowCategory.
+    constructor; try apply _; intros; unfold sliceToArrowObj.
+    - constructor; try apply _. repeat intro.
+      destruct a as [a aa]. destruct b as [b ab]. cbn in x, y.
+      destruct x as [fx ?H]. destruct y as [fy ?H]. cbn in H3. cbn. now split.
+    - destruct a as [a aa]. cbn. now split.
+    - destruct x as [x ax]. destruct y as [y ay]. destruct z as [z az].
+      cbn in f, g. destruct f as [fxy ?H]. destruct g as [fyz ?H]. cbn. split; auto.
+      symmetry. apply left_identity.
+  Qed.
+
+End SLICE_TO_ARROW_FUNCTOR.
 
 (** 4: coslice category *)
 Section COSLICE_CATEGORY.

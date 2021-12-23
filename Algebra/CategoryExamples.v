@@ -34,6 +34,7 @@ Section RELATION_CATEGORY.
     fun (A B C : Type) (g : B ~> C) (f : A ~> B) (a : A) (c: C) =>
       exists (b : B), f a b /\ g b c.
 
+  (** * Chapter 1.9 Exercises 1.(a) *)
   Instance relCategory: Category Type.
   Proof.
     constructor; repeat intro; hnf; unfold comp, relCatComp, cat_id, relCatId.
@@ -53,6 +54,38 @@ Section RELATION_CATEGORY.
     - split; intros.
       + destruct H as [b1 [? ?]]. now rewrite H.
       + exists a0. now split.
+  Qed.
+
+  (** * Chapter 1.9 Exercises 1.(b) *)
+  Instance setsRelFmap: @Fmap Type funArrows Type relArrows id :=
+    fun _ _ f A B => f A == B.
+
+  Instance setsRelFunc: @Functor Type funArrows funExtEq funCatId funCatComp
+                                 Type relArrows relIff relCatId relCatComp
+                                 id setsRelFmap.
+  Proof.
+    pose proof funCategory. constructor; try apply _; unfold fmap, setsRelFmap.
+    - intros. constructor; try apply _. repeat intro. rewrite H0. tauto.
+    - repeat intro. unfold cat_id, relCatId, funCatId. tauto.
+    - repeat intro. unfold comp, relCatComp, funCatComp, id. split; intros.
+      + exists (f a). now split.
+      + destruct H0 as [fa [? ?]]. now rewrite H0.
+  Qed.
+
+  (** * Chapter 1.9 Exercises 1.(c) *)
+  Instance oppoRelFmap: @Fmap Type oppoArrows Type relArrows id :=
+    fun _ _ r => flip r.
+
+  Instance oppoRelFunc: @Functor Type oppoArrows oppoCatEq oppoCatId oppoCatComp
+                                 Type relArrows relIff relCatId relCatComp
+                                 id oppoRelFmap.
+  Proof.
+    pose proof oppoCategory. constructor; try apply _; unfold fmap, oppoRelFmap, flip.
+    - intros. constructor; try apply _. repeat intro.
+      unfold equiv, oppoCatEq, relIff in H0. now rewrite H0.
+    - intros. unfold cat_id, oppoCatId, relCatId, id. split; intros; easy.
+    - intros. unfold comp, oppoCatComp, relCatComp, flip.
+      split; intros; destruct H0 as [S [? ?]]; exists S; easy.
   Qed.
 
 End RELATION_CATEGORY.
@@ -90,6 +123,12 @@ Section EMPTY_CATEGORY.
 
 End EMPTY_CATEGORY.
 
+Inductive sigT_relation {I: Type} {A: I -> Type}
+          (RA: forall i, relation (A i)): relation (sigT A) :=
+| sigT_relation_intro i a b:
+  RA i a b -> sigT_relation RA (existT _ i a) (existT _ i b).
+
+
 (** 6: All categories as a category *)
 Section CATEGORIES_AS_CATEGORY.
 
@@ -123,6 +162,7 @@ Section CATEGORIES_AS_CATEGORY.
 
   Instance catArrows: Arrows catObj := catArrow.
 
+  (* TODO: This is not a good definition, I can not prove transitivity. *)
   Instance catEquiv: forall a b: catObj, Equiv (a ~> b) :=
     fun a b F1 F2 =>
       {h: (cat_map F1 == cat_map F2) |
