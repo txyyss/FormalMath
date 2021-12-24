@@ -107,6 +107,6 @@ Proof. repeat intro. inversion H0. subst. constructor. now apply H. Qed.
  (RA: forall i, relation (A i)) {_: forall i, Transitive (RA i)}:
   Transitive (sigT_relation RA).
 Proof.
-  repeat intro. inversion H0; inversion H1. subst. apply path_sigT in H6.
-  destruct H6. simpl in *. subst. simpl in *. econstructor. eapply H; eassumption.
+  repeat intro. inversion H0; inversion H1. subst. inversion_sigma_on H6. subst i0.
+  simpl in *. subst. econstructor. eapply H; eassumption.
 Qed.

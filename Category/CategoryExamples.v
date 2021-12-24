@@ -1,6 +1,6 @@
 Require Import Coq.Logic.Eqdep.
 Require Export FormalMath.lib.Coqlib.
-Require Import FormalMath.Algebra.Category.
+Require Import FormalMath.Category.Category.
 Require Import FormalMath.Algebra.Group.
 
 (** * Chapter 1.4 Examples of categories *)
