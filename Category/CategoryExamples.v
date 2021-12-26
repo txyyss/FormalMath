@@ -1,5 +1,3 @@
-Require Import Coq.Logic.Eqdep.
-Require Export FormalMath.lib.Coqlib.
 Require Import FormalMath.Category.Category.
 Require Import FormalMath.Algebra.Group.
 
@@ -123,69 +121,6 @@ Section EMPTY_CATEGORY.
   Proof. constructor; exact Empty_map. Qed.
 
 End EMPTY_CATEGORY.
-
-(** 6: All categories as a category *)
-Section CATEGORIES_AS_CATEGORY.
-
-  Record catObj: Type := {
-      obj:> Type;
-      cat_arrows: Arrows obj;
-      cat_equiv: forall a b: obj, Equiv (a ~> b);
-      cat_catid: CatId obj;
-      cat_catcomp: CatComp obj;
-      cat_category: Category obj
-    }.
-
-  Arguments Build_catObj _ {_ _ _ _ _}.
-  Existing Instance cat_arrows.
-  Hint Extern 0 (Equiv (_ ~> _)) => eapply @cat_equiv : typeclass_instances.
-  Existing Instance cat_catid.
-  Existing Instance cat_catcomp.
-  Existing Instance cat_category.
-
-  Record catArrow (a b: catObj): Type := {
-      cat_map :> obj a -> obj b;
-      cat_Fmap: Fmap cat_map;
-      cat_Functor: Functor cat_map _
-    }.
-
-  Arguments Build_catArrow {_ _} _ {_ _}.
-  Arguments cat_map {_ _} _ _.
-  Arguments cat_Fmap {_ _}.
-  Existing Instance cat_Fmap.
-  Existing Instance cat_Functor.
-
-  Instance catArrows: Arrows catObj := catArrow.
-
-  Instance catEquiv: forall a b: catObj, Equiv (a ~> b) :=
-    fun a b F1 F2 => sigT_relation (@fmapEquiv (obj a) (cat_arrows a)
-                                               (obj b) (cat_arrows b) (cat_equiv b))
-                                   (existT _ (cat_map F1) (cat_Fmap F1))
-                                   (existT _ (cat_map F2) (cat_Fmap F2)).
-
-  Instance catCatId: CatId catObj := fun x => @Build_catArrow x x id _ _.
-
-  Instance catCatComp: CatComp catObj :=
-    fun x y z f g => @Build_catArrow x z (compose f g) _ _.
-
-  Instance catCategory: Category catObj.
-  Proof.
-    constructor; intros.
-    - constructor; repeat intro; unfold equiv, catEquiv in *.
-      + now constructor.
-      + apply sigT_relation_symmetric; auto. apply _.
-      + eapply sigT_relation_transitive; eauto. apply _.
-    - repeat intro. unfold comp, catCatComp. apply path_sigT_relation in H.
-      destruct H, x, y. simpl in *. subst. simpl in *. apply path_sigT_relation in H0.
-      destruct H0, x0, y0. simpl in *. subst. simpl in *.
-      constructor. simpl. unfold fmapEquiv in *. intros.
-      unfold compFmap, fmap, compose. rewrite f0. apply f.
-    - unfold comp, catCatComp. constructor. simpl. unfold fmapEquiv. now intros.
-    - unfold comp, catCatComp. constructor. simpl. unfold fmapEquiv. now intros.
-    - unfold comp, catCatComp. constructor. simpl. unfold fmapEquiv. now intros.
-  Qed.
-
-End CATEGORIES_AS_CATEGORY.
 
 (** * Chapter 1.5 Isomorphisms *)
 

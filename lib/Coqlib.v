@@ -89,9 +89,14 @@ Lemma path_sigT {I: Type} {A: I -> Type} (x y: sigT A) (H: x = y):
 Proof. exists (f_equal _ H). destruct H. easy. Qed.
 
 Lemma path_sigT_relation {I: Type} {A: I -> Type}
-      (RA: forall i, relation (A i)) (x y: sigT A) (H: sigT_relation RA x y):
+      (RA: forall i, relation (A i)) (x y: sigT A):
+  sigT_relation RA x y <->
   {p: projT1 x = projT1 y & RA _ (eq_rect _ A (projT2 x) _ p) (projT2 y) }.
-Proof. inversion H. simpl in *. exists eq_refl. now simpl. Qed.
+Proof.
+  split; intros.
+  - inversion H. simpl in *. exists eq_refl. now simpl.
+  - destruct x, y, H. simpl in *. subst. simpl in *. now constructor.
+Qed.
 
 #[export] Instance sigT_relation_reflexive {I: Type} {A: I -> Type}
  (RA: forall i, relation (A i)) {_: forall i, Reflexive (RA i)}:
