@@ -143,7 +143,7 @@ Section GROUP_AS_CATEGORY.
     - apply one_right.
   Qed.
 
-  Lemma group_arrow_is_iso: forall `(f: x ~> y), iso_arrows f (neg f).
-  Proof. repeat intro. red. split; [apply neg_left | apply neg_right]. Qed.
+  Lemma group_arrow_is_iso: forall `(f: x ~> y), Isomorphism f (neg f).
+  Proof. repeat intro. constructor; [apply neg_left | apply neg_right]. Qed.
 
 End GROUP_AS_CATEGORY.

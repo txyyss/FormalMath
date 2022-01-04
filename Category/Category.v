@@ -111,18 +111,20 @@ Section ISOMORPHISM.
   Context `{Category C}.
 
   (** Definition 1.3 *)
-  Definition iso_arrows `(f: A ~> B) (g: B ~> A): Prop :=
-    g >>> f = cat_id /\ f >>> g = cat_id.
+  Class Isomorphism `(f: A ~> B) (g: B ~> A): Prop := {
+      iso_comp1: g >>> f = cat_id;
+      iso_comp2: f >>> g = cat_id;
+    }.
 
-  Lemma iso_arrows_unique: forall `(f: A ~> B) (g1 g2: B ~> A),
-      iso_arrows f g1 -> iso_arrows f g2 -> g1 = g2.
+  Lemma iso_inverse_unique: forall `(f: A ~> B) (g1 g2: B ~> A),
+      Isomorphism f g1 -> Isomorphism f g2 -> g1 = g2.
   Proof.
     intros. destruct H1, H2. rewrite <- left_identity.
-    rewrite <- H2, <- comp_assoc. rewrite H3. apply right_identity.
+    rewrite <- iso_comp5, <- comp_assoc. rewrite iso_comp4. apply right_identity.
   Qed.
 
-  Lemma iso_arrows_sym: forall `(f: A ~> B) (g: B ~> A),
-      iso_arrows f g -> iso_arrows g f.
+  Lemma isomorphism_sym: forall `(f: A ~> B) (g: B ~> A),
+      Isomorphism f g -> Isomorphism g f.
   Proof. intros. destruct H1. split; auto. Qed.
 
 End ISOMORPHISM.
