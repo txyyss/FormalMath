@@ -22,6 +22,65 @@ Section FUNCTION_CATEGORY.
 
 End FUNCTION_CATEGORY.
 
+(** 2 *)
+Section GROUPS_AS_CATEGORY.
+
+  Record GroupObj: Type := {
+      obj :> Type;
+      go_equiv: Equiv obj;
+      go_op: BinOp obj;
+      go_unit: GrUnit obj;
+      go_neg: Negate obj;
+      go_group: Group obj;
+    }.
+
+  Existing Instances go_equiv go_op go_unit go_neg go_group.
+
+  Record GrpArrow (g1 g2: GroupObj): Type := {
+      ga_map :> obj g1 -> obj g2;
+      gr_hom: Group_Homomorphism ga_map;
+    }.
+
+  Existing Instance gr_hom.
+
+  Instance GrpArrows: Arrows GroupObj := GrpArrow.
+  Arguments ga_map {_ _} _.
+
+  Instance grpCatEq: forall a b: GroupObj, Equiv (a ~> b) :=
+    fun a b H1 H2 => forall (x: obj a), ga_map H1 x == ga_map H2 x.
+
+  Lemma id_grp_hom: forall (g: GroupObj), Group_Homomorphism (@id g).
+  Proof.
+    intros. constructor; try apply _.
+    - constructor; try apply _.
+    - intros. unfold id. auto.
+  Qed.
+
+  Instance grpCatId : CatId GroupObj :=
+    fun x : GroupObj => {| ga_map := id; gr_hom := id_grp_hom x |}.
+
+  Instance grpCatComp: CatComp GroupObj :=
+    fun x y z G1 G2 =>
+      {| ga_map := compose G1 G2; gr_hom := group_hom_compose |}.
+
+  Instance grpCatSetoid: forall (a b: GroupObj), Setoid (a ~> b).
+  Proof.
+    intros. constructor; unfold equiv, grpCatEq; repeat intro; auto.
+    now rewrite H.
+  Qed.
+
+  Instance grpCategory: Category GroupObj.
+  Proof.
+    constructor; intros; try apply _; unfold comp, grpCatComp.
+    - repeat intro. simpl. repeat red in H. repeat red in H0. unfold compose.
+      now rewrite H0, H.
+    - simpl. repeat red. simpl. intros. easy.
+    - simpl. repeat red. simpl. intros. unfold compose, id. auto.
+    - simpl. repeat red. simpl. intros. unfold compose, id. auto.
+  Qed.
+
+End GROUPS_AS_CATEGORY.
+
 (** 4 *)
 Section RELATION_CATEGORY.
 
@@ -125,7 +184,7 @@ End EMPTY_CATEGORY.
 (** * Chapter 1.5 Isomorphisms *)
 
 (** Definition 1.4 *)
-Section GROUP_AS_CATEGORY.
+Section ONE_GROUP_AS_CATEGORY.
 
   Context `{G: Group A}.
 
@@ -146,4 +205,4 @@ Section GROUP_AS_CATEGORY.
   Lemma group_arrow_is_iso: forall `(f: x ~> y), Isomorphism f (neg f).
   Proof. repeat intro. constructor; [apply neg_left | apply neg_right]. Qed.
 
-End GROUP_AS_CATEGORY.
+End ONE_GROUP_AS_CATEGORY.

@@ -177,6 +177,20 @@ Section GROUP_HOMOMORPHISMS_PROP.
     apply preserve_gr_unit.
   Qed.
 
+  Context {C : Type} {Ce : Equiv C} {Cop : BinOp C}
+          {Cunit : GrUnit C} {Cnegate : Negate C}.
+  Context {g : B -> C} `{GH' : !Group_Homomorphism g}.
+
+  Lemma group_hom_compose: Group_Homomorphism (compose g f).
+  Proof.
+    assert (Group A) by now destruct GH.
+    assert (Group B) by now destruct GH.
+    assert (Group C) by now destruct GH'.
+    constructor; try apply _.
+    - apply setoid_morphism_trans; [apply GH | apply GH'].
+    - intros. unfold compose. rewrite !preserve_gr_op. auto.
+  Qed.
+
 End GROUP_HOMOMORPHISMS_PROP.
 
 (****************************** SubGroup ******************************)
