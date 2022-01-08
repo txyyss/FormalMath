@@ -1,3 +1,5 @@
+Require Import Coq.Logic.Classical.
+Require Import Coq.Classes.RelationClasses.
 Require Import FormalMath.Category.Category.
 Require Import FormalMath.Algebra.Group.
 
@@ -6,18 +8,61 @@ Require Import FormalMath.Algebra.Group.
 (** 1 *)
 Section FUNCTION_CATEGORY.
 
-  Instance funArrows: Arrows Type := fun (A B: Type) => A -> B.
-  Instance funExtEq: forall A B: Type, Equiv (A ~> B) :=
-    fun (A B : Type) (f g : A ~> B) => forall x : A, f x == g x.
-  Instance funCatId: CatId Type := fun (A: Type) (x: A) => x.
-  Instance funCatComp: CatComp Type :=
-    fun (A B C : Type) (g : B ~> C) (f : A ~> B) (x : A) => g (f x).
+  Instance funArrows: Arrows Set := fun (A B: Set) => A -> B.
+  Instance funExtEq: forall A B: Set, Equiv (A ~> B) :=
+    fun (A B : Set) (f g : A ~> B) => forall x : A, f x == g x.
+  Instance funCatId: CatId Set := fun (A: Set) (x: A) => x.
+  Instance funCatComp: CatComp Set :=
+    fun (A B C : Set) (g : B ~> C) (f : A ~> B) (x : A) => g (f x).
 
-  Instance funCategory: Category Type.
+  Instance funCategory: Category Set.
   Proof.
     constructor; repeat intro; hnf; unfold comp, funCatComp, cat_id, funCatId; auto.
     - constructor; repeat intro; auto. rewrite H. apply H0.
     - rewrite H0. rewrite H. easy.
+  Qed.
+
+  (** Proposition 2.2 *)
+  Lemma monic_iff_injective: forall {A B: Set} (f: A ~> B),
+      Monomorphism f <-> (forall x y: A, f x == f y -> x == y).
+  Proof.
+    intros. split; repeat intro.
+    - red in H. intros. specialize (H unit (fun _ => x) (fun _ => y)).
+      unfold equiv, funExtEq, comp, funCatComp in H. apply H. 2: exact tt. now intros.
+    - unfold equiv, funExtEq, comp, funCatComp in H0. specialize (H0 x). now apply H.
+  Qed.
+
+  Lemma surjective_is_epic: forall {A B: Set} (f: A ~> B),
+      (forall y: B, exists x, f x == y) -> Epimorphism f.
+  Proof.
+    repeat intro. unfold equiv, funExtEq, comp, funCatComp in H0. specialize (H x).
+    destruct H as [x' ?]. specialize (H0 x'). now rewrite H in H0.
+  Qed.
+
+  Lemma epic_is_surjective: forall {A B: Set} (f: A ~> B),
+      (forall b1 b2: B, {b1 == b2} + {b1 =/= b2}) ->
+      Epimorphism f -> (forall y: B, exists x, f x == y).
+  Proof.
+    intros ? ? ? X ?. repeat red in H. unfold equiv, funExtEq, comp, funCatComp in H.
+    intros. apply NNPP. intro.
+    assert (forall x, f x =/= y). {
+      repeat intro. apply H0. now exists x. } clear H0.
+    specialize (H nat (fun _ => O) (fun x => if (X x y) then 1 else O)). simpl in H.
+    assert (forall x : A, 0 == (if X (f x) y then 1 else 0)). {
+      intros. destruct (X (f x) y); auto. exfalso. now apply (H1 x). }
+    specialize (H H0 y). destruct (X y y). 2: now apply n. inversion H.
+  Qed.
+
+  Instance emptyInitialArrow: InitialArrow Empty_set := fun _ H => match H with end.
+
+  Instance emptyInitial: Initial Empty_set.
+  Proof. repeat intro. destruct x. Qed.
+
+  Instance unitTerminalArrow: TerminalArrow unit := fun _ _ => tt.
+
+  Instance unitTerminal: Terminal unit.
+  Proof.
+    repeat intro. unfold terminal_arrow, unitTerminalArrow. now destruct (f' x).
   Qed.
 
 End FUNCTION_CATEGORY.
@@ -26,18 +71,18 @@ End FUNCTION_CATEGORY.
 Section GROUPS_AS_CATEGORY.
 
   Record GroupObj: Type := {
-      obj :> Type;
-      go_equiv: Equiv obj;
-      go_op: BinOp obj;
-      go_unit: GrUnit obj;
-      go_neg: Negate obj;
-      go_group: Group obj;
+      gr_obj :> Type;
+      go_equiv: Equiv gr_obj;
+      go_op: BinOp gr_obj;
+      go_unit: GrUnit gr_obj;
+      go_neg: Negate gr_obj;
+      go_group: Group gr_obj;
     }.
 
   Existing Instances go_equiv go_op go_unit go_neg go_group.
 
   Record GrpArrow (g1 g2: GroupObj): Type := {
-      ga_map :> obj g1 -> obj g2;
+      ga_map :> gr_obj g1 -> gr_obj g2;
       gr_hom: Group_Homomorphism ga_map;
     }.
 
@@ -47,7 +92,7 @@ Section GROUPS_AS_CATEGORY.
   Arguments ga_map {_ _} _.
 
   Instance grpCatEq: forall a b: GroupObj, Equiv (a ~> b) :=
-    fun a b H1 H2 => forall (x: obj a), ga_map H1 x == ga_map H2 x.
+    fun a b H1 H2 => forall (x: gr_obj a), ga_map H1 x == ga_map H2 x.
 
   Lemma id_grp_hom: forall (g: GroupObj), Group_Homomorphism (@id g).
   Proof.
@@ -84,16 +129,16 @@ End GROUPS_AS_CATEGORY.
 (** 4 *)
 Section RELATION_CATEGORY.
 
-  Instance relArrows: Arrows Type := fun (A B: Type) => A -> B -> Prop.
-  Instance relIff: forall A B: Type, Equiv (A ~> B) :=
-    fun (A B : Type) (f g : A ~> B) => forall a b, f a b <-> g a b.
-  Instance relCatId: CatId Type := fun (A: Type) (x y: A) => x == y.
-  Instance relCatComp: CatComp Type :=
-    fun (A B C : Type) (g : B ~> C) (f : A ~> B) (a : A) (c: C) =>
+  Instance relArrows: Arrows Set := fun (A B: Set) => A -> B -> Prop.
+  Instance relIff: forall A B: Set, Equiv (A ~> B) :=
+    fun (A B : Set) (f g : A ~> B) => forall a b, f a b <-> g a b.
+  Instance relCatId: CatId Set := fun (A: Set) (x y: A) => x == y.
+  Instance relCatComp: CatComp Set :=
+    fun (A B C : Set) (g : B ~> C) (f : A ~> B) (a : A) (c: C) =>
       exists (b : B), f a b /\ g b c.
 
   (** * Chapter 1.9 Exercises 1.(a) *)
-  Instance relCategory: Category Type.
+  Instance relCategory: Category Set.
   Proof.
     constructor; repeat intro; hnf; unfold comp, relCatComp, cat_id, relCatId.
     - constructor; repeat intro.
@@ -115,11 +160,11 @@ Section RELATION_CATEGORY.
   Qed.
 
   (** * Chapter 1.9 Exercises 1.(b) *)
-  Instance setsRelFmap: @Fmap Type funArrows Type relArrows id :=
+  Instance setsRelFmap: @Fmap Set funArrows Set relArrows id :=
     fun _ _ f A B => f A == B.
 
-  Instance setsRelFunc: @Functor Type funArrows funExtEq funCatId funCatComp
-                                 Type relArrows relIff relCatId relCatComp
+  Instance setsRelFunc: @Functor Set funArrows funExtEq funCatId funCatComp
+                                 Set relArrows relIff relCatId relCatComp
                                  id setsRelFmap.
   Proof.
     pose proof funCategory. constructor; try apply _; unfold fmap, setsRelFmap.
@@ -131,11 +176,11 @@ Section RELATION_CATEGORY.
   Qed.
 
   (** * Chapter 1.9 Exercises 1.(c) *)
-  Instance oppoRelFmap: @Fmap Type oppoArrows Type relArrows id :=
+  Instance oppoRelFmap: @Fmap Set oppoArrows Set relArrows id :=
     fun _ _ r => flip r.
 
-  Instance oppoRelFunc: @Functor Type oppoArrows oppoCatEq oppoCatId oppoCatComp
-                                 Type relArrows relIff relCatId relCatComp
+  Instance oppoRelFunc: @Functor Set oppoArrows oppoCatEq oppoCatId oppoCatComp
+                                 Set relArrows relIff relCatId relCatComp
                                  id oppoRelFmap.
   Proof.
     pose proof oppoCategory. constructor; try apply _; unfold fmap, oppoRelFmap, flip.
@@ -180,6 +225,41 @@ Section EMPTY_CATEGORY.
   Proof. constructor; exact Empty_map. Qed.
 
 End EMPTY_CATEGORY.
+
+(** 7 *)
+Section PREORDER_CATEGORY.
+
+  Context `{P: @PreOrder C pord}.
+
+  Instance preorderArrow: Arrows C := fun a b => pord a b.
+  Instance preorderCatEq: forall A B, Equiv (A ~> B) := fun _ _ _ _ => True.
+
+  Instance preorderCatId: CatId C.
+  Proof. repeat intro. apply P. Defined.
+
+  Instance preorderCatComp: CatComp C.
+  Proof.
+    repeat intro. repeat red in X, X0. repeat red.
+    eapply P; eauto.
+  Defined.
+
+  Instance preorderCategory: Category C.
+  Proof.
+    constructor; intros.
+    - constructor; repeat intro; auto.
+    - repeat intro. auto.
+    - unfold equiv, preorderCatEq. auto.
+    - unfold equiv, preorderCatEq. auto.
+    - unfold equiv, preorderCatEq. auto.
+  Qed.
+
+  Lemma preorder_monic: forall `(f: A ~> B), Monomorphism f.
+  Proof. intros. repeat intro. auto. Qed.
+
+  Lemma preorder_epic: forall `(f: A ~> B), Epimorphism f.
+  Proof. intros. repeat intro. auto. Qed.
+
+End PREORDER_CATEGORY.
 
 (** * Chapter 1.5 Isomorphisms *)
 

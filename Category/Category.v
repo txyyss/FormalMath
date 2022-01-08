@@ -127,7 +127,73 @@ Section ISOMORPHISM.
       Isomorphism f g -> Isomorphism g f.
   Proof. intros. destruct H1. split; auto. Qed.
 
+  Definition isomorphic (A B: C) := exists (f: A ~> B) (g: B ~> A), Isomorphism f g.
+
 End ISOMORPHISM.
+
+Infix "~=~" := isomorphic (at level 90, no associativity): math_scope.
+
+(** * Chapter 2.1 Epis and monos *)
+
+Section EPIS_MONOS.
+
+  Context `{Category C}.
+
+  (** Definition 2.1 *)
+  Class Monomorphism `(f: A ~> B): Prop :=
+    mono_comp: forall {D: C} (g h: D ~> A), f >>> g = f >>> h -> g = h.
+
+  Class Epimorphism `(f: A ~> B): Prop :=
+    epi_comp: forall {D: C} (i j: B ~> D), i >>> f = j >>> f -> i = j.
+
+  Lemma id_monic_epic: forall `(f: A ~> B) (g: B ~> A),
+      g >>> f = cat_id -> Monomorphism f /\ Epimorphism g.
+  Proof.
+    intros. split; repeat intro.
+    - rewrite <- left_identity. rewrite <- (left_identity h).
+      rewrite <- H1. rewrite <- comp_assoc. rewrite H2. apply comp_assoc.
+    - rewrite <- right_identity. rewrite <- (right_identity j).
+      rewrite <- H1. rewrite !comp_assoc. now rewrite H2.
+  Qed.
+
+  (** Proposition 2.6 *)
+  Lemma iso_monic_epic: forall `(f: A ~> B) (g: B ~> A),
+      Isomorphism f g -> Monomorphism f /\ Epimorphism f.
+  Proof.
+    intros. destruct (id_monic_epic f g iso_comp1).
+    destruct (id_monic_epic g f iso_comp2). now split.
+  Qed.
+
+End EPIS_MONOS.
+
+(** * Chapter 2.1 Initial and terminal objects *)
+Section INITIAL_TERMINAL.
+
+  Context `{Category C}.
+
+  Class InitialArrow (o: C): Type := initial_arrow: forall c, o ~> c.
+
+  Class Initial (o: C) `{InitialArrow o}: Prop :=
+    initial_arrow_unique: forall c f', f' = initial_arrow c.
+
+  Class TerminalArrow (o: C): Type := terminal_arrow: forall c, c ~> o.
+
+  Class Terminal (o: C) `{TerminalArrow o}: Prop :=
+    terminal_arrow_unique: forall c f', f' = terminal_arrow c.
+
+  Lemma initial_unique_iso: forall `(Initial o1) `(Initial o2), o1 ~=~ o2.
+  Proof.
+    intros. exists (initial_arrow o2). exists (initial_arrow o1).
+    constructor; rewrite initial_arrow_unique; symmetry; apply initial_arrow_unique.
+  Qed.
+
+  Lemma terminal_unique_iso: forall `(Terminal o1) `(Terminal o2), o1 ~=~ o2.
+  Proof.
+    intros. exists (terminal_arrow o1). exists (terminal_arrow o2).
+    constructor; rewrite terminal_arrow_unique; symmetry; apply terminal_arrow_unique.
+  Qed.
+
+End INITIAL_TERMINAL.
 
 (** * Chapter 1.6 Constructions on categories *)
 
