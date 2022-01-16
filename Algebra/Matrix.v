@@ -1067,7 +1067,7 @@ Qed.
 Lemma vec_dot_prod_unique: forall {n} (v1 v2: Vector n),
     (forall u, vec_dot_prod v1 u = vec_dot_prod v2 u) -> v1 = v2.
 Proof.
-  intros. revert H. apply dep_list_ind_2 with (v3 := v1) (v2 := v2); intros. 1: easy.
+  intros. revert H. apply dep_list_ind_2 with (v1 := v1) (v2 := v2); intros. 1: easy.
   f_equal.
   - specialize (H0 (dep_cons 1%R vec_zero)). autorewrite with vector in H0.
     now rewrite !Rplus_0_r, !Rmult_1_r in H0.

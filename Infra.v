@@ -33,7 +33,7 @@ Ltac exist_proj1 :=
 
 Class Equiv A := equiv : relation A.
 
-Typeclasses Transparent Equiv.
+#[global] Typeclasses Transparent Equiv.
 
 Infix "=" := equiv : type_scope.
 
@@ -100,7 +100,7 @@ Class Cast A B := cast: A -> B.
 Arguments cast _ _ {Cast} _.
 Notation "' x" := (cast _ _ x) (at level 20) : math_scope.
 #[export] Instance: Params (@cast) 3. Defined.
-Typeclasses Transparent Cast.
+#[global] Typeclasses Transparent Cast.
 
 Definition Cardinals (A : Type) `{s : Setoid A} (n: nat) : Prop :=
   exists l, NoDupA Ae l /\ length l == n /\ forall x: A, InA Ae x l.
@@ -120,7 +120,7 @@ Definition SetoidFinite (A: Type) `{s: Setoid A} : Prop := exists n, Cardinals A
 
 Class Inverse `(A -> B) : Type := inverse: B -> A.
 Arguments inverse {A B} _ {Inverse} _.
-Typeclasses Transparent Inverse.
+#[global] Typeclasses Transparent Inverse.
 
 Section JECTIONS.
 

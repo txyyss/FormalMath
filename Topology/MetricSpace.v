@@ -6,7 +6,7 @@ Require Import FormalMath.Topology.TopologicalSpace.
 Local Open Scope R_scope.
 
 Class DistanceFunc (A: Type) := d: A -> A -> R.
-Typeclasses Transparent DistanceFunc.
+#[global] Typeclasses Transparent DistanceFunc.
 
 Class Metric (A: Type) {DF: DistanceFunc A}: Prop :=
   {

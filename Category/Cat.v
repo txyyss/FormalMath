@@ -1,10 +1,10 @@
 Require Export FormalMath.lib.Coqlib.
 Require Import FormalMath.Category.Category.
+Require Import FormalMath.Category.CategoryExamples.
 Require Import Coq.Logic.FunctionalExtensionality.
 Require Import Coq.Logic.Eqdep.
 
-(** * Chapter 1.4 Examples of categories *)
-(** 6: All categories as a category *)
+(** Chapter 1.4.6: All categories as a category *)
 Record CatObj: Type := {
     obj:> Type;
     cat_arrows: Arrows obj;
@@ -130,3 +130,59 @@ Section SLICE_TO_ARROW_FUNCTOR.
   Abort.
 
 End SLICE_TO_ARROW_FUNCTOR.
+
+(** Example 2.11.2 *)
+Section INITIAL_TERMINAL.
+
+  Definition emptyCatObj : CatObj :=
+    @Build_CatObj Empty_set emptyArrows emptyEq emptyCatId emptyCatComp emptyCategory.
+
+  Definition toAny (c: CatObj) (s: obj emptyCatObj) : obj c.
+  Proof. destruct s. Defined.
+
+  Definition toAnyFmap (c: CatObj): Fmap (toAny c).
+  Proof. repeat intro. destruct v. Defined.
+
+  Instance emptyCatInitArrow : InitialArrow emptyCatObj.
+  Proof.
+    repeat intro. exists (toAny c) (toAnyFmap c). constructor; try apply _.
+    - intros. destruct a.
+    - intros. destruct a.
+    - intros. destruct x.
+  Defined.
+
+  Instance emptyCatInitial: Initial emptyCatObj.
+  Proof.
+    repeat intro. repeat red. unfold initial_arrow.
+    unfold emptyCatInitArrow. simpl. apply path_sigT_relation. simpl.
+    assert (cat_map f' == toAny c). { extensionality x. destruct x. } exists H.
+    red. intros. destruct v.
+  Qed.
+
+  Definition unitCatObj : CatObj :=
+    @Build_CatObj unit unitArrows unitEq unitCatId unitCatComp unitCategory.
+
+  Definition fromAny (c: CatObj) (x: obj c): obj unitCatObj := tt.
+
+  Definition fromAnyFmap (c: CatObj): Fmap (fromAny c) := fun _ _ _ => tt.
+
+  Instance unitCatTermArrow: TerminalArrow unitCatObj.
+  Proof.
+    repeat intro. exists (fromAny c) (fromAnyFmap c). constructor; try apply _.
+    - intros. constructor; try apply _. repeat intro. reflexivity.
+    - intros. reflexivity.
+    - intros. reflexivity.
+  Defined.
+
+  Instance unitTerminal: Terminal unitCatObj.
+  Proof.
+    repeat intro. repeat red. unfold terminal_arrow. unfold unitCatTermArrow. simpl.
+    apply path_sigT_relation. simpl.
+    assert (cat_map f' == fromAny c). {
+      extensionality x. destruct (f' x). destruct (fromAny c x). easy. }
+    exists H. unfold fmapEquiv. intros. unfold fromAnyFmap.
+    destruct (@eq_rect (c -> unit) f' (@Fmap _ _ _ unitArrows)
+                       (cat_Fmap f') (fromAny c) H v w ar). easy.
+  Qed.
+
+End INITIAL_TERMINAL.

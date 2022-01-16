@@ -5,7 +5,7 @@ Require Import FormalMath.Algebra.Group.
 
 (** * Chapter 1.4 Examples of categories *)
 
-(** 1 *)
+(** Chapter 1.4.1 *)
 Section FUNCTION_CATEGORY.
 
   Instance funArrows: Arrows Set := fun (A B: Set) => A -> B.
@@ -53,6 +53,7 @@ Section FUNCTION_CATEGORY.
     specialize (H H0 y). destruct (X y y). 2: now apply n. inversion H.
   Qed.
 
+  (** Example 2.11.1 *)
   Instance emptyInitialArrow: InitialArrow Empty_set := fun _ H => match H with end.
 
   Instance emptyInitial: Initial Empty_set.
@@ -67,7 +68,7 @@ Section FUNCTION_CATEGORY.
 
 End FUNCTION_CATEGORY.
 
-(** 2 *)
+(** Chapter 1.4.2 *)
 Section GROUPS_AS_CATEGORY.
 
   Record GroupObj: Type := {
@@ -126,7 +127,7 @@ Section GROUPS_AS_CATEGORY.
 
 End GROUPS_AS_CATEGORY.
 
-(** 4 *)
+(** Chapter 1.4.4 *)
 Section RELATION_CATEGORY.
 
   Instance relArrows: Arrows Set := fun (A B: Set) => A -> B -> Prop.
@@ -193,7 +194,7 @@ Section RELATION_CATEGORY.
 
 End RELATION_CATEGORY.
 
-(** 5: category 1 *)
+(** Chapter 1.4.5: category 1 *)
 Section UNIT_CATEGORY.
 
   Instance unitArrows: Arrows unit := fun _ _ => unit.
@@ -210,7 +211,7 @@ Section UNIT_CATEGORY.
 
 End UNIT_CATEGORY.
 
-(** 5: category 0 *)
+(** Chapter 1.4.5: category 0 *)
 Section EMPTY_CATEGORY.
 
   Definition Empty_map {A: Empty_set -> Type} : forall x : Empty_set, A x :=
@@ -226,7 +227,7 @@ Section EMPTY_CATEGORY.
 
 End EMPTY_CATEGORY.
 
-(** 7 *)
+(** Chapter 1.4.7 *)
 Section PREORDER_CATEGORY.
 
   Context `{P: @PreOrder C pord}.

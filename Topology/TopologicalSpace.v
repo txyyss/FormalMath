@@ -7,7 +7,7 @@ Require Import FormalMath.lib.FiniteType.
 Require Import Coq.Logic.ClassicalChoice.
 
 Class OpenSet (A: Type) := open: Ensemble A -> Prop.
-Typeclasses Transparent OpenSet.
+#[global] Typeclasses Transparent OpenSet.
 
 Class TopologicalSpace (A: Type) {Ao: OpenSet A} : Prop :=
   {

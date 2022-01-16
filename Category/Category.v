@@ -6,7 +6,7 @@ Require Export FormalMath.Infra.
 (** * Chapter 1.3 Definition of a category *)
 
 Class Arrows (O: Type): Type := Arrow: O -> O -> Type.
-Typeclasses Transparent Arrows.
+#[global] Typeclasses Transparent Arrows.
 Infix "~>" := Arrow (at level 90, right associativity): math_scope.
 
 Class CatId O `{Arrows O} := cat_id: forall x, x ~> x.
@@ -60,7 +60,7 @@ Section FUNCTOR.
 
 End FUNCTOR.
 
-Typeclasses Transparent Fmap.
+#[global] Typeclasses Transparent Fmap.
 
 Section IDENTITY_FUNCTOR.
 
@@ -166,13 +166,14 @@ Section EPIS_MONOS.
 
 End EPIS_MONOS.
 
-(** * Chapter 2.1 Initial and terminal objects *)
+(** * Chapter 2.2 Initial and terminal objects *)
 Section INITIAL_TERMINAL.
 
   Context `{Category C}.
 
   Class InitialArrow (o: C): Type := initial_arrow: forall c, o ~> c.
 
+  (** Definition 2.9 *)
   Class Initial (o: C) `{InitialArrow o}: Prop :=
     initial_arrow_unique: forall c f', f' = initial_arrow c.
 
@@ -181,6 +182,7 @@ Section INITIAL_TERMINAL.
   Class Terminal (o: C) `{TerminalArrow o}: Prop :=
     terminal_arrow_unique: forall c f', f' = terminal_arrow c.
 
+  (** Proposition 2.10 *)
   Lemma initial_unique_iso: forall `(Initial o1) `(Initial o2), o1 ~=~ o2.
   Proof.
     intros. exists (initial_arrow o2). exists (initial_arrow o1).
