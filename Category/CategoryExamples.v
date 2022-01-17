@@ -177,12 +177,12 @@ Section RELATION_CATEGORY.
   Qed.
 
   (** * Chapter 1.9 Exercises 1.(c) *)
-  Instance oppoRelFmap: @Fmap Set oppoArrows Set relArrows id :=
+  Instance oppoRelFmap: @Fmap (CatOp Set) oppoArrows Set relArrows catop_rep :=
     fun _ _ r => flip r.
 
-  Instance oppoRelFunc: @Functor Set oppoArrows oppoCatEq oppoCatId oppoCatComp
+  Instance oppoRelFunc: @Functor (CatOp Set) _ _ _ _
                                  Set relArrows relIff relCatId relCatComp
-                                 id oppoRelFmap.
+                                 catop_rep oppoRelFmap.
   Proof.
     pose proof oppoCategory. constructor; try apply _; unfold fmap, oppoRelFmap, flip.
     - intros. constructor; try apply _. repeat intro.

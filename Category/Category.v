@@ -199,7 +199,7 @@ End INITIAL_TERMINAL.
 
 (** * Chapter 1.6 Constructions on categories *)
 
-(** 1: product category *)
+(** Chapter 1.6.1: product category *)
 Section PRODUCT_CATEGORY.
 
   Context `{Category C} `{Category D}.
@@ -250,33 +250,69 @@ Section PRODUCT_CATEGORY.
 
 End PRODUCT_CATEGORY.
 
-(** 2: opposite category *)
+(** Chapter 1.6.2: opposite category *)
 Section OPPOSITE_CATEGORY.
 
   Context `{@Category C ArrowsC CatEquivC CatIdC CatCompC}.
 
-  Instance oppoArrows: Arrows C := flip ArrowsC.
-  Instance oppoCatEq: forall A B: C, Equiv (oppoArrows A B) :=
-    fun A B => CatEquivC B A.
-  Instance oppoCatId: @CatId C oppoArrows := CatIdC.
-  Instance oppoCatComp: @CatComp C oppoArrows := fun a b c => flip (CatCompC c b a).
-  Instance oppoCatSetoid: forall A B: C, Setoid (oppoArrows A B).
-  Proof. intros. change (Setoid (ArrowsC B A)). apply arrow_equiv. Qed.
+  Inductive CatOp A := catop_inject: A -> CatOp A.
+  Arguments catop_inject {_} _.
 
-  Lemma oppoCategory: @Category C oppoArrows oppoCatEq oppoCatId oppoCatComp.
+  #[export] Instance catop_rep {A}: Cast (CatOp A) A :=
+    fun x => match x with catop_inject x => x end.
+
+  #[export] Instance oppoArrows: Arrows (CatOp C) := fun a b => ' b ~> ' a.
+  #[export] Instance oppoCatEq: forall A B: (CatOp C), Equiv (oppoArrows A B) :=
+    fun A B => CatEquivC (' B) (' A).
+  #[export] Instance oppoCatId: CatId (CatOp C) := fun x => CatIdC (' x).
+  #[export] Instance oppoCatComp: CatComp (CatOp C) :=
+    fun a b c => flip (CatCompC (' c) (' b) (' a)).
+  #[export] Instance oppoCatSetoid: forall A B: (CatOp C), Setoid (oppoArrows A B).
+  Proof. intros. change (Setoid (ArrowsC (' B) (' A))). apply arrow_equiv. Qed.
+
+  #[export] Instance oppoCategory: Category (CatOp C).
   Proof.
     constructor; try apply _; intros; unfold comp, oppoCatComp, Arrow,
-      oppoArrows, cat_id, oppoCatId, equiv, oppoCatEq,  flip.
-    - repeat intro. change (CatCompC c b a x0 x = CatCompC c b a y0 y).
-      now apply comp_proper.
+      oppoArrows, cat_id, oppoCatId, equiv, oppoCatEq, flip.
+    - repeat intro. change (CatCompC (' c) (' b) (' a) x0 x =
+                              CatCompC (' c) (' b) (' a) y0 y). now rewrite H1, H0.
     - symmetry. apply comp_assoc.
     - apply right_identity.
     - apply left_identity.
   Qed.
 
+  Section INITIAL_TERMINAL_DUAL.
+
+    Parameter (o: C).
+    Context `{!InitialArrow o}.
+
+    Instance oppoTermArrow: TerminalArrow (catop_inject o).
+    Proof. repeat intro. repeat red. exact (initial_arrow (' c)). Defined.
+
+    Lemma initial_op_terminal: Initial o -> Terminal (catop_inject o).
+    Proof.
+      intros. repeat red. repeat red in H0.
+      unfold Arrow, oppoArrows, terminal_arrow, oppoTermArrow, cast.
+      simpl. intros. apply H0.
+    Qed.
+
+    Context `{!TerminalArrow o}.
+
+    Instance oppoInitArrow: InitialArrow (catop_inject o).
+    Proof. repeat intro. repeat red. exact (terminal_arrow (' c)). Defined.
+
+    Lemma terminal_op_initial: Terminal o -> Initial (catop_inject o).
+    Proof.
+      intros. repeat red. repeat red in H0.
+      unfold Arrow, oppoArrows, terminal_arrow, oppoTermArrow, cast.
+      simpl. intros. apply H0.
+    Qed.
+
+  End INITIAL_TERMINAL_DUAL.
+
 End OPPOSITE_CATEGORY.
 
-(** 3: arrow category *)
+(** Chapter 1.6.3: arrow category *)
 Section ARROW_CATEGORY.
 
   Context `{Category C}.
@@ -382,7 +418,7 @@ Section ARROW_CATEGORY.
 
 End ARROW_CATEGORY.
 
-(** 4: slice category *)
+(** Chapter 1.6.4: slice category *)
 Section SLICE_CATEGORY.
 
   Context `{Category C}.
@@ -484,7 +520,7 @@ Section SLICE_CATEGORY.
 
 End SLICE_CATEGORY.
 
-(** 4: coslice category *)
+(** Chapter 1.6.4: coslice category *)
 Section COSLICE_CATEGORY.
 
   Context `{Category C}.
