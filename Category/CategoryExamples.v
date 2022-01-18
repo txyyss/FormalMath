@@ -2,6 +2,7 @@ Require Import Coq.Logic.Classical.
 Require Import Coq.Classes.RelationClasses.
 Require Import FormalMath.Category.Category.
 Require Import FormalMath.Algebra.Group.
+Require Import FormalMath.Algebra.GroupExample.
 
 (** * Chapter 1.4 Examples of categories *)
 
@@ -93,7 +94,7 @@ Section GROUPS_AS_CATEGORY.
   Arguments ga_map {_ _} _.
 
   Instance grpCatEq: forall a b: GroupObj, Equiv (a ~> b) :=
-    fun a b H1 H2 => forall (x: gr_obj a), ga_map H1 x == ga_map H2 x.
+    fun a b H1 H2 => forall (x: gr_obj a), ga_map H1 x = ga_map H2 x.
 
   Lemma id_grp_hom: forall (g: GroupObj), Group_Homomorphism (@id g).
   Proof.
@@ -111,19 +112,45 @@ Section GROUPS_AS_CATEGORY.
 
   Instance grpCatSetoid: forall (a b: GroupObj), Setoid (a ~> b).
   Proof.
-    intros. constructor; unfold equiv, grpCatEq; repeat intro; auto.
-    now rewrite H.
+    intros. constructor; unfold equiv, grpCatEq; repeat intro; auto;
+      rewrite H; [|rewrite H0]; easy.
   Qed.
 
   Instance grpCategory: Category GroupObj.
   Proof.
     constructor; intros; try apply _; unfold comp, grpCatComp.
-    - repeat intro. simpl. repeat red in H. repeat red in H0. unfold compose.
+    - repeat intro. simpl. do 2 red in H. do 2 red in H0. unfold compose.
       now rewrite H0, H.
-    - simpl. repeat red. simpl. intros. easy.
-    - simpl. repeat red. simpl. intros. unfold compose, id. auto.
-    - simpl. repeat red. simpl. intros. unfold compose, id. auto.
+    - simpl. do 2 red. simpl. intros. easy.
+    - simpl. do 2 red. simpl. intros. unfold compose, id. auto.
+    - simpl. do 2 red. simpl. intros. unfold compose, id. auto.
   Qed.
+
+  (** Example 2.11.3 *)
+  Definition unitGrpObj: GroupObj := Build_GroupObj unit _ _ _ _ _.
+
+  Instance unitGrpInitArrow: InitialArrow unitGrpObj.
+  Proof.
+    repeat intro. exists (fun _ => one). constructor; try apply _.
+    - constructor; try apply _.
+    - repeat intro. rewrite one_left. easy.
+  Defined.
+
+  Instance unitGrpInitial: Initial unitGrpObj.
+  Proof.
+    intros c f'. intro. destruct f' as [f' ?H]. simpl.
+    destruct x. change tt with (one: unit). apply preserve_gr_unit.
+  Qed.
+
+  Instance unitGrpTermArrow: TerminalArrow unitGrpObj.
+  Proof.
+    repeat intro. exists (fun _ => tt). constructor; try apply _.
+    - constructor; try apply _. repeat intro. auto.
+    - intros. now vm_compute.
+  Defined.
+
+  Instance unitGrpTerminal: Terminal unitGrpObj.
+  Proof. repeat intro. destruct f'. simpl. destruct ga_map0. easy. Qed.
 
 End GROUPS_AS_CATEGORY.
 
