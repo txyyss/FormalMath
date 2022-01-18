@@ -491,6 +491,27 @@ Section SLICE_CATEGORY.
       cbn in f, g. destruct g as [fg ?H]. destruct f as [ff ?H]. cbn. easy.
   Qed.
 
+  (** Example 2.11.6 *)
+  Section SLICE_TERMINAL.
+    Context {c: C}.
+
+    Definition idSlice: (sliceObj c) := existT (fun dom : C => dom ~> c) c cat_id.
+
+    Instance idTermArrow: TerminalArrow idSlice.
+    Proof.
+      repeat intro. destruct c0 as [A fA]. do 2 red. unfold idSlice.
+      exists fA. apply left_identity.
+    Defined.
+
+    Instance idSliceTerminal: Terminal idSlice.
+    Proof.
+      repeat intro. destruct c0 as [A fA]. repeat red in f'. destruct f' as [fab ?H].
+      do 2 red. unfold idSlice. unfold terminal_arrow, idTermArrow. rewrite <- H1.
+      symmetry. apply left_identity.
+    Qed.
+
+  End SLICE_TERMINAL.
+
   Section SLICE_COMP_FUNCTOR.
 
     Context {c d: C} {g: c ~> d}.
@@ -574,6 +595,22 @@ Section COSLICE_CATEGORY.
       cbn. apply left_identity.
     - destruct a as [a fa]. destruct b as [b fb]. cbn in f. destruct f as [f ?].
       cbn. apply right_identity.
+  Qed.
+
+  (** Example 2.11.6 *)
+  Definition idCoslice: cosliceObj := existT (fun dom : C => o ~> dom) o cat_id.
+
+  Instance idInitArrow: InitialArrow idCoslice.
+  Proof.
+    repeat intro. destruct c as [A fA]. do 2 red. unfold idCoslice.
+    exists fA. apply right_identity.
+  Defined.
+
+  Instance idSliceInitial: Initial idCoslice.
+  Proof.
+    repeat intro. destruct c as [A fA]. repeat red in f'. destruct f' as [fab ?H].
+    do 2 red. unfold idCoslice. do 2 red. rewrite <- H1.
+    symmetry. apply right_identity.
   Qed.
 
 End COSLICE_CATEGORY.
