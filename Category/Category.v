@@ -66,6 +66,15 @@ Section IDENTITY_FUNCTOR.
 
   Context `{Category C}.
 
+  (** Example 2.12.3 *)
+  Lemma arrow_eq_iff: forall {c d: C} (f g: c ~> d),
+      f = g <-> forall {X: C} (x: X ~> c), f >>> x = g >>> x.
+  Proof.
+    intros. split; intros.
+    - now rewrite H1.
+    - specialize (H1 _ cat_id). now rewrite !right_identity in H1.
+  Qed.
+
   #[global] Instance idFmap: Fmap id := fun _ _ => id.
 
   #[global] Instance idFunctor: Functor (id: C -> C) _.

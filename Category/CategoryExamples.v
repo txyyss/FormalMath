@@ -4,6 +4,9 @@ Require Import FormalMath.Category.Category.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.GroupExample.
 
+Definition Empty_map {A: Empty_set -> Type} : forall x : Empty_set, A x :=
+  fun x => match x with end.
+
 (** * Chapter 1.4 Examples of categories *)
 
 (** Chapter 1.4.1 *)
@@ -55,7 +58,7 @@ Section FUNCTION_CATEGORY.
   Qed.
 
   (** Example 2.11.1 *)
-  Instance emptyInitialArrow: InitialArrow Empty_set := fun _ H => match H with end.
+  Instance emptyInitialArrow: InitialArrow Empty_set := fun _ => Empty_map.
 
   Instance emptyInitial: Initial Empty_set.
   Proof. repeat intro. destruct x. Qed.
@@ -90,7 +93,7 @@ Section GROUPS_AS_CATEGORY.
 
   Existing Instance gr_hom.
 
-  Instance GrpArrows: Arrows GroupObj := GrpArrow.
+  Instance grpArrows: Arrows GroupObj := GrpArrow.
   Arguments ga_map {_ _} _.
 
   Instance grpCatEq: forall a b: GroupObj, Equiv (a ~> b) :=
@@ -152,7 +155,94 @@ Section GROUPS_AS_CATEGORY.
   Instance unitGrpTerminal: Terminal unitGrpObj.
   Proof. repeat intro. destruct f'. simpl. destruct ga_map0. easy. Qed.
 
+  (** Example 2.12.2 *)
+  Lemma grp_not_enough_points: forall `(h: M ~> N) (j: M ~> N) (x: unitGrpObj ~> M),
+      h >>> x = j >>> x.
+  Proof.
+    intros. do 2 red. intro y. unfold comp, grpCatComp, compose. simpl.
+    destruct y. change tt with (@one unit unitGrUnit). now rewrite !preserve_gr_unit.
+  Qed.
+
 End GROUPS_AS_CATEGORY.
+
+(** Chapter 1.4.3 *)
+Section POS_CATEGORY.
+
+  Record PosObj: Type := {
+      pos_obj :> Type;
+      pos_rel : relation pos_obj;
+      pos_refl : forall a, pos_rel a a;
+      pos_trans : forall a b c, pos_rel a b -> pos_rel b c -> pos_rel a c;
+      pos_antisym : forall a b, pos_rel a b -> pos_rel b a -> a == b;
+    }.
+
+  Record PosArrow (p1 p2: PosObj): Type := {
+      pos_fun :> pos_obj p1 -> pos_obj p2;
+      pos_mono : forall a b, pos_rel p1 a b -> pos_rel p2 (pos_fun a) (pos_fun b);
+    }.
+
+  Instance posArrows: Arrows PosObj := PosArrow.
+
+  Instance posCatEq: forall a b: PosObj, Equiv (a ~> b) :=
+    fun a b H1 H2 => forall (x: pos_obj a), H1 x == H2 x.
+
+  Instance posCatId: CatId PosObj.
+  Proof. repeat intro. exists id. intros. apply H. Defined.
+
+  Instance posCatComp: CatComp PosObj.
+  Proof.
+    repeat intro. exists (compose X X0). intros. unfold compose. now apply X, X0.
+  Defined.
+
+  Instance posCatSetoid: forall (a b: PosObj), Setoid (a ~> b).
+  Proof.
+    intros. constructor; unfold equiv, posCatEq; repeat intro; auto.
+    rewrite H, H0; easy.
+  Qed.
+
+  Instance posCategory: Category PosObj.
+  Proof.
+    constructor; intros; try apply _; unfold comp, posCatComp.
+    - repeat intro. simpl. unfold compose. now rewrite H0, H.
+    - simpl. do 2 red. simpl. intros. easy.
+    - simpl. do 2 red. simpl. intros. unfold compose, id. auto.
+    - simpl. do 2 red. simpl. intros. unfold compose, id. auto.
+  Qed.
+
+  Definition emptyPos: PosObj.
+  Proof. exists Empty_set Empty_map; intro a; destruct a. Defined.
+
+  Instance emptyPosInitArrow: InitialArrow emptyPos.
+  Proof. intro. exists Empty_map. exact Empty_map. Qed.
+
+  Instance emptyPosInitial: Initial emptyPos.
+  Proof. repeat intro. destruct x. Qed.
+
+  Definition unitPos: PosObj.
+  Proof. exists unit eq; intros; auto. transitivity b; auto. Defined.
+
+  Instance unitPosTermArrow: TerminalArrow unitPos.
+  Proof. intro. exists (fun _ => tt). repeat intro. easy. Defined.
+
+  Instance unitPosTerminal: Terminal unitPos.
+  Proof.
+    repeat intro. unfold terminal_arrow, unitPosTermArrow. simpl.
+    destruct (f' x). easy.
+  Qed.
+
+  (** Example 2.12.1 *)
+  Lemma pos_enough_points:
+    forall  `(f: P ~> Q) (g: P ~> Q), f = g <-> forall (x: unitPos ~> P), f >>> x = g >>> x.
+  Proof.
+    intros. split; intros.
+    - rewrite H. auto.
+    - repeat red. intros. repeat red in H. unfold comp, posCatComp, compose in H.
+      simpl in H. specialize (H (Build_PosArrow unitPos P (fun _ => x)
+                                                (fun _ _ _ => pos_refl P x)) tt).
+      now simpl in H.
+  Qed.
+
+End POS_CATEGORY.
 
 (** Chapter 1.4.4 *)
 Section RELATION_CATEGORY.
@@ -241,9 +331,6 @@ End UNIT_CATEGORY.
 (** Chapter 1.4.5: category 0 *)
 Section EMPTY_CATEGORY.
 
-  Definition Empty_map {A: Empty_set -> Type} : forall x : Empty_set, A x :=
-    fun x => match x with end.
-
   Instance emptyArrows: Arrows Empty_set := Empty_map.
   Instance emptyCatId: CatId Empty_set := Empty_map.
   Instance emptyCatComp: CatComp Empty_set := Empty_map.
@@ -281,6 +368,7 @@ Section PREORDER_CATEGORY.
     - unfold equiv, preorderCatEq. auto.
   Qed.
 
+  (** Example 2.4 *)
   Lemma preorder_monic: forall `(f: A ~> B), Monomorphism f.
   Proof. intros. repeat intro. auto. Qed.
 
@@ -288,6 +376,35 @@ Section PREORDER_CATEGORY.
   Proof. intros. repeat intro. auto. Qed.
 
 End PREORDER_CATEGORY.
+
+(** Chapter 1.4.8 *)
+Section POSET_CATEGORY.
+
+  Context `{P: @PartialOrder C eqC eqC_eqv pord pord_pre}.
+
+  Instance posetArrow: Arrows C := fun a b => pord a b.
+  Instance posetCatEq: forall A B, Equiv (A ~> B) := fun _ _ _ _ => True.
+
+  Instance posetCatId: CatId C.
+  Proof. repeat intro. apply pord_pre. Defined.
+
+  Instance posetCatComp: CatComp C.
+  Proof.
+    repeat intro. repeat red in X, X0. repeat red.
+    eapply pord_pre; eauto.
+  Defined.
+
+  Instance posetCategory: Category C.
+  Proof.
+    constructor; intros.
+    - constructor; repeat intro; auto.
+    - repeat intro. auto.
+    - unfold equiv, posetCatEq. auto.
+    - unfold equiv, posetCatEq. auto.
+    - unfold equiv, posetCatEq. auto.
+  Qed.
+
+End POSET_CATEGORY.
 
 (** * Chapter 1.5 Isomorphisms *)
 
