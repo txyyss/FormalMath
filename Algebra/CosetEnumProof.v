@@ -1,4 +1,5 @@
 Require Import Coq.Classes.EquivDec.
+Require Import Coq.Arith.Arith_base.
 Require Import Coq.PArith.PArith.
 Require Import Coq.micromega.Lia.
 Require Import FormalMath.Algebra.FreeGroup.
@@ -42,14 +43,14 @@ Section FIN_GEN_REP_PROOFS.
   Proof.
     intro x. induction l; intros. 1: simpl; inversion H.
     Opaque nth. simpl. if_tac. Transparent nth.
-    - simpl. rewrite PeanoNat.Nat.sub_diag. rewrite e. reflexivity.
+    - simpl. rewrite Nat.sub_diag. rewrite e. reflexivity.
     - compute in c. simpl in H. destruct H. 1: exfalso; auto.
       specialize (IHl (Pos.succ n) a0 H). rewrite <- IHl at 2.
       rewrite Pos2Nat.inj_succ. simpl.
       destruct ((Pos.to_nat (a2p_helper x l (Pos.succ n)) - Pos.to_nat n)%nat) eqn: ?.
-      + rewrite PeanoNat.Nat.sub_0_le in Heqn0. exfalso.
+      + rewrite Nat.sub_0_le in Heqn0. exfalso.
         pose proof (a2p_helper_low x l (Pos.succ n)). lia.
-      + rewrite PeanoNat.Nat.sub_succ_r, Heqn0, PeanoNat.Nat.pred_succ. reflexivity.
+      + rewrite Nat.sub_succ_r, Heqn0, Nat.pred_succ. reflexivity.
   Qed.
 
   Lemma a2p_heler_nth: forall x l n a,
@@ -94,7 +95,7 @@ Section FIN_GEN_REP_PROOFS.
       intros. rewrite H, <- a2p_helper_In. apply fg_gens_all. } destruct x.
     - if_tac.
       + rewrite Pos.leb_le, H, <- a2p_helper_In in Heqb.
-        rewrite Minus.pred_of_minus, nth_a2p_helper; auto.
+        rewrite <- Nat.sub_1_r, nth_a2p_helper; auto.
       + rewrite Pos.leb_nle in Heqb. exfalso. apply Heqb. apply H0.
     - pose proof (Pos.mul_xI_r 1 fg_size).
       rewrite !Pos.mul_1_l, <- Pos.add_diag, Pos.add_assoc in H1.
@@ -111,7 +112,7 @@ Section FIN_GEN_REP_PROOFS.
         assert ((Pos.to_nat (1 + fg_size - a2p_helper a fg_gens 1) <=
                  Pos.to_nat fg_size)%nat) by lia.
         rewrite H3, Pos.add_sub, rev_nth; rewrite fg_gens_size.
-        * rewrite <- (Lt.S_pred _ O). 2: apply Pos2Nat.is_pos.
+        * rewrite (Nat.lt_succ_pred O). 2: apply Pos2Nat.is_pos.
           rewrite Pos2Nat.inj_sub; auto.
           assert (forall (n m p : nat),
                      (p < m)%nat ->
@@ -143,7 +144,7 @@ Section FIN_GEN_REP_PROOFS.
         rewrite fg_gens_size, Pos2Nat.inj_sub; auto.
         rewrite Pos2Nat.inj_le, Pos2Nat.inj_add in H.
         pose proof (Pos2Nat.is_pos x). pose proof (Pos2Nat.is_pos fg_size). lia.
-      } rewrite Minus.pred_of_minus, rev_nth; auto.
+      } rewrite <- Nat.sub_1_r, rev_nth; auto.
       remember (length fg_gens - S (Pos.to_nat (x - fg_size) - 1))%nat.
       replace n with (pred (n + 1)) by lia.
       rewrite <- (Nat2Pos.id (n + 1)) by lia.

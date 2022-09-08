@@ -863,7 +863,7 @@ Lemma dep_nth_overflow: forall {A n} (i: nat) (l: dep_list A n) (d: A),
     n <= i -> dep_nth i l d = d.
 Proof.
   intros A n i. revert n. induction i; intros.
-  - apply le_n_0_eq in H. subst n. dep_list_decomp. now simpl.
+  - apply Nat.le_0_r in H. subst n. dep_list_decomp. now simpl.
   - simpl. destruct l. 1: easy. apply le_S_n in H. now apply IHi.
 Qed.
 
@@ -875,7 +875,7 @@ Proof.
     dep_list_decomp. now simpl.
   - destruct n.
     + exfalso. now apply Nat.nlt_0_r in H.
-    + dep_list_decomp. simpl. apply IHi. now apply lt_S_n.
+    + dep_list_decomp. simpl. apply IHi. now apply Nat.succ_lt_mono.
 Qed.
 
 Lemma dep_nth_app_cons:
@@ -894,11 +894,11 @@ Proof.
   - intros. split; intros.
     + f_equal.
       * specialize (H0 a b O (Nat.lt_0_succ n)). now simpl in H0.
-      * rewrite <- H. intros. apply lt_n_S in H1.
+      * rewrite <- H. intros. apply Nat.succ_lt_mono in H1.
         specialize (H0 d1 d2 _ H1). now simpl in H0.
     + apply dep_cons_eq_inv in H0. destruct H0. subst. destruct i.
       * now simpl.
-      * simpl. now apply dep_nth_indep, lt_S_n.
+      * simpl. apply dep_nth_indep. now rewrite Nat.succ_lt_mono.
 Qed.
 
 Lemma dep_nth_app_1:
@@ -909,7 +909,7 @@ Proof.
   - apply Nat.succ_pred_pos in H. remember (pred m) as m1. clear Heqm1. subst m.
     dep_list_decomp. now simpl.
   - destruct m. 1: exfalso; now apply Nat.nlt_0_r in H. dep_list_decomp. simpl.
-    now apply IHi, lt_S_n.
+    now apply IHi, Nat.succ_lt_mono.
 Qed.
 
 Lemma dep_nth_app_2:
@@ -999,7 +999,7 @@ Lemma row_rev_rel_cons: forall
     row_rev_rel (dep_cons v1 mat1) (dep_cons v2 mat2).
 Proof.
   intros. unfold row_rev_rel in *. intros.
-  destruct row; simpl; [|apply H0, lt_S_n]; easy.
+  destruct row; simpl; [|apply H0, Nat.succ_lt_mono]; easy.
 Qed.
 
 Lemma row_rev_rel_exists: forall {A m n} (mat: dep_list (dep_list A n) m),
@@ -1086,7 +1086,7 @@ Proof.
   - rewrite dep_nth_overflow, nth_overflow; auto. now rewrite dep_to_list_len.
   - revert l i l0. induction n; intros.
     + now apply Nat.nlt_0_r in l0.
-    + dep_list_decomp. destruct i; simpl; [| apply IHn, lt_S_n]; easy.
+    + dep_list_decomp. destruct i; simpl; [| apply IHn, Nat.succ_lt_mono]; easy.
 Qed.
 
 Lemma dep_vertical_split: forall {A n m} (mat: dep_list (dep_list A (S n)) m),
@@ -1118,12 +1118,12 @@ Proof.
   - simpl dep_nth at 3. now simpl.
   - simpl dep_nth at 3. simpl dep_nth at 2.
     rewrite (dep_nth_list_binop _ _ _ _ d0 d4); auto. simpl.
-    now apply dep_nth_indep, lt_S_n.
+    now apply dep_nth_indep, Nat.succ_lt_mono.
   - simpl dep_nth at 2. rewrite (dep_nth_list_binop _ _ _ _ d1 d5); auto. simpl.
-    now apply dep_nth_indep, lt_S_n.
+    now apply dep_nth_indep, Nat.succ_lt_mono.
   - simpl dep_nth at 2. rewrite (dep_nth_list_binop _ _ _ _ d1 d5),
                         (dep_nth_list_binop _ _ _ _ d0 d4); auto. simpl.
-    apply IHm; now apply lt_S_n.
+    apply IHm; now apply Nat.succ_lt_mono.
 Qed.
 
 Lemma dep_cons_app_col: forall

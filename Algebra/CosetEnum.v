@@ -21,7 +21,7 @@ Class FiniteGenerators (A: Type) :=
     fg_gens_size: length fg_gens = Pos.to_nat fg_size;
   }.
 
-Existing Instance fg_decidable.
+#[export] Existing Instance fg_decidable.
 
 Section COSET_MAP.
 
