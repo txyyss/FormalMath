@@ -299,7 +299,7 @@ Section ISOMETRY_ACTION.
   Proof.
     constructor; auto.
     - apply _.
-    - intros [g] [h] ?. vm_compute. easy.
+    - intros [g] [h] ?. native_compute. easy.
   Qed.
 
 End ISOMETRY_ACTION.

@@ -149,7 +149,7 @@ Section GROUPS_AS_CATEGORY.
   Proof.
     repeat intro. exists (fun _ => tt). constructor; try apply _.
     - constructor; try apply _. repeat intro. auto.
-    - intros. now vm_compute.
+    - intros. now native_compute.
   Defined.
 
   Instance unitGrpTerminal: Terminal unitGrpObj.

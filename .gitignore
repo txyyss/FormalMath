@@ -10,3 +10,4 @@
 *.vos
 .lia.cache
 .nia.cache
+_opam

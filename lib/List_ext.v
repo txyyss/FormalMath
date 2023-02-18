@@ -33,17 +33,7 @@ Tactic Notation "if_tac" "in" hyp(H0)
     end end.
 
 Lemma seq_S: forall i num, seq i (S num) = seq i num ++ [num + i].
-Proof.
-  intros. revert i. induction num; intros. 1: simpl; reflexivity. remember (S num).
-  simpl. rewrite (IHnum (S i)). subst. simpl. repeat f_equal. now rewrite plus_n_Sm.
-Qed.
-
-Lemma seq_app: forall s n m, seq s (n + m) = seq s n ++ seq (s + n) m.
-Proof.
-  intros. revert s; induction n; simpl; intros.
-  - now rewrite <- plus_n_O.
-  - now rewrite IHn, plus_Snm_nSm.
-Qed.
+Proof. intros. rewrite <- Nat.add_1_r, seq_app, Nat.add_comm. reflexivity. Qed.
 
 Lemma fold_right_ext: forall {A B: Type} (g f: B -> A -> A) a l,
     (forall x y, f x y = g x y) -> fold_right f a l = fold_right g a l.
