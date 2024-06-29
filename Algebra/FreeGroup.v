@@ -28,9 +28,9 @@ Section FREE_GROUP.
   Proof.
     constructor. unfold free_binop. transitivity (x ++ y0).
     - induction H; [| reflexivity | now symmetry | now transitivity (y ++ y0)].
-      rewrite !app_ass. simpl. symmetry. apply word_equiv_pair.
+      rewrite <- !app_assoc. simpl. symmetry. apply word_equiv_pair.
     - induction H0; [| reflexivity | now symmetry | now transitivity (x ++ y0)].
-      rewrite <- !app_ass. symmetry. apply word_equiv_pair.
+      rewrite !app_assoc. symmetry. apply word_equiv_pair.
   Qed.
 
   Instance: Proper ((=) ==> (=)) free_neg.
@@ -38,7 +38,7 @@ Section FREE_GROUP.
     constructor. unfold free_neg.
     induction H; [| reflexivity | now symmetry |
                   now transitivity (map (opposite A) (rev y))]. rewrite !rev_app_distr.
-    simpl. rewrite !app_ass, <- !app_comm_cons, !app_nil_l, !map_app. simpl.
+    simpl. rewrite <- !app_assoc, <- !app_comm_cons, !app_nil_l, !map_app. simpl.
     rewrite double_opposite. symmetry. apply word_equiv_pair.
   Qed.
 
@@ -46,10 +46,10 @@ Section FREE_GROUP.
   Proof.
     constructor; try apply _; intros;
       unfold bi_op, free_binop, one, free_gunit, neg, free_neg.
-    - now rewrite app_ass.
+    - now rewrite <- app_assoc.
     - now rewrite app_nil_l.
     - induction x; simpl; auto. rewrite map_app. simpl.
-      rewrite app_ass, <- app_comm_cons, app_nil_l.
+      rewrite <- app_assoc, <- app_comm_cons, app_nil_l.
       transitivity (map (opposite A) (rev x) ++ x); auto.
       rewrite <- (double_opposite A a) at 2. symmetry. constructor.
   Qed.
