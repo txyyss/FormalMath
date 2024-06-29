@@ -8,7 +8,7 @@ Notation "( x ⊙)" := (gr_act x) (only parsing) : math_scope.
 Notation "(⊙ x )" := (fun y => y ⊙ x) (only parsing) : math_scope.
 
 Class GroupAction (A X: Type) `{G: Group A} {Ga: GrAct A X}: Prop := {
-  gr_act_prop :> Proper ((=) ==> (==) ==> (==)) (⊙);
+  gr_act_prop :: Proper ((=) ==> (==) ==> (==)) (⊙);
   gr_act_ident: forall x: X, one ⊙ x == x;
   gr_act_compat: forall (g h: A) (x: X), (g & h) ⊙ x == g ⊙ (h ⊙ x); }.
 

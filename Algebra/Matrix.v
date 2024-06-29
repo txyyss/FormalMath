@@ -213,7 +213,7 @@ Qed.
 
 Definition vec_sum {n} (v: Vector n) := dep_fold_left Rplus v 0%R.
 
-Lemma vec_sum_nil: vec_sum dep_nil = 0%R. Proof. native_compute. easy. Qed.
+Lemma vec_sum_nil: vec_sum dep_nil = 0%R. Proof. vm_compute. easy. Qed.
 
 #[export] Hint Rewrite vec_sum_nil: vector.
 
@@ -229,7 +229,7 @@ Qed.
 
 Definition vec_prod {n} (v: Vector n) := dep_fold_left Rmult v 1%R.
 
-Lemma vec_prod_nil: vec_prod dep_nil = 1%R. Proof. native_compute. easy. Qed.
+Lemma vec_prod_nil: vec_prod dep_nil = 1%R. Proof. vm_compute. easy. Qed.
 
 #[export] Hint Rewrite vec_prod_nil: vector.
 
@@ -1200,18 +1200,18 @@ Proof. intros. easy. Qed.
 
 Lemma determinant_for_2: forall (a b c d: R),
     det {| {| a; b |} ; {| c; d |} |} = (a * d - b * c)%R.
-Proof. intros. native_compute. ring. Qed.
+Proof. intros. vm_compute. ring. Qed.
 
 Lemma determinant_for_3: forall (a b c d e f g h i: R),
     det {| {| a; b; c |}; {| d; e; f |}; {| g; h; i |} |} =
     (a * e * i + b * f * g + c * d * h - c * e * g - b * d * i - a * f * h)%R.
-Proof. intros. native_compute. ring. Qed.
+Proof. intros. vm_compute. ring. Qed.
 
 Lemma det_identity: forall {n}, det (@identity_mat n) = 1%R.
 Proof.
   induction n. 1: now simpl. simpl identity_mat. rewrite det_cons.
   autorewrite with matrix. destruct n.
-  - simpl. native_compute. ring.
+  - simpl. vm_compute. ring.
   - autorewrite with dep_list vector. now rewrite IHn, Rmult_1_r, Rplus_0_r.
 Qed.
 
@@ -1263,7 +1263,7 @@ Lemma dep_colist_scal: forall {m} (a: R) (v: Vector (S m)),
     dep_colist (vec_scal_mul a v) = dep_map (vec_scal_mul a) (dep_colist v).
 Proof.
   intros. induction m; unfold Vector in *.
-  - dep_list_decomp. now native_compute.
+  - dep_list_decomp. now vm_compute.
   - dep_step_decomp v. autorewrite with vector dep_list. f_equal. rewrite IHm.
     rewrite !dep_map_nest. apply dep_map_ext. intros. now autorewrite with vector.
 Qed.
@@ -1298,7 +1298,7 @@ Lemma dep_colist_vec_add: forall {n} (v1 v2: Vector (S n)),
     dep_list_binop vec_add (dep_colist v1) (dep_colist v2).
 Proof.
   intros. induction n; unfold Vector in *.
-  - dep_list_decomp. now native_compute.
+  - dep_list_decomp. now vm_compute.
   - dep_step_decomp v1. dep_step_decomp v2. autorewrite with vector dep_list. f_equal.
     rewrite IHn, <- dep_list_binop_map_1, <- dep_list_binop_map_2, dep_map_list_binop.
     apply dep_list_binop_ext. intros. now autorewrite with vector.
@@ -1337,7 +1337,7 @@ Lemma det_dup_first_2: forall {n} (r: Vector (S (S n))) (m: Matrix n (S (S n))),
     det (dep_cons r (dep_cons r m)) = 0%R.
 Proof.
   induction n; intros; unfold Matrix in *; unfold Vector in *.
-  - dep_list_decomp. native_compute. ring.
+  - dep_list_decomp. vm_compute. ring.
   - rewrite <- det_transpose, !mat_transpose_cons_row. generalize (mat_transpose m).
     clear m. intros. unfold Matrix in *. dep_step_decomp m. dep_step_decomp r.
     rewrite !dep_list_binop_cons. rewrite <- (mat_transpose_involutive m1).
@@ -1412,7 +1412,7 @@ Proof.
       cut (forall (m3 : dep_list (dep_list R (S (S l))) l) (r : Vector (S (S l))),
               det (dep_cons r (dep_cons r m3)) = 0%R); intros. 1: apply H.
       induction l.
-      * unfold Vector in *. dep_list_decomp. native_compute. ring.
+      * unfold Vector in *. dep_list_decomp. vm_compute. ring.
       * apply det_dup_first_2.
     + dep_step_decomp m2. simpl dep_app. rewrite (det_swap_first_2 r m0).
       apply Ropp_eq_0_compat.
@@ -1652,7 +1652,7 @@ Proof.
   unfold upper_triangular in H. inversion H. subst. unfold Vector in *. clear H2.
   dep_step_decomp v0. autorewrite with matrix vector dep_list. simpl dep_hd.
   rewrite <- IHn by (now red). clear. unfold Matrix in *. destruct n.
-  - dep_list_decomp. native_compute. ring.
+  - dep_list_decomp. vm_compute. ring.
   - autorewrite with dep_list vector. rewrite det_transpose.
     rewrite <- (Rplus_0_r (v1 * det m0)%R) at 2. f_equal.
     rewrite dep_map_nest, (dep_map_ext (fun x => 0%R)).
@@ -1679,7 +1679,7 @@ Lemma upper_triangular_diag: forall {n} (m1 m2: Matrix n n),
     diagonal (mat_mul m1 m2) = dep_list_binop Rmult (diagonal m1) (diagonal m2).
 Proof.
   unfold upper_triangular. induction n; intros.
-  - unfold Matrix in *. dep_list_decomp. now native_compute.
+  - unfold Matrix in *. dep_list_decomp. now vm_compute.
   - inversion H. apply inj_pair2_eq_dec in H3. 2: exact Nat.eq_dec. subst.
     inversion H0. apply inj_pair2_eq_dec in H4. 2: exact Nat.eq_dec. subst.
     assert (mat_mul m0 (dep_list_binop (dep_cons (n:=n)) vec_zero m1) =
@@ -1697,7 +1697,7 @@ Proof.
   intros. rewrite !upper_triangular_det; auto.
   - rewrite upper_triangular_diag; auto. generalize (diagonal m1).
     generalize (diagonal m2). clear. revert n. apply dep_list_ind_2.
-    + native_compute. ring.
+    + vm_compute. ring.
     + intros. autorewrite with vector dep_list. rewrite H. ring.
   - now apply upper_triangular_mult.
 Qed.
@@ -3402,17 +3402,17 @@ Proof.
   intros. pose proof H. rewrite orthogonal_mat_spec_1 in H.
   rewrite orthogonal_mat_spec_2 in H0. unfold Matrix in mat. dep_list_decomp.
   rename mat3 into p. rename mat1 into q. rename mat0 into t. rename mat2 into u.
-  native_compute in H, H0. replace R0 with 0%R in H, H0 by now native_compute.
-  replace R1 with 1%R in H, H0 by now native_compute. rewrite !Rplus_0_l in H, H0.
+  vm_compute in H, H0. replace R0 with 0%R in H, H0 by now vm_compute.
+  replace R1 with 1%R in H, H0 by now vm_compute. rewrite !Rplus_0_l in H, H0.
   decomp_mat_eq. clear H11 H5. rewrite !Rmult_sqr in *.
   destruct (Rsqr_sum_1_cos_sin _ _ H) as [x [? [? ?]]]. subst. exists x. split; auto.
   apply cos2_sum_1_sin in H0. apply sin2_sum_1_cos in H9. clear H3 H1.
   destruct H0, H9; subst; [| now right | now left |].
-  - rewrite Rmult_comm, <- double in H7. apply Rmult_integral in H7.
+  - rewrite Rmult_comm, Rplus_diag in H7. apply Rmult_integral in H7.
     destruct H7. 1: exfalso; pose proof R2_neq_0; now apply H1.
     apply Rmult_integral in H0.
     destruct H0; rewrite H0, Ropp_0; [right | left]; easy.
-  - rewrite Rmult_opp_opp, Rmult_comm, <- double in H7. apply Rmult_integral in H7.
+  - rewrite Rmult_opp_opp, Rmult_comm, Rplus_diag in H7. apply Rmult_integral in H7.
     destruct H7. 1: exfalso; pose proof R2_neq_0; now apply H1.
     apply Rmult_integral in H0.
     destruct H0; rewrite H0, Ropp_0; [left | right]; easy.

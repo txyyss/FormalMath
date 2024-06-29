@@ -6,7 +6,7 @@ Require Import Coq.Logic.Eqdep.
 
 (** Chapter 1.4.6: All categories as a category *)
 Record CatObj: Type := {
-    obj:> Type;
+    obj :> Type;
     cat_arrows: Arrows obj;
     cat_equiv: forall a b: obj, Equiv (a ~> b);
     cat_catid: CatId obj;

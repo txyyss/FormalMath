@@ -63,7 +63,7 @@ Section EUCLIDEAN_DISTANCE.
       + unfold norm. rewrite !Rsqr_sqrt; [|apply vec_dot_prod_nonneg..].
         rewrite !Rplus_assoc. apply Rplus_le_compat_l. rewrite <- Rplus_assoc.
         rewrite (Rplus_comm (vec_dot_prod y y)). apply Rplus_le_compat_r.
-        rewrite (vec_dot_prod_comm y), <- double. apply Rmult_le_compat_l; auto.
+        rewrite (vec_dot_prod_comm y), Rplus_diag. apply Rmult_le_compat_l; auto.
         apply RRle_abs.
       + rewrite Rsqr_plus. apply Rplus_le_compat_l. rewrite Rmult_assoc.
         apply Rmult_le_compat_l; auto. apply Cauchy_Schwarz_ineq.
@@ -99,7 +99,7 @@ Section EUCLIDEAN_DISTANCE.
       apply not_0_IZR. discriminate.
     - unfold norm. rewrite !Rsqr_sqrt; [|apply vec_dot_prod_nonneg..].
       rewrite vec_dot_prod_add_r, !vec_dot_prod_add_l. autorewrite with vector.
-      ring_simplify. rewrite (vec_dot_prod_comm v). apply double.
+      ring_simplify. rewrite (vec_dot_prod_comm v). now rewrite <- Rplus_diag.
   Qed.
 
   Lemma vec_dot_prod_distance: forall (u v: Vector n),
@@ -299,7 +299,7 @@ Section ISOMETRY_ACTION.
   Proof.
     constructor; auto.
     - apply _.
-    - intros [g] [h] ?. native_compute. easy.
+    - intros [g] [h] ?. vm_compute. easy.
   Qed.
 
 End ISOMETRY_ACTION.

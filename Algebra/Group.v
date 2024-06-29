@@ -15,9 +15,9 @@ Class Negate A := neg : A -> A.
 Class Group (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A}
       {Anegate : Negate A} : Prop :=
   {
-    gr_as_setoid :> Setoid A;
-    gr_op_proper :> Proper ((=) ==> (=) ==> (=)) (&);
-    negate_proper :> Proper ((=) ==> (=)) neg;
+    gr_as_setoid :: Setoid A;
+    gr_op_proper :: Proper ((=) ==> (=) ==> (=)) (&);
+    negate_proper :: Proper ((=) ==> (=)) neg;
     op_assoc : forall x y z, (x & y) & z = x & (y & z);
     one_left : forall x, one & x = x;
     neg_left : forall x, neg x & x = one
@@ -28,7 +28,7 @@ Coercion gr_as_setoid : Group >-> Setoid.
 Class AbelianGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A}
       {Anegate : Negate A} : Prop :=
   {
-    abgroup_as_group :> Group A;
+    abgroup_as_group :: Group A;
     bi_op_comm : forall x y, x & y = y & x
   }.
 
@@ -150,7 +150,7 @@ Section GROUP_HOMOMORPHISM.
   {
     grmor_a : Group A;
     grmor_b : Group B;
-    grmor_setmore :> Setoid_Morphism f;
+    grmor_setmore :: Setoid_Morphism f;
     preserve_gr_op : forall x y, f (x & y) = f x & f y
   }.
 
@@ -197,7 +197,7 @@ End GROUP_HOMOMORPHISMS_PROP.
 
 Class SubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
   {
-    pred_proper :> Proper ((=) ==> iff) P;
+    pred_proper :: Proper ((=) ==> iff) P;
     non_empty: exists x, P x;
     sub_criteria: forall x y: A, P x -> P y -> P (x & (neg y));
   }.
@@ -355,7 +355,7 @@ End COSET.
 
 Class NormalSubGroupCondition (A: Type) (P: A -> Prop) `{Group A} : Prop :=
   {
-    still_subgroup :> SubGroupCondition A P;
+    still_subgroup :: SubGroupCondition A P;
     normal_comm: forall (x y: A), P (x & y) -> P (y & x)
   }.
 

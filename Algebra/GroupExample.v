@@ -14,7 +14,7 @@ Section UNIT_GROUP.
   #[export] Instance unitGroup: Group unit.
   Proof.
     constructor; try apply _; repeat intro; destruct x;
-      [destruct y, z|..]; now native_compute.
+      [destruct y, z|..]; now vm_compute.
   Qed.
 
 End UNIT_GROUP.

@@ -75,7 +75,8 @@ Section FIN_GEN_REP.
   Lemma fg_gens_not_nil: fg_gens = nil -> False.
   Proof.
     intros. pose proof fg_gens_size. rewrite H in H0.
-    simpl in H0. pose proof (Pos2Nat.is_pos fg_size). exfalso. intuition.
+    simpl in H0. pose proof (Pos2Nat.is_pos fg_size). exfalso.
+    intuition auto with *.
   Qed.
 
   Definition anyA : A.

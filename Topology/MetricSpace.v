@@ -36,7 +36,7 @@ Section METRIC_TOPOLOGY.
                                         Included (openBall y r') (openBall x r).
   Proof.
     intros. exists (r - d x y). split.
-    - hnf in H. now apply Rlt_Rminus.
+    - hnf in H. now rewrite Rlt_0_minus.
     - repeat intro. hnf in H0 |- *. apply (Rplus_lt_compat_l (d x y)) in H0.
       rewrite Rplus_minus in H0. apply Rle_lt_trans with (r2 := d x y + d y x0); auto.
       apply metric_trig_ineq.
@@ -134,7 +134,7 @@ Section METRIC_TOPOLOGY.
     - hnf. now rewrite metric_zero.
     - apply Extensionality_Ensembles. split; repeat intro. 2: inversion H1.
       destruct H1. hnf in H1, H2. pose proof (Rplus_lt_compat _ _ _ _ H1 H2).
-      rewrite <- double_var, (metric_sym x2 x) in H3.
+      rewrite Rplus_half_diag, (metric_sym x2 x) in H3.
       pose proof (metric_trig_ineq x1 x x2). pose proof (Rle_lt_trans _ _ _ H4 H3).
       exfalso. now apply (Rlt_irrefl (d x1 x2)).
   Qed.

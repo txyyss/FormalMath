@@ -20,8 +20,8 @@ Infix ">>>" := (comp _ _ _) (at level 40, left associativity) : math_scope.
 #[universes (polymorphic, cumulative)]
  Class Category O `{!Arrows O} `{forall a b: O, Equiv (a ~> b)}
  `{!CatId O} `{!CatComp O}: Prop := {
-    arrow_equiv :> forall a b, Setoid (a ~> b);
-    comp_proper :> forall a b c, Proper ((=) ==> (=) ==> (=)) (comp a b c);
+    arrow_equiv :: forall a b, Setoid (a ~> b);
+    comp_proper :: forall a b c, Proper ((=) ==> (=) ==> (=)) (comp a b c);
     comp_assoc : forall `(f: a ~> b) `(g: b ~> c) `(h: c ~> d),
       h >>> (g >>> f) = (h >>> g) >>> f;
     left_identity: forall `(f: a ~> b), cat_id >>> f = f;
@@ -43,7 +43,7 @@ Section FUNCTOR.
   Class Functor `(Fmap): Prop := {
       functor_from: Category C;
       functor_to: Category D;
-      functor_morphism :> forall a b, Setoid_Morphism (@fmap _ a b);
+      functor_morphism :: forall a b, Setoid_Morphism (@fmap _ a b);
       preserves_id: forall {a}, fmap (cat_id: a ~> a) = cat_id;
       preserves_comp: forall `(g: y ~> z) `(f: x ~> y),
         fmap (g >>> f) = fmap g >>> fmap f

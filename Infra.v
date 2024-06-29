@@ -63,7 +63,7 @@ Notation "(=/= x )" := (fun y => y =/= x) (only parsing) : math_scope.
 
 (******************************* Setoid *******************************)
 
-Class Setoid A {Ae : Equiv A} : Prop := setoid_eq :> Equivalence (@equiv A Ae).
+Class Setoid A {Ae : Equiv A} : Prop := setoid_eq :: Equivalence (@equiv A Ae).
 
 Section SETOID_MORPHISM.
 
@@ -73,7 +73,7 @@ Section SETOID_MORPHISM.
     {
       setoidmor_a : Setoid A ;
       setoidmor_b : Setoid B ;
-      sm_proper :> Proper ((=) ==> (=)) f
+      sm_proper :: Proper ((=) ==> (=)) f
     }.
 
 End SETOID_MORPHISM.
@@ -140,8 +140,8 @@ Section JECTIONS.
 
   Class Bijective : Prop :=
     {
-      bijective_injective :> Injective;
-      bijective_surjective :> Surjective
+      bijective_injective :: Injective;
+      bijective_surjective :: Surjective
     }.
 
 End JECTIONS.

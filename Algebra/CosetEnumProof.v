@@ -15,8 +15,8 @@ Section FIN_GEN_REP_PROOFS.
 
   Lemma a2p_helper_low: forall x l n, n <= a2p_helper x l n.
   Proof.
-    intro x. induction l; intros; simpl. 1: intuition. if_tac.
-    - intuition.
+    intro x. induction l; intros; simpl. 1: intuition auto with *. if_tac.
+    - intuition auto with *.
     - specialize (IHl (Pos.succ n)). transitivity (Pos.succ n). 2: assumption.
       rewrite <- Pos.add_1_r. apply Pos.lt_le_incl, Pos.lt_add_r.
   Qed.
@@ -81,8 +81,8 @@ Section FIN_GEN_REP_PROOFS.
     rewrite pos_add_succ. if_tac.
     - rewrite pos_succ_add_sub.
       pose proof (Pos.add_no_neutral n (Pos.of_succ_nat (length l))).
-      rewrite Pos.add_comm in H. intuition.
-    - rewrite <- IHl. intuition.
+      rewrite Pos.add_comm in H. intuition auto with *.
+    - rewrite <- IHl. intuition auto with *.
   Qed.
 
   Lemma a2p2a_the_same: forall x, positive_to_alphabet (alphabet_to_positive x) == x.
@@ -261,11 +261,12 @@ Section TODD_COXETER_PROOFS.
       rewrite double_neg_rep by assumption.
       rewrite table_find_add_diff;
         [rewrite table_find_add_same | | | right; apply gen_rep_neq_neg_rep];
-        intuition. red in H0. lia.
+        intuition auto with *. red in H0. lia.
     - rewrite table_find_add_diff in H4 by assumption.
       destruct (pos_double_eq c a y x).
       + destruct H8. subst. rewrite table_find_add_same in H4. inversion H4. subst.
-        rewrite table_find_add_same. split; [|split]; [reflexivity | | intuition].
+        rewrite table_find_add_same.
+        split; [|split]; [reflexivity | | intuition auto with *].
         clear -H0. red in H0. lia.
       + rewrite table_find_add_diff in H4 by assumption. apply H in H4.
         2: assumption. destruct H4 as [? [? ?]].
