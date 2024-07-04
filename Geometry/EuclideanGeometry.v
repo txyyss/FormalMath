@@ -1,15 +1,24 @@
 (** * Lɪʙʀᴀʀʏ ᴀʙᴏᴜᴛ Isᴏᴍᴇᴛʀɪᴇs ᴏғ Eᴜᴄʟɪᴅᴇᴀɴ Sᴘᴀᴄᴇ *)
-(** * Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
 
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.FiniteGroup.
 Require Import FormalMath.Algebra.GroupAction.
-Require Import FormalMath.Topology.Topology.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
 
 Open Scope R_scope.
+
+Class DistanceFunc (A: Type) := distance: A -> A -> R.
+#[global] Typeclasses Transparent DistanceFunc.
+
+Class Metric (A: Type) {DF: DistanceFunc A}: Prop :=
+  {
+    metric_nonneg: forall x y, 0 <= distance x y;
+    metric_zero_iff: forall x y, distance x y == 0 <-> x == y;
+    metric_sym: forall x y, distance x y == distance y x;
+    metric_trig_ineq: forall x y z, distance x z <= distance x y + distance y z
+  }.
 
 Section EUCLIDEAN_DISTANCE.
 
@@ -72,9 +81,9 @@ Section EUCLIDEAN_DISTANCE.
   Global Instance eucDis: DistanceFunc (Vector n) :=
     fun x y => norm (vec_add x (vec_neg y)).
 
-  Global Instance distanceMetric: Metric (Vector n).
+  #[global] Instance distanceMetric: Metric (Vector n).
   Proof.
-    constructor; intros; unfold d, eucDis, norm.
+    constructor; intros; unfold distance, eucDis, norm.
     - apply sqrt_pos.
     - split; intro.
       + apply sqrt_eq_0 in H. 2: apply vec_dot_prod_nonneg.
@@ -103,9 +112,10 @@ Section EUCLIDEAN_DISTANCE.
   Qed.
 
   Lemma vec_dot_prod_distance: forall (u v: Vector n),
-      vec_dot_prod u v == ((d u vec_zero)² + (d v vec_zero)² - (d u v)²) * / 2.
+      vec_dot_prod u v ==
+        ((distance u vec_zero)² + (distance v vec_zero)² - (distance u v)²) * / 2.
   Proof.
-    intros. unfold d, eucDis. autorewrite with vector. apply polarization_identity.
+    intros. unfold distance, eucDis. autorewrite with vector. apply polarization_identity.
   Qed.
 
 End EUCLIDEAN_DISTANCE.
@@ -115,7 +125,7 @@ Class Isometric {n} (f: Vector n -> Vector n) :=
     iso_inv: Vector n -> Vector n;
     iso_inj: forall x y, f x == f y -> x == y;
     iso_surj: forall x, f (iso_inv x) == x;
-    distance_preserve: forall x y, d x y == d (f x) (f y)
+    distance_preserve: forall x y, distance x y == distance (f x) (f y)
   }.
 
 Arguments iso_inv {_} _ {_}.
@@ -133,7 +143,7 @@ Proof.
     rewrite <- orthogonal_mat_spec_1, orthogonal_mat_spec_2 in H.
     now rewrite H, mat_vec_mul_identity.
   - pose proof (preserve_dot_prod_linear _ S). destruct H2.
-    red in S. unfold d, eucDis.
+    red in S. unfold distance, eucDis.
     rewrite <- !vec_neg_scal_mul, <- H3, <- H2, !vec_neg_scal_mul. unfold norm.
     now rewrite S.
 Qed.
@@ -151,7 +161,7 @@ Proof.
   - now rewrite <- vec_add_id_l, <- (vec_add_id_l x), <- (vec_add_inv1 (vec_neg v)),
     vec_neg_double, !vec_add_assoc, H.
   - rewrite <- vec_add_assoc. now autorewrite with vector.
-  - unfold d, eucDis. rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc,
+  - unfold distance, eucDis. rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc,
                      <- (vec_add_assoc v (vec_neg v)). now autorewrite with vector.
 Qed.
 
@@ -170,13 +180,13 @@ Section ISOMETRY.
 
   Context {n: nat}.
 
-  Global Instance iso_rep: Cast (Isometry n) (Vector n -> Vector n) :=
+  #[global] Instance iso_rep: Cast (Isometry n) (Vector n -> Vector n) :=
     fun x => projT1 x.
 
-  Global Instance iso_equiv: Equiv (Isometry n) :=
+  #[global] Instance iso_equiv: Equiv (Isometry n) :=
     fun f1 f2 => forall x, (' f1) x == (' f2) x.
 
-  Global Instance iso_binop: BinOp (Isometry n).
+  #[global] Instance iso_binop: BinOp (Isometry n).
   Proof.
     intros [f1] [f2].
     refine (existT _ (fun x => f1 (f2 x))
@@ -184,16 +194,16 @@ Section ISOMETRY.
       intros.
     - apply (iso_inj f2), (iso_inj f1); auto.
     - do 2 rewrite iso_surj; easy.
-    - transitivity (d (f2 x) (f2 y)); apply distance_preserve.
+    - transitivity (distance (f2 x) (f2 y)); apply distance_preserve.
   Defined.
 
-  Global Instance iso_gunit: GrUnit (Isometry n).
+  #[global] Instance iso_gunit: GrUnit (Isometry n).
   Proof.
     refine (existT _ (fun x => x) (Build_Isometric _ _ (fun x => x) _ _ _));
       intros; auto.
   Defined.
 
-  Global Instance iso_neg: Negate (Isometry n).
+  #[global] Instance iso_neg: Negate (Isometry n).
   Proof.
     intros [f].
     refine (existT _ (iso_inv f) (Build_Isometric _ _ f _ _ _));
@@ -221,7 +231,7 @@ Section ISOMETRY.
     rewrite iso_surj, H, iso_surj. reflexivity.
   Qed.
 
-  Global Instance isometryGroup: Group (Isometry n).
+  #[global] Instance isometryGroup: Group (Isometry n).
   Proof.
     constructor; try apply _; intros; unfold bi_op, iso_binop, one, iso_gunit,
                                       neg, iso_neg, equiv, iso_equiv.
@@ -287,7 +297,7 @@ Section ISOMETRY_ACTION.
 
   Context {n: nat}.
 
-  Global Instance isometry_act: GrAct (Isometry n) (Vector n) := fun g x => ('g) x.
+  #[global] Instance isometry_act: GrAct (Isometry n) (Vector n) := fun g x => ('g) x.
 
   Instance: Proper ((=) ==> (==) ==> (==)) isometry_act.
   Proof.
@@ -295,7 +305,7 @@ Section ISOMETRY_ACTION.
     unfold iso_equiv in H. unfold cast, iso_rep in *. simpl in *. apply H.
   Qed.
 
-  Global Instance isometryGroupAction: GroupAction (Isometry n) (Vector n).
+  #[global] Instance isometryGroupAction: GroupAction (Isometry n) (Vector n).
   Proof.
     constructor; auto.
     - apply _.
@@ -305,7 +315,7 @@ Section ISOMETRY_ACTION.
 End ISOMETRY_ACTION.
 
 Lemma isometry_subgroup_fix_one_point:
-  forall {n} P `{!SubGroupCondition (Isometry n) P},
+  forall `{!SubGroupCondition (Isometry n) P},
     SetoidFinite (Subpart (Isometry n) P) ->
     exists c, forall (g: Subpart (Isometry n) P), g ⊙ c == c.
 Proof.
@@ -352,34 +362,3 @@ Proof.
     rewrite map_length, H0, H2. apply Rinv_r, not_0_INR. destruct SGC, non_empty.
     specialize (H1 (exist _ x H3)). intro. subst m. now destruct l.
 Qed.
-
-Class TilingAxioms {n: nat} (pat: Ensemble (Vector n)) (P: Isometry n -> Prop)
-      {SGC: SubGroupCondition (Isometry n) P}: Prop := {
-  pattern_int_nonempty: interior pat =/= Empty_set;
-  pattern_connected: connected_subspace pat;
-  pattern_compact: compact_set pat;
-  cover_all: IndexedUnion (fun g: Subpart (Isometry n) P => Im pat (g ⊙)) == Full_set;
-  edge_overlap: forall g h: Subpart (Isometry n) P,
-      Intersection (Im (interior pat) (g ⊙))
-                   (Im (interior pat) (h ⊙)) =/= Empty_set ->
-      Im pat (g ⊙) == Im pat (h ⊙);
-  }.
-
-Section TILING_PROP.
-
-  Context {n: nat}.
-  Variable pat : Ensemble (Vector n).
-  Variable P : Isometry n -> Prop.
-  Context {SGC: SubGroupCondition (Isometry n) P}.
-  Hypothesis TiA: TilingAxioms pat P.
-
-  (* 1.7.5.1 in Geometry I *)
-
-  Lemma tiling_group_acts_discretely:
-    forall (x: Vector n), discrete (orbit (Subpart (Isometry n) P) _ x).
-  Proof.
-    intros x. red. intros y ?. unfold orbit in H. destruct H as [g ?].
-    rewrite (orbit_the_same _ _ g). rewrite <- H0. clear x g H H0. rename y into x.
-  Abort.
-
-End TILING_PROP.

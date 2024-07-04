@@ -12,10 +12,10 @@ Section FREE_GROUP.
   | word_equiv_symm: forall x y, word_equiv x y -> word_equiv y x
   | word_equiv_trans: forall x y z, word_equiv x y -> word_equiv y z -> word_equiv x z.
 
-  Global Instance free_equiv: Equiv (Word A) := word_equiv.
-  Global Instance free_binop: BinOp (Word A):= fun x y => x ++ y.
-  Global Instance free_gunit: GrUnit (Word A) := nil.
-  Global Instance free_neg: Negate (Word A) := fun x => map (opposite A) (rev x).
+  #[global] Instance free_equiv: Equiv (Word A) := word_equiv.
+  #[global] Instance free_binop: BinOp (Word A):= fun x y => x ++ y.
+  #[global] Instance free_gunit: GrUnit (Word A) := nil.
+  #[global] Instance free_neg: Negate (Word A) := fun x => map (opposite A) (rev x).
 
   Instance: Setoid (Word A).
   Proof.
@@ -42,7 +42,7 @@ Section FREE_GROUP.
     rewrite double_opposite. symmetry. apply word_equiv_pair.
   Qed.
 
-  Global Instance freeGroup: Group (Word A).
+  #[global] Instance freeGroup: Group (Word A).
   Proof.
     constructor; try apply _; intros;
       unfold bi_op, free_binop, one, free_gunit, neg, free_neg.

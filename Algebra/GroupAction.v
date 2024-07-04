@@ -36,7 +36,7 @@ Section SUBGROUP_ACTION.
   Context `{Ga: GrAct A X}.
   Context `{GRA: !GroupAction A X}.
 
-  Global Instance subgroup_act: GrAct (Subpart A P) X := fun g x => 'g ⊙ x.
+  #[global] Instance subgroup_act: GrAct (Subpart A P) X := fun g x => 'g ⊙ x.
 
   Instance: Proper ((=) ==> (==) ==> (==)) subgroup_act.
   Proof.
@@ -45,7 +45,7 @@ Section SUBGROUP_ACTION.
     now rewrite H0.
   Qed.
 
-  Global Instance subgroup_action: GroupAction (Subpart A P) X.
+  #[global] Instance subgroup_action: GroupAction (Subpart A P) X.
   Proof.
     constructor.
     - apply _.

@@ -228,17 +228,17 @@ Section SUBGROUP.
     rewrite double_neg in H3. auto.
   Qed.
 
-  Global Instance subgroup_equiv: Equiv (Subpart A P) := fun x y => ('x) = ('y).
+  #[global] Instance subgroup_equiv: Equiv (Subpart A P) := fun x y => ('x) = ('y).
 
-  Global Instance subgroup_binop: BinOp (Subpart A P).
+  #[global] Instance subgroup_binop: BinOp (Subpart A P).
   Proof.
     intros x y. destruct x as [x ?H]. destruct y as [y ?H]. exists (x & y).
     apply op_pred; auto.
   Defined.
 
-  Global Instance subgroup_gunit: GrUnit (Subpart A P) := exist _ _ one_pred.
+  #[global] Instance subgroup_gunit: GrUnit (Subpart A P) := exist _ _ one_pred.
 
-  Global Instance subgroup_neg: Negate (Subpart A P).
+  #[global] Instance subgroup_neg: Negate (Subpart A P).
   Proof. intro x. destruct x as [x ?H]. exists (neg x). apply neg_pred; auto. Defined.
 
   Lemma sg_neg_proj : forall (x : Subpart A P), neg ('x) =  '(neg x).
@@ -267,7 +267,7 @@ Section SUBGROUP.
     simpl. apply negate_proper; auto.
   Qed.
 
-  Global Instance subGroup: Group (Subpart A P).
+  #[global] Instance subGroup: Group (Subpart A P).
   Proof.
     repeat (constructor; try apply _); repeat intros [?];
       unfold bi_op, neg, subgroup_binop, subgroup_neg, one, equiv,
@@ -295,10 +295,10 @@ Section COSET.
 
   Context `{SA: SubGroupCondition A P}.
 
-  Global Instance right_coset_equiv: Equiv (RightCoset A P) :=
+  #[global] Instance right_coset_equiv: Equiv (RightCoset A P) :=
     fun x y => P ('x & (neg ('y))).
 
-  Global Instance rightCosetoid: Setoid (RightCoset A P).
+  #[global] Instance rightCosetoid: Setoid (RightCoset A P).
   Proof.
     constructor; unfold equiv, right_coset_equiv, cast, right_coset_rep.
     - intros [x]. rewrite neg_right. apply one_pred.
@@ -307,10 +307,10 @@ Section COSET.
       rewrite <- op_assoc, (op_assoc x (neg y) y), neg_left, one_right in H2. auto.
   Qed.
 
-  Global Instance left_coset_equiv: Equiv (LeftCoset A P) :=
+  #[global] Instance left_coset_equiv: Equiv (LeftCoset A P) :=
     fun x y => P ((neg ('x)) & 'y).
 
-  Global Instance leftCosetoid: Setoid (LeftCoset A P).
+  #[global] Instance leftCosetoid: Setoid (LeftCoset A P).
   Proof.
     constructor; unfold equiv, left_coset_equiv, cast, left_coset_rep.
     - intros [x]. rewrite neg_left. apply one_pred.
@@ -369,15 +369,15 @@ Section QUOTIENT_GROUP.
 
   Context `{NSA: NormalSubGroupCondition A P}.
 
-  Global Instance quotient_equiv: Equiv (Quotient A P) :=
+  #[global] Instance quotient_equiv: Equiv (Quotient A P) :=
     fun x y => P (' x & (neg ('y))).
 
-  Global Instance quotient_binop: BinOp (Quotient A P) :=
+  #[global] Instance quotient_binop: BinOp (Quotient A P) :=
     fun x y => quotient_inject (' x & ' y).
 
-  Global Instance quotient_gunit: GrUnit (Quotient A P) := quotient_inject one.
+  #[global] Instance quotient_gunit: GrUnit (Quotient A P) := quotient_inject one.
 
-  Global Instance quotient_neg: Negate (Quotient A P) :=
+  #[global] Instance quotient_neg: Negate (Quotient A P) :=
     fun x => quotient_inject (neg (' x)).
 
   Instance: Setoid (Quotient A P).
@@ -406,7 +406,7 @@ Section QUOTIENT_GROUP.
     rewrite neg_op, double_neg. apply normal_comm. auto.
   Qed.
 
-  Global Instance quotientGroup: Group (Quotient A P).
+  #[global] Instance quotientGroup: Group (Quotient A P).
   Proof.
     constructor; try apply _;
       unfold bi_op, neg, one, equiv, quotient_equiv, quotient_binop,
@@ -453,7 +453,7 @@ Section SUBGROUP_GEN.
     - intros. rewrite in_app_iff in H4. destruct H4; [apply H1 | apply H3]; auto.
   Qed.
 
-  Global Instance: SubGroupCondition A subgroup_gen.
+  #[global] Instance: SubGroupCondition A subgroup_gen.
   Proof.
     constructor; [apply _ | exists one, nil; simpl; intuition |
                   intros; apply subgroup_gen_op; auto; apply subgroup_gen_neg; auto].
@@ -523,7 +523,7 @@ Section NORMAL_GENERATION.
                   intros; apply normal_gen_op; auto; apply normal_gen_neg; auto].
   Qed.
 
-  Global Instance normal_gen_normalcond: NormalSubGroupCondition A normal_gen.
+  #[global] Instance normal_gen_normalcond: NormalSubGroupCondition A normal_gen.
   Proof. constructor; [apply _ | apply normal_gen_op_comm]. Qed.
 
 End NORMAL_GENERATION.

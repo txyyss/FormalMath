@@ -1,4 +1,4 @@
-Global Generalizable All Variables.
+#[global] Generalizable All Variables.
 Require Import Coq.Classes.EquivDec.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.PArith.PArith.

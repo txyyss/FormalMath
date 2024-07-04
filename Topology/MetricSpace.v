@@ -78,9 +78,9 @@ Section METRIC_TOPOLOGY.
       + apply H2. apply (openBall_Included _ (Rmin r1' r2')); auto. apply Rmin_r.
   Qed.
 
-  Global Instance metricOpenSet: OpenSet A := basis_to_open openBallBasis.
+  #[global] Instance metricOpenSet: OpenSet A := basis_to_open openBallBasis.
 
-  Global Instance metricTopology: TopologicalSpace A.
+  #[global] Instance metricTopology: TopologicalSpace A.
   Proof. apply topology_basis_TopologicalSpace, openBallBasis_topology_basis. Qed.
 
   Definition metric_bounded (S: Ensemble A): Prop :=
@@ -122,7 +122,7 @@ Section METRIC_TOPOLOGY.
       + exists (openBall x eta). split; auto. apply openBall_open.
   Qed.
 
-  Global Instance metricHausdorff: HausdorffSpace A.
+  #[global] Instance metricHausdorff: HausdorffSpace A.
   Proof.
     repeat intro. exists (openBall x1 (d x1 x2 / 2)), (openBall x2 (d x1 x2 / 2)).
     assert (0 < d x1 x2 / 2). {

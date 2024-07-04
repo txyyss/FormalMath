@@ -1,5 +1,5 @@
-Global Generalizable All Variables.
-Global Set Warnings "-notation-overridden".
+#[global] Generalizable All Variables.
+#[global] Set Warnings "-notation-overridden".
 
 Require Export Coq.Lists.List.
 Require Export Coq.Lists.SetoidList.
@@ -44,7 +44,7 @@ Notation "( x =)" := (equiv x) (only parsing) : math_scope.
 Notation "(= x )" := (fun y => equiv y x) (only parsing) : math_scope.
 
 Delimit Scope math_scope with math.
-Global Open Scope math_scope.
+#[global] Open Scope math_scope.
 
 #[export] Hint Extern 2 (?x = ?x) => reflexivity: core.
 #[export] Hint Extern 2 (?x = ?y) => auto_symm: core.
