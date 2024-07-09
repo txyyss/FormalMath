@@ -1,5 +1,5 @@
 (** * Lɪʙʀᴀʀʏ ᴏғ Lᴇɴɢᴛʜ-Iɴᴅᴇxᴇᴅ Lɪsᴛ *)
-(** * Aᴜᴛʜᴏʀ: 𝕾𝖍𝖊𝖓𝖌𝖞𝖎 𝖂𝖆𝖓𝖌 *)
+(** * Aᴜᴛʜᴏʀ: Sʜᴇɴɢʏɪ Wᴀɴɢ *)
 
 Require Import Coq.Lists.List.
 Require Import Coq.Logic.Eqdep_dec.
@@ -137,6 +137,15 @@ Lemma dep_list_ind_1: forall {A} (P: forall n, dep_list A n -> Prop),
     forall (n: nat) (v: dep_list A n), P n v.
 Proof.
   intros until n. induction n; intros; dep_list_decomp; [easy | apply H0, IHn].
+Qed.
+
+Lemma dep_list_indT_1: forall {A} (P: forall n, dep_list A n -> Type),
+    P O dep_nil ->
+    (forall (n: nat) (v: dep_list A n),
+        P n v -> forall a: A, P (S n) (dep_cons a v)) ->
+    forall (n: nat) (v: dep_list A n), P n v.
+Proof.
+  intros until n. induction n; intros; dep_list_decomp; [easy | apply X0, IHn].
 Qed.
 
 Lemma dep_list_ind_2: forall
@@ -958,11 +967,11 @@ Proof.
   now rewrite lt_sub1_sub1_sub_eq in H.
 Qed.
 
-Lemma rev_rel_exists: forall {A n} (l: dep_list A n), exists l', rev_rel l l'.
+Lemma rev_rel_exists: forall {A n} (l: dep_list A n), { l' | rev_rel l l' }.
 Proof.
-  intro. apply dep_list_ind_1; intros.
+  intro. apply dep_list_indT_1; intros.
   - exists dep_nil. apply rev_rel_nil.
-  - destruct H as [l2 ?]. rename v into l1.
+  - destruct X as [l2 ?]. rename v into l1.
     remember (dep_app l2 (dep_cons a dep_nil)) as l3.
     assert (forall d i, i < n -> dep_nth i l3 d = dep_nth i l2 d). {
       intros. subst l3. now rewrite <- dep_nth_app_1. }
@@ -970,8 +979,8 @@ Proof.
       intros. subst l3. now rewrite dep_nth_app_cons. } clear Heql3.
     remember (n + 1) as m. rewrite Nat.add_1_r in Heqm. subst m. exists l3.
     unfold rev_rel in *. intros. destruct i; simpl; rewrite !Nat.sub_0_r.
-    1: now rewrite H1. rewrite <- Nat.succ_lt_mono in H2.
-    rewrite <- Nat.add_1_l, Nat.sub_add_distr, H, H0; auto. now apply lt_sub_1_sub_lt.
+    1: now rewrite H0. rewrite <- Nat.succ_lt_mono in H1.
+    rewrite <- Nat.add_1_l, Nat.sub_add_distr, r, H; auto. now apply lt_sub_1_sub_lt.
 Qed.
 
 Lemma rev_rel_unique: forall {A n} (l l1 l2: dep_list A n),
@@ -1003,7 +1012,7 @@ Proof.
 Qed.
 
 Lemma row_rev_rel_exists: forall {A m n} (mat: dep_list (dep_list A n) m),
-    exists mat', row_rev_rel mat mat'.
+    { mat' | row_rev_rel mat mat' }.
 Proof.
   intro. induction m; intros; dep_list_decomp.
   - exists dep_nil. red. intros. now apply Nat.nlt_0_r in H.
@@ -1045,14 +1054,14 @@ Lemma dual_rev_rel_sym: forall {A m n} (m1 m2: dep_list (dep_list A n) m),
     dual_rev_rel m1 m2 -> dual_rev_rel m2 m1.
 Proof.
   intros. unfold dual_rev_rel in *. destruct H as [m3 [? ?]].
-  destruct (row_rev_rel_exists m2) as [m4 ?]. exists m4. split; auto.
+  destruct (row_rev_rel_exists m2) as [m4 ?H]. exists m4. split; auto.
   apply rev_rel_sym in H0. apply row_rev_rel_sym in H.
-  destruct (rev_rel_exists m4) as [m5 ?].
+  destruct (rev_rel_exists m4) as [m5 ?H].
   pose proof (row_rev_comm_rev _ _ _ _ _ H1 H2 H0 H). now subst.
 Qed.
 
 Lemma dual_rev_rel_exists: forall {A m n} (mat: dep_list (dep_list A n) m),
-    exists mat', dual_rev_rel mat mat'.
+    { mat' | dual_rev_rel mat mat' }.
 Proof.
   intros. destruct (row_rev_rel_exists mat) as [mat1 ?].
   destruct (rev_rel_exists mat1) as [mat2 ?]. exists mat2. red. exists mat1. now split.
@@ -1090,7 +1099,7 @@ Proof.
 Qed.
 
 Lemma dep_vertical_split: forall {A n m} (mat: dep_list (dep_list A (S n)) m),
-    exists v mat', mat = (dep_list_binop (dep_cons (n := n)) v mat').
+    { v & { mat' | mat = (dep_list_binop (dep_cons (n := n)) v mat') } }.
 Proof.
   intros. pose proof (dep_list_transpose_involutive mat).
   remember (dep_list_transpose mat) as mat0. dep_step_decomp mat0. rewrite e in H.

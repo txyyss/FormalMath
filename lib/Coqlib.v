@@ -6,7 +6,7 @@ Require Import Coq.micromega.Lia.
 Lemma lt_plus_S_l: forall (n m: nat), n < n + S m.
 Proof. lia. Qed.
 
-Lemma lt_exists_S_diff: forall (n m: nat), n < m -> exists k, m = n + S k.
+Lemma lt_exists_S_diff: forall (n m: nat), n < m -> { k | m = n + S k }.
 Proof. intros. exists (m - S n). lia. Qed.
 
 Ltac decomp_lt_subst' H :=
