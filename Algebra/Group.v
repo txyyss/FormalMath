@@ -242,10 +242,10 @@ Section SUBGROUP.
   Proof. intro x. destruct x as [x ?H]. exists (neg x). apply neg_pred; auto. Defined.
 
   Lemma sg_neg_proj : forall (x : Subpart A P), neg ('x) =  '(neg x).
-  Proof. intros. destruct x. unfold cast, subgroup_rep, proj1_sig. simpl. auto. Qed.
+  Proof. intros. destruct x. simpl. reflexivity. Qed.
 
   Lemma sg_op_proj : forall (x y : Subpart A P), ('x) & ('y) = '(x & y).
-  Proof. intros; destruct x, y. unfold cast, subgroup_rep, proj1_sig. simpl. auto. Qed.
+  Proof. intros; destruct x, y. simpl. auto. Qed.
 
   Instance: Setoid (Subpart A P).
   Proof.
@@ -256,15 +256,13 @@ Section SUBGROUP.
 
   Instance: Proper ((=) ==> (=) ==> (=)) subgroup_binop.
   Proof.
-    intros [x] [y] ? [x0] [y0] ?. hnf in H0, H1 |- *.
-    unfold cast, subgroup_rep, proj1_sig in H0, H1 |-* . simpl.
+    intros [x] [y] ? [x0] [y0] ?. hnf in H0, H1 |- *. simpl in *.
     apply gr_op_proper; auto.
   Qed.
 
   Instance: Proper ((=) ==> (=)) subgroup_neg.
   Proof.
-    intros [x] [y] ?. hnf in H0 |-* . unfold cast, subgroup_rep, proj1_sig in H0 |-* .
-    simpl. apply negate_proper; auto.
+    intros [x] [y] ?. hnf in H0 |-* . simpl in *. apply negate_proper; auto.
   Qed.
 
   #[global] Instance subGroup: Group (Subpart A P).

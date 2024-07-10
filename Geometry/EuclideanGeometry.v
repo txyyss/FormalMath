@@ -8,6 +8,7 @@ Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
 
 Open Scope R_scope.
+Local Open Scope program_scope.
 
 Class DistanceFunc (A: Type) := distance: A -> A -> R.
 #[global] Typeclasses Transparent DistanceFunc.
@@ -220,13 +221,13 @@ Section ISOMETRY.
 
   Instance: Proper ((=) ==> (=) ==> (=)) iso_binop.
   Proof.
-    repeat intro. unfold cast, iso_rep, iso_binop. destruct x, y, x0, y0.
+    repeat intro. simpl. unfold iso_rep, iso_binop. destruct x, y, x0, y0.
     unfold equiv, iso_equiv in H, H0. simpl in *. rewrite H0, H. reflexivity.
   Qed.
 
   Instance: Proper ((=) ==> (=)) iso_neg.
   Proof.
-    repeat intro. unfold cast, iso_rep, iso_neg. destruct x, y.
+    repeat intro. simpl. unfold iso_rep, iso_neg. destruct x, y.
     unfold equiv, iso_equiv in H. simpl in *. apply (iso_inj x).
     rewrite iso_surj, H, iso_surj. reflexivity.
   Qed.
@@ -237,8 +238,7 @@ Section ISOMETRY.
                                       neg, iso_neg, equiv, iso_equiv.
     - destruct x, y, z; intros; simpl. reflexivity.
     - destruct x; intros; simpl; reflexivity.
-    - destruct x. intros; unfold cast, iso_rep. simpl.
-      apply (iso_inj x). rewrite iso_surj; reflexivity.
+    - destruct x. intros. simpl. apply (iso_inj x). rewrite iso_surj; reflexivity.
   Qed.
 
 End ISOMETRY.
@@ -302,7 +302,7 @@ Section ISOMETRY_ACTION.
   Instance: Proper ((=) ==> (==) ==> (==)) isometry_act.
   Proof.
     intros [x] [y] ? a b ?. unfold isometry_act. subst. red in H.
-    unfold iso_equiv in H. unfold cast, iso_rep in *. simpl in *. apply H.
+    unfold iso_equiv in H. simpl in *. apply H.
   Qed.
 
   #[global] Instance isometryGroupAction: GroupAction (Isometry n) (Vector n).
@@ -325,7 +325,7 @@ Proof.
               (/ INR m)
               (@fold_right (Vector n) _ vec_add
                            vec_zero (map (fun x => (''x) vec_zero) l))) as c. exists c.
-  intros [[g]]. unfold cast, iso_rep, subgroup_rep. simpl. rewrite Heqc at 1.
+  intros [[g]]. simpl. rewrite Heqc at 1.
   rewrite (fold_right_distr (fun x y => (@vec_scal_mul x n y))).
   2: intros; apply vec_scal_mul_add_distr_l. autorewrite with vector.
   rewrite (map_binary_func (fun x y => (@vec_scal_mul x n y))).
@@ -350,12 +350,13 @@ Proof.
         assert (forall (l1 l2: list (Subpart (Isometry n) P)),
                    PermutationA (=) l1 l2 -> Permutation (map f l1) (map f l2)). {
           subst f. clear. intros. induction H; simpl; try constructor.
-          - rewrite H. now constructor.
+          - change (iso_rep (subgroup_rep x₁)) with (' (' x₁)).
+            change (iso_rep (subgroup_rep x₂)) with (' (' x₂)).
+            rewrite H. now constructor.
           - apply perm_trans with
                 (map (fun x : Subpart (Isometry n) P => (' (' x)) vec_zero) l₂); auto.
           } apply H2. symmetry. now apply finite_group_left_perm.
-      * rewrite map_map. apply map_ext. intros [[a]]. subst gg.
-        unfold cast, iso_rep, subgroup_rep. now simpl.
+      * rewrite map_map. apply map_ext. intros [[a]]. subst gg. now simpl.
   - rewrite fold_right_map, map_fst_combine. 2: now rewrite repeat_length, map_length.
     assert (forall r k, fold_right Rplus 0 (repeat r k) == Rmult (INR k) r). {
       intros. induction k. 1: simpl; ring. rewrite S_INR. simpl. rewrite IHk. ring. }

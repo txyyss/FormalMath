@@ -41,7 +41,7 @@ Section SUBGROUP_ACTION.
   Instance: Proper ((=) ==> (==) ==> (==)) subgroup_act.
   Proof.
     intros [x] [y] ? a b ?. unfold subgroup_act. subst. red in H0.
-    unfold subgroup_equiv in H0. unfold cast, subgroup_rep in *. simpl in *.
+    unfold subgroup_equiv in H0. simpl in *.
     now rewrite H0.
   Qed.
 

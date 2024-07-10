@@ -11,6 +11,9 @@ Section ORTHOGONAL_GROUP.
 
   Definition OrthogonalMatrix := {mat: Matrix n n | orthogonal_mat mat}.
 
+  #[global] Instance ortho_mat_rep: Cast OrthogonalMatrix (Matrix n n) :=
+    fun x => proj1_sig x.
+
   #[global] Instance ortho_mat_equiv: Equiv OrthogonalMatrix :=
     fun x y => proj1_sig x == proj1_sig y.
 
@@ -62,18 +65,21 @@ Section GENERAL_LINEAR_GROUP.
 
   Definition InvertibleMatrix := {mat: Matrix n n | det mat <> 0%R}.
 
+  #[global] Instance gl_mat_rep: Cast InvertibleMatrix (Matrix n n) :=
+    fun x => proj1_sig x.
+
   #[global] Instance gl_mat_equiv: Equiv InvertibleMatrix :=
-    fun x y => proj1_sig x == proj1_sig y.
+    fun x y => ' x == ' y.
 
   Lemma gl_mat_binop_ok:
-    forall x y : InvertibleMatrix, det (mat_mul (proj1_sig x) (proj1_sig y)) =/= 0%R.
+    forall x y : InvertibleMatrix, det (mat_mul (' x) (' y)) =/= 0%R.
   Proof.
     intros [x] [y]. simpl. rewrite det_mul. apply Rmult_integral_contrapositive. now split.
   Qed.
 
   #[global] Instance gl_mat_binop: BinOp InvertibleMatrix.
   Proof.
-    intros x y. exists (mat_mul (proj1_sig x) (proj1_sig y)). now apply gl_mat_binop_ok.
+    intros x y. exists (mat_mul (' x) (' y)). now apply gl_mat_binop_ok.
   Defined.
 
   Lemma gl_mat_gunit_ok: @det n identity_mat =/= 0%R.
@@ -84,7 +90,7 @@ Section GENERAL_LINEAR_GROUP.
 
   Lemma gl_mat_neg_ok:
     forall mat : InvertibleMatrix,
-      det (proj1_sig (mat_inv_exists (proj1_sig mat) (proj2_sig mat))) =/= 0%R.
+      det (proj1_sig (mat_inv_exists (' mat) (proj2_sig mat))) =/= 0%R.
   Proof.
     intros [mat ?H]. simpl. destruct (mat_inv_exists mat H) as [imat [[?H ?H] ?H]].
     simpl. pose proof (det_mul imat mat). rewrite H0, det_identity in H3.
@@ -94,7 +100,7 @@ Section GENERAL_LINEAR_GROUP.
 
   #[global] Instance gl_mat_neg: Negate InvertibleMatrix.
   Proof.
-    intros mat. exists (proj1_sig (mat_inv_exists (proj1_sig mat) (proj2_sig mat))).
+    intros mat. exists (proj1_sig (mat_inv_exists (' mat) (proj2_sig mat))).
     apply gl_mat_neg_ok.
   Defined.
 

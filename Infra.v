@@ -97,7 +97,7 @@ Arguments sm_proper {A Ae B Be f Setoid_Morphism} _ _ _.
 #[export] Hint Extern 4 (?f _ = ?f _) => eapply (sm_proper (f := f)): core.
 
 Class Cast A B := cast: A -> B.
-Arguments cast _ _ {Cast} _.
+Arguments cast _ _ {Cast} / _.
 Notation "' x" := (cast _ _ x) (at level 20) : math_scope.
 #[export] Instance: Params (@cast) 3. Defined.
 #[global] Typeclasses Transparent Cast.
