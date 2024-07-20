@@ -241,6 +241,11 @@ Proof.
   intros. revert n l. apply dep_list_ind_1; intros; simpl; [| rewrite H, H0]; easy.
 Qed.
 
+Lemma dep_map_id: forall {A: Type} {n: nat} (l: dep_list A n), dep_map id l = l.
+Proof. intro A. apply dep_list_ind_1; intros; simpl; [| rewrite H]; easy. Qed.
+
+#[export] Hint Rewrite @dep_map_id: dep_list.
+
 Lemma dep_list_binop_nil: forall {A B C} (f: A -> B -> C),
     dep_list_binop f dep_nil dep_nil = dep_nil.
 Proof. intros. unfold dep_list_binop. simpl. easy. Qed.
@@ -271,13 +276,26 @@ Proof.
   autorewrite with dep_list. simpl. autorewrite with dep_list. now rewrite H.
 Qed.
 
-Lemma dep_list_binop_comm: forall
-    {A B} {n: nat} (v1 v2: dep_list A n) (f: A -> A -> B),
-    (forall x y, f x y = f y x) -> dep_list_binop f v1 v2 = dep_list_binop f v2 v1.
+Lemma dep_list_binop_swap: forall
+    {A B C} {n: nat} (v1: dep_list A n) (v2: dep_list B n) (f: A -> B -> C),
+    dep_list_binop f v1 v2 = dep_list_binop (fun a b => f b a) v2 v1.
 Proof.
   intros. revert n v1 v2. apply dep_list_ind_2. 1: easy. intros.
   autorewrite with dep_list. f_equal; easy.
 Qed.
+
+Lemma dep_list_binop_ext: forall {A B C} (g f: A -> B -> C) {n: nat}
+                                 (l1: dep_list A n) (l2: dep_list B n),
+    (forall x y, f x y = g x y) -> dep_list_binop f l1 l2 = dep_list_binop g l1 l2.
+Proof.
+  intros. revert n l1 l2. apply dep_list_ind_2; intros; autorewrite with dep_list.
+  1: easy. now rewrite H, H0.
+Qed.
+
+Lemma dep_list_binop_comm: forall
+    {A B} {n: nat} (v1 v2: dep_list A n) (f: A -> A -> B),
+    (forall x y, f x y = f y x) -> dep_list_binop f v1 v2 = dep_list_binop f v2 v1.
+Proof. intros. rewrite dep_list_binop_swap. now apply dep_list_binop_ext. Qed.
 
 Lemma dep_list_binop_assoc: forall
     {A} {n: nat} (v1 v2 v3: dep_list A n) (f: A -> A -> A),
@@ -432,14 +450,6 @@ Lemma dep_map_list_binop: forall {A B C D: Type} (g: C -> D) (f: A -> B -> C) {n
 Proof.
   intros. revert n l1 l2. apply dep_list_ind_2; intros; autorewrite with dep_list.
   1: easy. now rewrite H.
-Qed.
-
-Lemma dep_list_binop_ext: forall {A B C} (g f: A -> B -> C) {n: nat}
-                                 (l1: dep_list A n) (l2: dep_list B n),
-    (forall x y, f x y = g x y) -> dep_list_binop f l1 l2 = dep_list_binop g l1 l2.
-Proof.
-  intros. revert n l1 l2. apply dep_list_ind_2; intros; autorewrite with dep_list.
-  1: easy. now rewrite H, H0.
 Qed.
 
 Lemma dep_colist_cons_one: forall {A} (a: A) (l: dep_list A O),

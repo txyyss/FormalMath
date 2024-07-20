@@ -6,6 +6,7 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
+Require Import Coq.micromega.Lra.
 Require Export FormalMath.lib.Coqlib.
 Require Export FormalMath.lib.dep_list.
 Require Export FormalMath.lib.Reals_ext.
@@ -89,6 +90,14 @@ Proof. induction n; intros; autorewrite with vector; [|rewrite IHn, Ropp_0]; eas
 
 #[export] Hint Rewrite @vec_neg_zero: vector.
 
+Lemma vec_neg_nest: forall {n} (v: Vector n), vec_neg (vec_neg v) = v.
+Proof.
+  intros. unfold vec_neg. rewrite dep_map_nest. rewrite <- (dep_map_id v) at 2.
+  apply dep_map_ext. intros; unfold Datatypes.id. lra.
+Qed.
+
+#[export] Hint Rewrite @vec_neg_nest: vector.
+
 Lemma vec_add_inv1: forall {n} (v: Vector n), vec_add v (vec_neg v) = vec_zero.
 Proof.
   apply dep_list_ind_1. 1: easy. intros. autorewrite with vector.
@@ -100,14 +109,58 @@ Proof. intros. rewrite vec_add_comm. apply vec_add_inv1. Qed.
 
 #[export] Hint Rewrite @vec_add_inv1 @vec_add_inv2: vector.
 
-Lemma vec_add_neg_zero_iff: forall {n} (u v: Vector n),
-    vec_add u (vec_neg v) = vec_zero <-> u = v.
+Definition vec_sub {n} (v1 v2: Vector n): Vector n := vec_add v1 (vec_neg v2).
+
+Lemma vec_sub_diag: forall {n} (v: Vector n), vec_sub v v = vec_zero.
+Proof. intros. unfold vec_sub. autorewrite with vector. reflexivity. Qed.
+
+Lemma vec_sub_id_r: forall {n} (v: Vector n), vec_sub v vec_zero = v.
+Proof. intros. unfold vec_sub. autorewrite with vector. reflexivity. Qed.
+
+Lemma vec_sub_id_l: forall {n} (v: Vector n), vec_sub vec_zero v = vec_neg v.
+Proof. intros. unfold vec_sub. autorewrite with vector. reflexivity. Qed.
+
+Lemma vec_sub_cons: forall a1 a2 {n} (v1 v2: Vector n),
+    vec_sub (dep_cons a1 v1) (dep_cons a2 v2) = dep_cons (a1 - a2)%R (vec_sub v1 v2).
+Proof.
+  intros a1 a2. unfold vec_sub. intros. autorewrite with vector. reflexivity.
+Qed.
+
+#[export] Hint Rewrite @vec_sub_diag @vec_sub_id_l @vec_sub_id_r @vec_sub_cons: vector.
+
+Lemma vec_sub_swap: forall {n} (v1 v2: Vector n), vec_sub v1 v2 = vec_neg (vec_sub v2 v1).
+Proof.
+  intros. unfold vec_sub. unfold vec_add, vec_neg.
+  rewrite dep_map_list_binop, <- !dep_list_binop_map_2, dep_list_binop_swap.
+  apply dep_list_binop_ext. intros. lra.
+Qed.
+
+Lemma vec_sub_eq_zero_iff: forall {n} (u v: Vector n),
+    vec_sub u v = vec_zero <-> u = v.
 Proof.
   apply dep_list_ind_2; intros; autorewrite with vector. 1: easy.
   split; intros; apply dep_cons_eq_inv in H0; destruct H0.
   - f_equal. 2: now rewrite <- H. apply Rplus_opp_r_uniq, Ropp_eq_compat in H0.
     rewrite !Ropp_involutive in H0. now subst.
   - rewrite <- H in H1. rewrite H1. f_equal. subst. apply Rplus_opp_r.
+Qed.
+
+Lemma vec_sub_add_assoc1: forall {n} (a b c: Vector n),
+    vec_sub (vec_add a b) c = vec_add a (vec_sub b c).
+Proof. intros. unfold vec_sub. now rewrite vec_add_assoc. Qed.
+
+Lemma vec_sub_add_assoc2: forall {n} (a b c: Vector n),
+    vec_sub (vec_add a b) c = vec_sub a (vec_sub c b).
+Proof.
+  intros. rewrite (vec_sub_swap c b). unfold vec_sub at 1 2.
+  rewrite vec_add_assoc, vec_neg_nest. now f_equal.
+Qed.
+
+Lemma vec_add_sub_assoc: forall {n} (a b c: Vector n),
+    vec_add (vec_sub a b) c = vec_sub a (vec_sub b c).
+Proof.
+  intros. rewrite (vec_sub_swap b c). unfold vec_sub at 1 2.
+  rewrite vec_add_assoc, vec_neg_nest. f_equal. rewrite vec_add_comm. reflexivity.
 Qed.
 
 Lemma dep_nth_vec_add: forall i {n} d (v1 v2: Vector n),
@@ -179,6 +232,33 @@ Lemma vec_scal_mul_add_distr_r: forall a b {n} (v: Vector n),
 Proof.
   intros a b. apply dep_list_ind_1. 1: easy. intros. autorewrite with vector.
   now rewrite H, Rmult_plus_distr_r.
+Qed.
+
+Lemma vec_scal_mul_neg_comm: forall a {n} (v: Vector n),
+    vec_scal_mul a (vec_neg v) = vec_neg (vec_scal_mul a v).
+Proof.
+  intros. unfold vec_scal_mul, vec_neg. rewrite !dep_map_nest.
+  apply dep_map_ext. intros. lra.
+Qed.
+
+Lemma vec_scal_mul_neg_opp: forall a {n} (v: Vector n),
+    vec_neg (vec_scal_mul a v) = vec_scal_mul (- a) v.
+Proof.
+  intros. unfold vec_scal_mul, vec_neg. rewrite dep_map_nest.
+  apply dep_map_ext. intros. lra.
+Qed.
+
+Lemma vec_scal_mul_sub_distr_l: forall a {n} (u v: Vector n),
+    vec_scal_mul a (vec_sub u v) = vec_sub (vec_scal_mul a u) (vec_scal_mul a v).
+Proof.
+  intros. unfold vec_sub. now rewrite vec_scal_mul_add_distr_l, vec_scal_mul_neg_comm.
+Qed.
+
+Lemma vec_scal_mul_sub_distr_r: forall a b {n} (v: Vector n),
+    vec_scal_mul (a - b) v = vec_sub (vec_scal_mul a v) (vec_scal_mul b v).
+Proof.
+  intros. rewrite Rminus_def, vec_scal_mul_add_distr_r. unfold vec_sub.
+  now rewrite vec_scal_mul_neg_opp.
 Qed.
 
 Lemma dep_nth_vec_scal_mul: forall i a {n} (v: Vector n) d,
@@ -323,6 +403,14 @@ Qed.
 
 #[export] Hint Rewrite @vec_dot_prod_neg_r: vector.
 
+Lemma vec_dot_prod_sub_l: forall {n} (a b c: Vector n),
+    vec_dot_prod a (vec_sub b c) = (vec_dot_prod a b - vec_dot_prod a c)%R.
+Proof. intros. unfold vec_sub. rewrite vec_dot_prod_add_l, vec_dot_prod_neg_r. lra. Qed.
+
+Lemma vec_dot_prod_sub_r: forall {n} (a b c: Vector n),
+    vec_dot_prod (vec_sub a b) c = (vec_dot_prod a c - vec_dot_prod b c)%R.
+Proof. intros. unfold vec_sub. rewrite vec_dot_prod_add_r, vec_dot_prod_neg_l. lra. Qed.
+
 Lemma vec_dot_prod_nonneg: forall {n} (v: Vector n), (0 <= vec_dot_prod v v)%R.
 Proof.
   apply dep_list_ind_1; intros; autorewrite with vector.
@@ -397,6 +485,13 @@ Proof.
   - intros. now rewrite vec_scal_mul_add_distr_l.
 Qed.
 
+Lemma vec_add_is_not_linear: forall {n} (v: Vector n), v <> vec_zero -> ~ linear_map (vec_add v).
+Proof.
+  repeat intro. destruct H0 as [? _]. hnf in H0. specialize (H0 vec_zero vec_zero).
+  autorewrite with vector in H0. apply H. clear H. pose proof (vec_add_inv1 v).
+  rewrite H0 in H at 1. rewrite vec_add_assoc in H. now autorewrite with vector in H.
+Qed.
+
 Lemma affine_map_compose:
   forall {m n l} (f: Vector m -> Vector n) (g: Vector n -> Vector l),
     affine_map f -> affine_map g -> affine_map (fun x => g (f x)).
@@ -415,6 +510,30 @@ Lemma affine_map_ext: forall {m n} (f g: Vector m -> Vector n),
 Proof.
   intros. unfold affine_map in *. intros. rewrite <- H, H0; auto.
   apply fold_right_ext. intros; now rewrite H.
+Qed.
+
+Lemma affine_map_sub_linear: forall {m n} (f: Vector m -> Vector n),
+    affine_map f -> linear_map (fun x => vec_sub (f x) (f vec_zero)).
+Proof.
+  intros. unfold affine_map in H. split; hnf; intros.
+  - specialize (H ((1%R, u) :: (1%R, v) :: ((- 1)%R, vec_zero) :: nil) ltac:(simpl; lra)).
+    simpl in H. autorewrite with vector in H. rewrite H.
+    rewrite vec_sub_add_assoc2, vec_add_sub_assoc. do 2 f_equal.
+    rewrite <- (vec_scal_mul_neg_opp 1%R). autorewrite with vector. reflexivity.
+  - specialize (H ((a, v) ::  ((1 - a)%R, vec_zero) :: nil) ltac:(simpl; lra)).
+    simpl in H. autorewrite with vector in H. rewrite H.
+    rewrite vec_scal_mul_sub_distr_l, vec_sub_add_assoc2. f_equal. unfold vec_sub.
+    rewrite vec_scal_mul_neg_opp. rewrite <- (vec_scal_mul_one (f vec_zero)) at 1.
+    rewrite <- vec_scal_mul_add_distr_r. f_equal. lra.
+Qed.
+
+Lemma affine_map_linear_iff: forall {m n} (f: Vector m -> Vector n),
+    affine_map f <-> linear_map (fun x => vec_sub (f x) (f vec_zero)).
+Proof.
+  intros. split; intros; [now apply affine_map_sub_linear | apply linear_map_is_affine in H].
+  pose proof (affine_map_compose _ _ H (vec_add_is_affine (f vec_zero))). simpl in H0.
+  eapply affine_map_ext; [| apply H0]. intros; simpl. rewrite vec_add_comm.
+  rewrite vec_add_sub_assoc. now autorewrite with vector.
 Qed.
 
 (** * General Matrix Theory *)
@@ -1005,13 +1124,39 @@ Proof.
 Qed.
 
 Lemma linear_map_mat_iff: forall {n m} (f: Vector n -> Vector m),
-    linear_map f <->
-    exists ! mat: Matrix m n, forall v, f v = mat_vec_mul mat v.
+    linear_map f <-> exists mat: Matrix m n, forall v, f v = mat_vec_mul mat v.
 Proof.
   intros. split; intros.
-  - apply linear_map_mat_sig in H. destruct H as [mat ?]. now exists mat.
-  - destruct H as [mat [? ?]]. destruct (mat_vec_mul_linear_map mat). red in H1, H2.
+  - apply linear_map_mat_sig in H. destruct H as [mat [? ?]]. now exists mat.
+  - destruct H as [mat ?]. destruct (mat_vec_mul_linear_map mat). red in H0, H1.
     split; red; intros; rewrite !H; easy.
+Qed.
+
+Lemma affine_map_mat_sig: forall {n m} (f: Vector n -> Vector m),
+    affine_map f ->
+    {mat_v: (Matrix m n * Vector m) |
+      unique (fun mv => forall x, f x = vec_add (mat_vec_mul (fst mv) x) (snd mv)) mat_v}.
+Proof.
+  intros. rewrite affine_map_linear_iff in H. apply linear_map_mat_sig in H.
+  destruct H as [mat [? ?]]. exists (mat, f vec_zero). split; simpl; intros.
+  - rewrite <- H. rewrite vec_add_sub_assoc. now autorewrite with vector.
+  - destruct x' as [mat' v']. simpl in *. pose proof (H1 vec_zero).
+    autorewrite with matrix vector in H2. subst v'. f_equal. apply H0. intros.
+    rewrite H1, vec_sub_add_assoc1. now autorewrite with vector.
+Qed.
+
+Lemma affine_map_mat_iff: forall {n m} (f: Vector n -> Vector m),
+    affine_map f <->
+      exists (mat: Matrix m n) (u: Vector m), forall v, f v = vec_add (mat_vec_mul mat v) u.
+Proof.
+  intros. split; intros.
+  - apply affine_map_mat_sig in H. destruct H as [[mat u] [? _]]. simpl in H. now exists mat, u.
+  - destruct H as [mat [u ?]]. remember (mat_vec_mul mat) as h. remember (vec_add u) as g.
+    apply (affine_map_ext (fun x => g (h x))).
+    + subst. intros. now rewrite H, vec_add_comm.
+    + apply affine_map_compose; subst.
+      * apply linear_map_is_affine, mat_vec_mul_linear_map.
+      * apply vec_add_is_affine.
 Qed.
 
 Lemma mat_vec_mul_neg: forall {m n} (mat: Matrix m n) (v: Vector n),
@@ -1030,9 +1175,8 @@ Lemma preserve_dot_prod_linear: forall {m n} (f: Vector m -> Vector n),
     preserve_dot_prod f -> linear_map f.
 Proof.
   intros m n f. red. unfold preserve_dot_prod.
-  intros; split; red; intros; rewrite <- vec_add_neg_zero_iff; apply vec_dot_prod_zero;
-    rewrite vec_dot_prod_add_l, !vec_dot_prod_add_r, !vec_dot_prod_neg_l,
-    !vec_dot_prod_neg_r.
+  intros; split; red; intros; rewrite <- vec_sub_eq_zero_iff; apply vec_dot_prod_zero;
+    rewrite vec_dot_prod_sub_l, !vec_dot_prod_sub_r.
   - rewrite !vec_dot_prod_add_l, !vec_dot_prod_add_r, !H, !vec_dot_prod_add_l,
     !vec_dot_prod_add_r. ring.
   - rewrite !vec_dot_prod_scal_l, !vec_dot_prod_scal_r, !H, !vec_dot_prod_scal_l,
@@ -3007,14 +3151,6 @@ Proof.
 Qed.
 
 #[export] Hint Rewrite @vec_neg_scal_mul: vector.
-
-Lemma vec_neg_double: forall {n} (v: Vector n), vec_neg (vec_neg v) = v.
-Proof.
-  intros. rewrite <- !vec_neg_scal_mul, vec_scal_mul_assoc.
-  assert (-1 * -1 = 1)%R by ring. rewrite H. now autorewrite with vector.
-Qed.
-
-#[export] Hint Rewrite @vec_neg_double: vector.
 
 Lemma vec_neg_add: forall {n} (v1 v2: Vector n),
     vec_neg (vec_add v1 v2) = vec_add (vec_neg v1) (vec_neg v2).
