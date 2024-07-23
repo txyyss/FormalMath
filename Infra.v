@@ -119,8 +119,15 @@ Qed.
 Definition SetoidFinite (A: Type) `{s: Setoid A} : Prop := exists n, Cardinals A n.
 
 Class Inverse `(A -> B) : Type := inverse: B -> A.
-Arguments inverse {A B} _ {Inverse} _.
+Arguments inverse {A B} _ {Inverse} / _.
 #[global] Typeclasses Transparent Inverse.
+Notation "f ⁻¹" := (inverse f) (at level 30) : math_scope.
+
+Class Inj {A B} (R : relation A) (S : relation B) (f : A -> B) : Prop :=
+  inj x y : S (f x) (f y) -> R x y.
+
+Class Cancel {A B} (S : relation B) (f : A -> B) (g : B -> A) : Prop :=
+  cancel x : S (f (g x)) x.
 
 Section JECTIONS.
 
@@ -128,13 +135,13 @@ Section JECTIONS.
 
   Class Injective : Prop :=
     {
-      injective : forall x y, f x = f y -> x = y;
+      injective : Inj (=) (=) f;
       injective_mor : Setoid_Morphism f
     }.
 
   Class Surjective : Prop :=
     {
-      surjective : forall x: B, f (inverse f x) = x;
+      surjective : Cancel (=) f (f ⁻¹);
       surjective_mor : Setoid_Morphism f
     }.
 
@@ -179,11 +186,11 @@ Proof.
     constructor; [exact (setoidmor_b f) | exact (setoidmor_a f) |]. subst g.
     intros x y ?. rewrite <- (H2 x), <- (H2 y) in H3. apply H0 in H3. assumption. }
   assert (@Bijective _ _ _ _ g f). {
-    split; split; try assumption; simpl; intros.
+    split; split; try assumption; simpl; repeat intro.
     - subst g. pose proof (H2 x). pose proof (H2 y).
       rewrite H4 in H5. rewrite H5 in H6. assumption.
     - assert (@inverse _ _ g f == f) by reflexivity.
-      rewrite H4. subst g. apply H0, H2. }
+      rewrite <- H4. subst g. apply H0, H2. }
   apply (@bijective_the_same_cardinals_forward B A _ _ _ _ g f); assumption.
 Qed.
 

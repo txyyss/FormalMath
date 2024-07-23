@@ -1,4 +1,5 @@
 (** * Lɪʙʀᴀʀʏ ᴀʙᴏᴜᴛ Isᴏᴍᴇᴛʀɪᴇs ᴏғ Eᴜᴄʟɪᴅᴇᴀɴ Sᴘᴀᴄᴇ *)
+(** * Aᴜᴛʜᴏʀ: Sʜᴇɴɢʏɪ Wᴀɴɢ *)
 
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
@@ -119,26 +120,26 @@ End EUCLIDEAN_DISTANCE.
 
 Class Isometric {n} (f: Vector n -> Vector n) :=
   {
-    iso_inv: Vector n -> Vector n;
-    iso_inj: forall x y, f x == f y -> x == y;
-    iso_surj: forall x, f (iso_inv x) == x;
+    iso_inv :: Inverse f;
+    iso_inj: Inj (==) (==) f;
+    iso_surj: Cancel (==) f (f ⁻¹);
     distance_preserve: forall x y, distance x y == distance (f x) (f y)
   }.
 
-Arguments iso_inv {_} _ {_}.
-Arguments iso_inj {_} _ {_}.
-Arguments iso_surj {_} _ {_}.
+#[global] Arguments iso_inv {_} _ {_}.
+#[global] Arguments iso_inj {_} _ {_}.
+#[global] Arguments iso_surj {_} _ {_}.
 
 Lemma preserve_dot_prod_isometric: forall {n} (f: Vector n -> Vector n),
     preserve_dot_prod f -> Isometric f.
 Proof.
   intros. pose proof H as S. apply preserve_dot_prod_mat_sig in H.
-  destruct H as [mat [[? ?] ?]]. exists (mat_vec_mul (mat_transpose mat)); intros.
-  - rewrite !H0 in H2. rewrite <- mat_vec_mul_identity, <- (mat_vec_mul_identity x).
-    now rewrite <- !H, <- !mat_vec_mul_assoc, H2.
-  - rewrite H0, mat_vec_mul_assoc.
-    rewrite <- orthogonal_mat_spec_1, orthogonal_mat_spec_2 in H.
-    now rewrite H, mat_vec_mul_identity.
+  destruct H as [mat [[? ?] ?]]. exists (mat_vec_mul (mat_transpose mat)); repeat intro.
+  - rewrite !H in H2. rewrite <- mat_vec_mul_identity, <- (mat_vec_mul_identity x).
+    now rewrite <- !H1, <- !mat_vec_mul_assoc, H2.
+  - simpl. rewrite H, mat_vec_mul_assoc.
+    rewrite <- orthogonal_mat_spec_1, orthogonal_mat_spec_2 in H1.
+    now rewrite H1, mat_vec_mul_identity.
   - pose proof (preserve_dot_prod_linear _ S). destruct H2.
     red in S. unfold distance, eucDis, vec_sub.
     rewrite <- !vec_neg_scal_mul, <- H3, <- H2, !vec_neg_scal_mul. unfold norm.
@@ -149,15 +150,15 @@ Lemma isometric_fix_preserve_dot_prod: forall {n} (f: Vector n -> Vector n),
     Isometric f -> f vec_zero == vec_zero -> preserve_dot_prod f.
 Proof.
   intros. red. intros.
-  now rewrite !vec_dot_prod_distance, <- H0, <- !distance_preserve, H0.
+  now rewrite !vec_dot_prod_distance, <- H, <- !distance_preserve, H.
 Qed.
 
 Lemma translation_isometric: forall {n} (v: Vector n), Isometric (vec_add v).
 Proof.
-  intros. exists (vec_add (vec_neg v)); intros.
+  intros. exists (vec_add (vec_neg v)); repeat intro.
   - now rewrite <- vec_add_id_l, <- (vec_add_id_l x), <- (vec_add_inv1 (vec_neg v)),
     vec_neg_nest, !vec_add_assoc, H.
-  - rewrite <- vec_add_assoc. now autorewrite with vector.
+  - simpl. rewrite <- vec_add_assoc. now autorewrite with vector.
   - unfold distance, eucDis, vec_sub.
     rewrite vec_neg_add, (vec_add_comm v x), vec_add_assoc, <- (vec_add_assoc v (vec_neg v)).
     now autorewrite with vector.
@@ -166,9 +167,9 @@ Qed.
 Lemma ext_isometric: forall {n} (f g: Vector n -> Vector n),
     (forall x, f x == g x) -> Isometric f -> Isometric g.
 Proof.
-  intros. exists (iso_inv f); intros.
-  - rewrite <- !H in H1. now apply iso_inj in H1.
-  - rewrite <- H. now apply iso_surj.
+  intros. exists (iso_inv f); repeat intro.
+  - rewrite <- !H in H0. now apply iso_inj in H0.
+  - simpl. rewrite <- H. now apply iso_surj.
   - rewrite <- !H. now apply distance_preserve.
 Qed.
 
@@ -189,16 +190,16 @@ Section ISOMETRY.
     intros [f1] [f2].
     refine (existT _ (fun x => f1 (f2 x))
                    (Build_Isometric _ _ (fun x => (iso_inv f2) (iso_inv f1 x)) _ _ _));
-      intros.
+      repeat intro.
     - apply (iso_inj f2), (iso_inj f1); auto.
-    - do 2 rewrite iso_surj; easy.
+    - pose proof (iso_surj f1). pose proof (iso_surj f2). simpl in *. now rewrite H0, H.
     - transitivity (distance (f2 x) (f2 y)); apply distance_preserve.
   Defined.
 
   #[global] Instance iso_gunit: GrUnit (Isometry n).
   Proof.
     refine (existT _ (fun x => x) (Build_Isometric _ _ (fun x => x) _ _ _));
-      intros; auto.
+      repeat intro; auto.
   Defined.
 
   #[global] Instance iso_neg: Negate (Isometry n).
@@ -206,8 +207,8 @@ Section ISOMETRY.
     intros [f].
     refine (existT _ (iso_inv f) (Build_Isometric _ _ f _ _ _));
       assert (forall x, iso_inv f (f x) == x) by
-        (intros; apply (iso_inj f), iso_surj); intros; auto.
-    - pose proof (iso_surj f x). pose proof (iso_surj f y).
+        (intros; apply (iso_inj f), iso_surj); repeat intro; auto.
+    - pose proof (iso_surj f x). pose proof (iso_surj f y). simpl in *.
       rewrite <- H0, H1 in H2; assumption.
     - rewrite <- (iso_surj f x), <- (iso_surj f y), !H. symmetry.
       apply distance_preserve.
@@ -226,6 +227,7 @@ Section ISOMETRY.
   Proof.
     repeat intro. simpl. unfold iso_rep, iso_neg. destruct x, y.
     unfold equiv, iso_equiv in H. simpl in *. apply (iso_inj x).
+    change (iso_inv x) with (x ⁻¹). change (iso_inv x1) with (x1 ⁻¹).
     rewrite iso_surj, H, iso_surj. reflexivity.
   Qed.
 
@@ -235,7 +237,8 @@ Section ISOMETRY.
                                       neg, iso_neg, equiv, iso_equiv.
     - destruct x, y, z; intros; simpl. reflexivity.
     - destruct x; intros; simpl; reflexivity.
-    - destruct x. intros. simpl. apply (iso_inj x). rewrite iso_surj; reflexivity.
+    - destruct x. intros. simpl. apply (iso_inj x). change (iso_inv x) with (x ⁻¹).
+      rewrite iso_surj; reflexivity.
   Qed.
 
 End ISOMETRY.
@@ -243,28 +246,26 @@ End ISOMETRY.
 Lemma isometric_orthogonal_mat: forall {n} (f: Vector n -> Vector n),
     Isometric f ->
     {mat_v: (Matrix n n * Vector n) |
-     unique (fun mv => orthogonal_mat (fst mv) /\
-                       forall x, f x == vec_add (mat_vec_mul (fst mv) x) (snd mv))
-            mat_v}.
+      unique (fun mv => forall x, f x == vec_add (mat_vec_mul (fst mv) x) (snd mv)) mat_v /\
+        orthogonal_mat (fst mat_v)}.
 Proof.
   intros. remember (existT _ _ (translation_isometric (vec_neg (f vec_zero)))) as T.
-  remember (existT _ _ H) as A. remember (T & A). destruct s as [B ?H].
+  remember (existT _ _ X) as A. remember (T & A). destruct s as [B ?H].
   assert (B == (fun x : Vector n => vec_add (vec_neg (f vec_zero)) (f x))). {
     destruct T, A. unfold bi_op, iso_binop in Heqs.
     apply EqdepFacts.eq_sigT_fst in Heqs. apply EqdepFacts.eq_sigT_fst in HeqT.
     apply EqdepFacts.eq_sigT_fst in HeqA. now subst x x0. }
   assert (B vec_zero == vec_zero) by
       (subst B; rewrite vec_add_comm; now autorewrite with vector).
-  pose proof (isometric_fix_preserve_dot_prod _ H0 H2).
-  apply preserve_dot_prod_mat_sig in H3. destruct H3 as [mat [[? ?] ?]].
-  exists (mat, (f vec_zero)). red. split; intros.
-  - rewrite orthogonal_mat_spec_1. split; auto. intros.
-    rewrite <- H4, H1, vec_add_comm, <- vec_add_assoc. now autorewrite with vector.
-  - destruct x' as [mat2 v]. simpl in *. destruct H6. f_equal.
-    + apply H5. split. 1: apply H6. intros. subst B. rewrite !H7.
+  pose proof (isometric_fix_preserve_dot_prod _ H H1).
+  apply preserve_dot_prod_mat_sig in H2. destruct H2 as [mat [[? ?] ?]].
+  exists (mat, (f vec_zero)). split; [split|]; simpl; intros; auto.
+  - rewrite <- H2, H0, vec_add_comm, <- vec_add_assoc. now autorewrite with vector.
+  - destruct x' as [mat2 v]. simpl in *. f_equal.
+    + apply H3. intros. subst B. rewrite !H5.
       autorewrite with matrix vector. rewrite vec_add_comm, vec_add_assoc.
       now autorewrite with vector.
-    + rewrite H7. now autorewrite with matrix vector.
+    + rewrite H5. now autorewrite with matrix vector.
 Qed.
 
 Lemma orthogonal_mat_isometric: forall {n} (mat: Matrix n n) (v: Vector n),
@@ -282,9 +283,9 @@ Qed.
 Lemma isometric_is_affine: forall {n} (f: Vector n -> Vector n),
     Isometric f -> affine_map f.
 Proof.
-  intros. apply isometric_orthogonal_mat in H. destruct H as [[mat v] [[? ?] _]].
+  intros. apply isometric_orthogonal_mat in X. destruct X as [[mat v] [[? _] ?]].
   simpl in *. apply (affine_map_ext (fun x => vec_add v (mat_vec_mul mat x))).
-  - intros. now rewrite H0, vec_add_comm.
+  - intros. now rewrite H, vec_add_comm.
   - apply affine_map_compose.
     + apply linear_map_is_affine, mat_vec_mul_linear_map.
     + apply vec_add_is_affine.
