@@ -30,14 +30,13 @@ Proof.
   intros. pose proof aff_is_affine. rewrite affine_map_linear_iff in H |- *. destruct H.
   assert (forall u v, f (vec_add u v) == vec_sub (vec_add (f u) (f v)) (f vec_zero)). {
     intros. pose proof (f_equal (fun x => vec_add x (f vec_zero)) (H u v)). simpl in H1.
-    rewrite vec_add_sub_assoc in H1. autorewrite with vector in H1.
-    rewrite vec_add_assoc, (vec_add_sub_assoc (f v)) in H1. autorewrite with vector in H1.
-    now rewrite H1, vec_add_sub_assoc, vec_sub_add_assoc2. }
+    autorewrite with vector in H1. rewrite vec_add_assoc in H1.
+    autorewrite with vector in H1. now rewrite H1, vec_add_sub_assoc, vec_sub_add_assoc2. }
   assert (forall (a : R) (v : Vector n),
              f (vec_scal_mul a v)  ==
                vec_add (vec_scal_mul a (f v)) (vec_scal_mul (1 - a) (f vec_zero))). {
     intros. pose proof (f_equal (fun x => vec_add x (f vec_zero)) (H0 a v)). simpl in H2.
-    rewrite vec_add_sub_assoc in H2. autorewrite with vector in H2.
+    autorewrite with vector in H2.
     rewrite H2, vec_scal_mul_sub_distr_l, vec_add_sub_assoc. unfold vec_sub. f_equal.
     rewrite <- (vec_neg_scal_mul (f _)), <- vec_scal_mul_add_distr_r, vec_scal_mul_neg_opp.
     f_equal. lra. }
@@ -72,9 +71,21 @@ Proof.
   cut (vec_add (mat_vec_mul mat v') v == vec_zero).
   - intros. rewrite H2 in H1. now autorewrite with vector in H1.
   - assert (mat_vec_mul mat v' == vec_sub (f v') v). {
-      rewrite H, vec_sub_add_assoc1. now autorewrite with vector. }
-    rewrite H2, vec_add_sub_assoc. autorewrite with vector. specialize (H0 vec_zero).
+      rewrite H. now autorewrite with vector. }
+    rewrite H2. autorewrite with vector. specialize (H0 vec_zero).
     autorewrite with matrix vector in H0. rewrite <- H0. apply aff_surj.
+Qed.
+
+Lemma invertible_mat_invertible_affine: forall {n} (mat: Matrix n n) (v: Vector n),
+    invertible_mat mat -> InvertibleAffine (fun x => vec_add (mat_vec_mul mat x) v).
+Proof.
+  intros. destruct (mat_inv_exists _ H) as [imat [[? ?] _]].
+  exists (fun x => mat_vec_mul imat (vec_sub x v)).
+  - repeat intro. pose proof (f_equal (fun x => vec_sub x v) H2). simpl in H3.
+    autorewrite with vector in H3. pose proof (f_equal (mat_vec_mul imat) H3).
+    rewrite !mat_vec_mul_assoc, H0 in H4. now autorewrite with matrix in H4.
+  - repeat intro. simpl. rewrite mat_vec_mul_assoc, H1. now autorewrite with matrix vector.
+  - rewrite affine_map_mat_iff. now exists mat, v.
 Qed.
 
 Class DistanceFunc (A: Type) := distance: A -> A -> R.
@@ -159,9 +170,8 @@ Section EUCLIDEAN_DISTANCE.
     - rewrite (vec_sub_swap x y). autorewrite with vector. now rewrite Ropp_involutive.
     - remember (vec_sub x y) as vx. remember (vec_sub y z) as vy.
       assert (vec_sub x z == vec_add vx vy). {
-        subst. rewrite vec_add_sub_assoc. f_equal.
-        rewrite <- vec_sub_add_assoc2, vec_add_comm, vec_sub_add_assoc1.
-        now autorewrite with vector. } rewrite H. clear. apply norm_tri_ineq.
+        subst. rewrite vec_add_sub_assoc. f_equal. now autorewrite with vector. }
+      rewrite H. clear. apply norm_tri_ineq.
   Qed.
 
   Lemma polarization_identity: forall (u v: Vector n),
@@ -215,8 +225,7 @@ Qed.
 Lemma isometric_fix_preserve_dot_prod: forall {n} (f: Vector n -> Vector n),
     Isometric f -> f vec_zero == vec_zero -> preserve_dot_prod f.
 Proof.
-  intros. red. intros.
-  now rewrite !vec_dot_prod_distance, <- H, <- !distance_preserve, H.
+  intros. red. intros. now rewrite !vec_dot_prod_distance, <- H, <- !distance_preserve, H.
 Qed.
 
 Lemma translation_isometric: forall {n} (v: Vector n), Isometric (vec_add v).
@@ -275,8 +284,7 @@ Section ISOMETRY.
         (intros; apply (iso_inj f), iso_surj); repeat intro; auto.
     - pose proof (iso_surj f x). pose proof (iso_surj f y). simpl in *.
       rewrite <- H0, H1 in H2; assumption.
-    - rewrite <- (iso_surj f x), <- (iso_surj f y), !H. symmetry.
-      apply distance_preserve.
+    - rewrite <- (iso_surj f x), <- (iso_surj f y), !H. symmetry. apply distance_preserve.
   Defined.
 
   Instance: Setoid (Isometry n).

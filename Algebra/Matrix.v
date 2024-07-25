@@ -170,6 +170,17 @@ Proof.
   unfold vec_sub. autorewrite with vector. apply vec_add_comm.
 Qed.
 
+Lemma vec_add_sub_same: forall {n} (a b: Vector n), vec_add (vec_sub a b) b = a.
+Proof. intros. rewrite vec_add_sub_assoc. now autorewrite with vector. Qed.
+
+Lemma vec_sub_add_same: forall {n} (a b: Vector n), vec_sub (vec_add a b) b = a.
+Proof. intros. rewrite vec_sub_add_assoc1. now autorewrite with vector. Qed.
+
+Lemma vec_sub_sub_same: forall {n} (a b: Vector n), vec_sub a (vec_sub a b) = b.
+Proof. intros. rewrite <- vec_sub_add_assoc2, vec_add_comm. apply vec_sub_add_same. Qed.
+
+#[export] Hint Rewrite @vec_add_sub_same @vec_sub_add_same @vec_sub_sub_same: vector.
+
 Lemma dep_nth_vec_add: forall i {n} d (v1 v2: Vector n),
     i < n -> dep_nth i (vec_add v1 v2) d = (dep_nth i v1 d + dep_nth i v2 d)%R.
 Proof.
