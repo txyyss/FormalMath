@@ -1,4 +1,4 @@
-(** * Lɪʙʀᴀʀʏ ᴀʙᴏᴜᴛ Isᴏᴍᴇᴛʀɪᴇs ᴏғ Eᴜᴄʟɪᴅᴇᴀɴ Sᴘᴀᴄᴇ *)
+(** * Lɪʙʀᴀʀʏ ᴀʙᴏᴜᴛ Tʀᴀɴsꜰᴏʀᴍᴀᴛɪᴏɴs ᴏꜰ Eᴜᴄʟɪᴅᴇᴀɴ Sᴘᴀᴄᴇ *)
 (** * Aᴜᴛʜᴏʀ: Sʜᴇɴɢʏɪ Wᴀɴɢ *)
 
 Require Import FormalMath.Algebra.Matrix.
@@ -7,9 +7,75 @@ Require Import FormalMath.Algebra.FiniteGroup.
 Require Import FormalMath.Algebra.GroupAction.
 Require Import Coq.Sorting.Permutation.
 Require Import Coq.Lists.SetoidPermutation.
+Require Import Coq.micromega.Lra.
 
 Open Scope R_scope.
 Local Open Scope program_scope.
+
+Class InvertibleAffine {n} (f: Vector n -> Vector n) :=
+  {
+    aff_inv :: Inverse f;
+    aff_inj :: Inj (==) (==) f;
+    aff_surj :: Cancel (==) f (f ⁻¹);
+    aff_is_affine: affine_map f
+  }.
+
+#[global] Arguments aff_inv {_} _ {_}.
+#[global] Arguments aff_inj {_} _ {_}.
+#[global] Arguments aff_surj {_} _ {_}.
+
+Lemma invertible_affine_inv_affine:
+  forall {n} (f: Vector n -> Vector n) {X: InvertibleAffine f}, affine_map (f ⁻¹).
+Proof.
+  intros. pose proof aff_is_affine. rewrite affine_map_linear_iff in H |- *. destruct H.
+  assert (forall u v, f (vec_add u v) == vec_sub (vec_add (f u) (f v)) (f vec_zero)). {
+    intros. pose proof (f_equal (fun x => vec_add x (f vec_zero)) (H u v)). simpl in H1.
+    rewrite vec_add_sub_assoc in H1. autorewrite with vector in H1.
+    rewrite vec_add_assoc, (vec_add_sub_assoc (f v)) in H1. autorewrite with vector in H1.
+    now rewrite H1, vec_add_sub_assoc, vec_sub_add_assoc2. }
+  assert (forall (a : R) (v : Vector n),
+             f (vec_scal_mul a v)  ==
+               vec_add (vec_scal_mul a (f v)) (vec_scal_mul (1 - a) (f vec_zero))). {
+    intros. pose proof (f_equal (fun x => vec_add x (f vec_zero)) (H0 a v)). simpl in H2.
+    rewrite vec_add_sub_assoc in H2. autorewrite with vector in H2.
+    rewrite H2, vec_scal_mul_sub_distr_l, vec_add_sub_assoc. unfold vec_sub. f_equal.
+    rewrite <- (vec_neg_scal_mul (f _)), <- vec_scal_mul_add_distr_r, vec_scal_mul_neg_opp.
+    f_equal. lra. }
+  assert (forall v, f (vec_neg v) == vec_sub (vec_scal_mul 2 (f vec_zero)) (f v)). {
+    intros. specialize (H2 (-1) v). rewrite !vec_neg_scal_mul in H2.
+    rewrite H2, vec_add_comm. unfold vec_sub. do 2 f_equal. lra. }
+  assert (vec_sub (vec_scal_mul 2 (f vec_zero)) (f vec_zero) == f vec_zero). {
+    rewrite <- (vec_scal_mul_one (f vec_zero)) at 2.
+    rewrite <- vec_scal_mul_sub_distr_r. replace (2 - 1) with 1 by lra.
+    now rewrite vec_scal_mul_one. } split; repeat intro.
+  - apply (aff_inj f). unfold vec_sub. rewrite !H1, H3, !aff_surj.
+    autorewrite with vector. rewrite !vec_sub_add_assoc1, H4.
+    autorewrite with vector. rewrite !vec_add_assoc. f_equal. now rewrite vec_add_comm.
+  - apply (aff_inj f). unfold vec_sub. rewrite H1, H2, H3, H1, H3, !aff_surj.
+    autorewrite with vector. rewrite !vec_sub_add_assoc1, H4, vec_scal_mul_add_distr_l.
+    rewrite vec_add_assoc, <- vec_scal_mul_add_distr_r. f_equal.
+    rewrite <- (vec_scal_mul_one (f vec_zero)) at 1. f_equal. lra.
+Qed.
+
+Lemma invertible_affine_invertible_mat: forall {n} (f: Vector n -> Vector n),
+    InvertibleAffine f ->
+    {mat_v: (Matrix n n * Vector n) |
+      unique (fun mv => forall x, f x == vec_add (mat_vec_mul (fst mv) x) (snd mv)) mat_v /\
+        invertible_mat (fst mat_v)}.
+Proof.
+  intros. destruct (affine_map_mat_sig _ aff_is_affine) as [[mat v] [? ?]].
+  exists (mat, v). split; [split|]; simpl in *; intros; auto. clear H0.
+  destruct (affine_map_mat_sig _ (invertible_affine_inv_affine f)) as [[mat' v'] [? _]].
+  simpl fst in H0. simpl snd in H0. rewrite invertible_mat_spec2. exists mat'.
+  apply mat_vec_mul_unique. intros x. autorewrite with matrix. pose proof (aff_surj f x).
+  rewrite H0, H, mat_vec_mul_add_r, mat_vec_mul_assoc, vec_add_assoc in H1.
+  cut (vec_add (mat_vec_mul mat v') v == vec_zero).
+  - intros. rewrite H2 in H1. now autorewrite with vector in H1.
+  - assert (mat_vec_mul mat v' == vec_sub (f v') v). {
+      rewrite H, vec_sub_add_assoc1. now autorewrite with vector. }
+    rewrite H2, vec_add_sub_assoc. autorewrite with vector. specialize (H0 vec_zero).
+    autorewrite with matrix vector in H0. rewrite <- H0. apply aff_surj.
+Qed.
 
 Class DistanceFunc (A: Type) := distance: A -> A -> R.
 #[global] Typeclasses Transparent DistanceFunc.
@@ -80,7 +146,7 @@ Section EUCLIDEAN_DISTANCE.
         apply Rmult_le_compat_l; auto. apply Cauchy_Schwarz_ineq.
   Qed.
 
-  Global Instance eucDis: DistanceFunc (Vector n) := fun x y => norm (vec_sub x y).
+  #[global] Instance eucDis: DistanceFunc (Vector n) := fun x y => norm (vec_sub x y).
 
   #[global] Instance distanceMetric: Metric (Vector n).
   Proof.
@@ -121,8 +187,8 @@ End EUCLIDEAN_DISTANCE.
 Class Isometric {n} (f: Vector n -> Vector n) :=
   {
     iso_inv :: Inverse f;
-    iso_inj: Inj (==) (==) f;
-    iso_surj: Cancel (==) f (f ⁻¹);
+    iso_inj :: Inj (==) (==) f;
+    iso_surj :: Cancel (==) f (f ⁻¹);
     distance_preserve: forall x y, distance x y == distance (f x) (f y)
   }.
 
@@ -138,7 +204,7 @@ Proof.
   - rewrite !H in H2. rewrite <- mat_vec_mul_identity, <- (mat_vec_mul_identity x).
     now rewrite <- !H1, <- !mat_vec_mul_assoc, H2.
   - simpl. rewrite H, mat_vec_mul_assoc.
-    rewrite <- orthogonal_mat_spec_1, orthogonal_mat_spec_2 in H1.
+    rewrite <- orthogonal_mat_spec1, orthogonal_mat_spec2 in H1.
     now rewrite H1, mat_vec_mul_identity.
   - pose proof (preserve_dot_prod_linear _ S). destruct H2.
     red in S. unfold distance, eucDis, vec_sub.
@@ -179,8 +245,7 @@ Section ISOMETRY.
 
   Context {n: nat}.
 
-  #[global] Instance iso_rep: Cast (Isometry n) (Vector n -> Vector n) :=
-    fun x => projT1 x.
+  #[global] Instance iso_rep: Cast (Isometry n) (Vector n -> Vector n) := fun x => projT1 x.
 
   #[global] Instance iso_equiv: Equiv (Isometry n) :=
     fun f1 f2 => forall x, (' f1) x == (' f2) x.
@@ -271,7 +336,7 @@ Qed.
 Lemma orthogonal_mat_isometric: forall {n} (mat: Matrix n n) (v: Vector n),
     orthogonal_mat mat -> Isometric (fun x => vec_add (mat_vec_mul mat x) v).
 Proof.
-  intros. rewrite orthogonal_mat_spec_1 in H. apply mat_vec_mul_preserve_dot_prod in H.
+  intros. rewrite orthogonal_mat_spec1 in H. apply mat_vec_mul_preserve_dot_prod in H.
   apply preserve_dot_prod_isometric in H. remember (existT _ _ H) as R.
   remember (existT _ _ (translation_isometric v)) as T. remember (T & R).
   destruct s as [B ?H]. destruct R, T. unfold bi_op, iso_binop in Heqs.

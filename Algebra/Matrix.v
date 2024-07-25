@@ -163,6 +163,13 @@ Proof.
   rewrite vec_add_assoc, vec_neg_nest. f_equal. rewrite vec_add_comm. reflexivity.
 Qed.
 
+Lemma vec_sub_sub_assoc: forall {n} (a b c: Vector n),
+    vec_sub (vec_sub a b) c = vec_sub a (vec_add b c).
+Proof.
+  intros. unfold vec_sub at 2. rewrite vec_sub_add_assoc2. f_equal.
+  unfold vec_sub. autorewrite with vector. apply vec_add_comm.
+Qed.
+
 Lemma dep_nth_vec_add: forall i {n} d (v1 v2: Vector n),
     i < n -> dep_nth i (vec_add v1 v2) d = (dep_nth i v1 d + dep_nth i v2 d)%R.
 Proof.
@@ -1114,7 +1121,7 @@ Qed.
 
 Lemma linear_map_mat_sig: forall {n m} (f: Vector n -> Vector m),
     linear_map f -> {mat: Matrix m n |
-                      unique (fun m => forall v, f v = mat_vec_mul m v) mat}.
+                      unique (fun ma => forall v, f v = mat_vec_mul ma v) mat}.
 Proof.
   intros. exists (mat_transpose (dep_map f identity_mat)).
   assert (forall v, f v = mat_vec_mul (mat_transpose (dep_map f identity_mat)) v) by
@@ -3488,7 +3495,7 @@ Proof.
   autorewrite with matrix in H, H0. now  subst mat1 mat2.
 Qed.
 
-Lemma mat_inv_exists: forall {n} (mat: Matrix n n),
+Lemma det_neq_zero_mat_inv_exists: forall {n} (mat: Matrix n n),
     det mat <> 0%R -> { imat | unique (fun im => mat_mul im mat = identity_mat /\
                                               mat_mul mat im = identity_mat) imat }.
 Proof.
@@ -3503,18 +3510,65 @@ Lemma mat_mul_identity_comm: forall {n} (A B: Matrix n n),
     mat_mul A B = identity_mat -> mat_mul B A = identity_mat.
 Proof.
   intros. destruct (mat_mul_identity_det _ _ H).
-  destruct (mat_inv_exists _ H0) as [invA [[? ?] _]].
+  destruct (det_neq_zero_mat_inv_exists _ H0) as [invA [[? ?] _]].
   pose proof (mat_right_inv_unique _ _ _ H3 H). now subst.
 Qed.
+
+Definition invertible_mat {n: nat} (mat: Matrix n n): Prop :=
+  exists imat, mat_mul mat imat = identity_mat.
+
+Lemma left_inv_invertible: forall {n} (A B: Matrix n n),
+    mat_mul A B = identity_mat -> invertible_mat A.
+Proof. intros. now exists B. Qed.
+
+Lemma right_inv_invertible: forall {n} (A B: Matrix n n),
+    mat_mul A B = identity_mat -> invertible_mat B.
+Proof. intros. apply mat_mul_identity_comm in H. now exists A. Qed.
+
+Lemma invertible_mat_det: forall {n} (mat: Matrix n n),
+    invertible_mat mat <-> det mat <> 0%R.
+Proof.
+  intros. split; intros.
+  - destruct H as [imat ?]. apply mat_mul_identity_det in H. now destruct H.
+  - apply mat_right_inv_exists in H. destruct H as [matr ?]. now exists matr.
+Qed.
+
+Lemma invertible_mat_spec1: forall {n} (mat: Matrix n n),
+    invertible_mat mat <-> exists imat, mat_mul mat imat = identity_mat /\
+                                   mat_mul imat mat = identity_mat.
+Proof.
+  intros; split; intros.
+  - destruct H as [imat ?]. exists imat. split; auto. now apply mat_mul_identity_comm.
+  - destruct H as [imat [? ?]]. now exists imat.
+Qed.
+
+Lemma invertible_mat_spec2: forall {n} (mat: Matrix n n),
+    invertible_mat mat <-> exists imat, mat_mul mat imat = identity_mat.
+Proof. intros. split; intros; [now red in H | now red]. Qed.
+
+Lemma invertible_mat_spec3: forall {n} (mat: Matrix n n),
+    invertible_mat mat <-> exists imat, mat_mul imat mat = identity_mat.
+Proof.
+  intros. split; intros.
+  - destruct H as [imat ?]. apply mat_mul_identity_comm in H. exists imat; easy.
+  - destruct H as [imat ?]. now apply (right_inv_invertible imat).
+Qed.
+
+Lemma mat_inv_exists: forall {n} (mat: Matrix n n),
+    invertible_mat mat -> { imat | unique (fun im => mat_mul im mat = identity_mat /\
+                                                   mat_mul mat im = identity_mat) imat }.
+Proof. intros. rewrite invertible_mat_det in H. now apply det_neq_zero_mat_inv_exists. Qed.
+
+#[global] Opaque invertible_mat.
 
 Definition orthogonal_mat {n: nat} (mat: Matrix n n): Prop :=
   mat_mul (mat_transpose mat) mat = identity_mat.
 
-Lemma orthogonal_mat_spec_1: forall {n} (mat: Matrix n n),
+Lemma orthogonal_mat_spec1: forall {n} (mat: Matrix n n),
     orthogonal_mat mat <-> mat_mul (mat_transpose mat) mat = identity_mat.
 Proof. intros. now unfold orthogonal_mat. Qed.
 
-Lemma orthogonal_mat_spec_2: forall {n} (mat: Matrix n n),
+Lemma orthogonal_mat_spec2: forall {n} (mat: Matrix n n),
     orthogonal_mat mat <-> mat_mul mat (mat_transpose mat) = identity_mat.
 Proof. intros. unfold orthogonal_mat. split; apply mat_mul_identity_comm. Qed.
 
@@ -3525,6 +3579,8 @@ Proof.
   autorewrite with matrix in H0. rewrite Rmult_sqr in H0. symmetry in H0.
   apply Rsqr_eq. now rewrite Rsqr_1.
 Qed.
+
+#[global] Opaque orthogonal_mat.
 
 (** * Special and Concrete Matrix *)
 
@@ -3541,8 +3597,8 @@ Lemma orthogonal_mat_dim2: forall mat: Matrix 2 2,
               (mat = {|{|cos x; (- sin x)%R|}; {|sin x; cos x|}|} \/
                mat = {|{|cos x; sin x|}; {|sin x; (- cos x)%R|}|}).
 Proof.
-  intros. pose proof H. rewrite orthogonal_mat_spec_1 in H.
-  rewrite orthogonal_mat_spec_2 in H0. unfold Matrix in mat. dep_list_decomp.
+  intros. pose proof H. rewrite orthogonal_mat_spec1 in H.
+  rewrite orthogonal_mat_spec2 in H0. unfold Matrix in mat. dep_list_decomp.
   rename mat3 into p. rename mat1 into q. rename mat0 into t. rename mat2 into u.
   vm_compute in H, H0. replace R0 with 0%R in H, H0 by now vm_compute.
   replace R1 with 1%R in H, H0 by now vm_compute. rewrite !Rplus_0_l in H, H0.
