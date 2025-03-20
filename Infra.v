@@ -1,8 +1,8 @@
 #[global] Generalizable All Variables.
 #[global] Set Warnings "-notation-overridden".
 
-Require Export Coq.Lists.List.
-Require Export Coq.Lists.SetoidList.
+Require Export Stdlib.Lists.List.
+Require Export Stdlib.Sorting.SetoidList.
 
 (******************************* Hint *******************************)
 
@@ -159,7 +159,7 @@ Lemma bijective_the_same_cardinals_forward:
     Cardinals A n -> Cardinals B n.
 Proof.
   unfold Cardinals. intros. destruct H as [l [? [? ?]]]. exists (map f l).
-  split; [|split]. 2: rewrite map_length; assumption. destruct Bi as [Binj Bsur].
+  split; [|split]. 2: rewrite length_map; assumption. destruct Bi as [Binj Bsur].
   - clear H0 H1. induction l; simpl; constructor; inversion H; subst.
     2: apply IHl; assumption. intro. apply H2. clear H2.
     rewrite InA_alt in H0. destruct H0 as [y [? ?]].

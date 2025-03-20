@@ -1,6 +1,6 @@
-Require Import Coq.Classes.EquivDec.
-Require Import Coq.PArith.PArith.
-Require Import Coq.Lists.List.
+Require Import Stdlib.Classes.EquivDec.
+Require Import Stdlib.PArith.PArith.
+Require Import Stdlib.Lists.List.
 Require Import FormalMath.Algebra.Word.
 Require Import FormalMath.Algebra.CosetEnum.
 Require Import FormalMath.lib.List_ext.

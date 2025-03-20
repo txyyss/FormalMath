@@ -1,10 +1,10 @@
 (** * Lɪʙʀᴀʀʏ ᴏғ Lᴇɴɢᴛʜ-Iɴᴅᴇxᴇᴅ Lɪsᴛ *)
 (** * Aᴜᴛʜᴏʀ: Sʜᴇɴɢʏɪ Wᴀɴɢ *)
 
-Require Import Coq.Lists.List.
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Logic.EqdepFacts.
-Require Import Coq.Arith.Arith.
+Require Import Stdlib.Lists.List.
+Require Import Stdlib.Logic.Eqdep_dec.
+Require Import Stdlib.Logic.EqdepFacts.
+Require Import Stdlib.Arith.Arith.
 Require Import FormalMath.lib.Coqlib.
 
 Inductive dep_list (A: Type): nat -> Type :=

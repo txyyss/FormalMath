@@ -5,12 +5,16 @@ Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.FiniteGroup.
 Require Import FormalMath.Algebra.GroupAction.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.Lists.SetoidPermutation.
-Require Import Coq.micromega.Lra.
+Require Import Stdlib.Sorting.Permutation.
+Require Import Stdlib.Sorting.SetoidPermutation.
+Require Import Stdlib.micromega.Lra.
 
 Open Scope R_scope.
 Local Open Scope program_scope.
+
+Lemma bij_inv_cancel: forall {A B: Type} (f: A -> B) `{HI: !Inverse f},
+    Inj (==) (==) f -> Cancel (==) f (f ⁻¹) -> Cancel (==) (f ⁻¹) f.
+Proof. intros A B f HI Hinj Hcan x. apply Hinj. now rewrite Hcan. Qed.
 
 Class InvertibleAffine {n} (f: Vector n -> Vector n) :=
   {
@@ -55,6 +59,15 @@ Proof.
     rewrite vec_add_assoc, <- vec_scal_mul_add_distr_r. f_equal.
     rewrite <- (vec_scal_mul_one (f vec_zero)) at 1. f_equal. lra.
 Qed.
+
+Lemma inv_invertible_affine:
+  forall {n} (f: Vector n -> Vector n) {X: InvertibleAffine f}, InvertibleAffine (f ⁻¹).
+Proof.
+  intros. exists f.
+  - repeat intro. pose proof (f_equal f H). now rewrite !aff_surj in H0.
+  - now apply bij_inv_cancel; [apply aff_inj | apply aff_surj].
+  - now apply invertible_affine_inv_affine.
+Defined.
 
 Lemma invertible_affine_invertible_mat: forall {n} (f: Vector n -> Vector n),
     InvertibleAffine f ->
@@ -402,10 +415,10 @@ Proof.
   rewrite (map_binary_func (fun x y => (@vec_scal_mul x n y))).
   rewrite <- fold_right_map, (isometric_is_affine _ i).
   - rewrite fold_right_map, map_binary_snd_combine with
-        (f := fun x y => (@vec_scal_mul x n y)), map_map, map_length.
+        (f := fun x y => (@vec_scal_mul x n y)), map_map, length_map.
     replace (length l) with
         (length (map (fun x : Subpart (Isometry n) P => g ((' (' x)) vec_zero)) l)) by
-        now rewrite map_length.
+        now rewrite length_map.
     rewrite <- (map_binary_func (fun x y => (@vec_scal_mul x n y))).
     replace vec_zero with (@vec_scal_mul (/ INR m) n vec_zero) by
         now rewrite vec_scal_mul_zero_r.
@@ -428,9 +441,41 @@ Proof.
                 (map (fun x : Subpart (Isometry n) P => (' (' x)) vec_zero) l₂); auto.
           } apply H2. symmetry. now apply finite_group_left_perm.
       * rewrite map_map. apply map_ext. intros [[a]]. subst gg. now simpl.
-  - rewrite fold_right_map, map_fst_combine. 2: now rewrite repeat_length, map_length.
+  - rewrite fold_right_map, map_fst_combine. 2: now rewrite repeat_length, length_map.
     assert (forall r k, fold_right Rplus 0 (repeat r k) == Rmult (INR k) r). {
       intros. induction k. 1: simpl; ring. rewrite S_INR. simpl. rewrite IHk. ring. }
-    rewrite map_length, H0, H2. apply Rinv_r, not_0_INR. destruct SGC, non_empty.
+    rewrite length_map, H0, H2. apply Rinv_r, not_0_INR. destruct SGC, non_empty.
     specialize (H1 (exist _ x H3)). intro. subst m. now destruct l.
 Qed.
+
+Definition affine_conjugate {n: nat} (f g: Isometry n): Prop :=
+  exists (aff: Vector n -> Vector n) (X : InvertibleAffine aff),
+  forall v, (' f) v == (aff ∘ (' g) ∘ (aff ⁻¹)) v.
+
+Section SUB_AFFINE_CONJ.
+
+  Context `{!SubGroupCondition (Isometry n) P}.
+
+  Context `{!SubGroupCondition (Isometry n) Q}.
+
+  Class Isometry_Affine_Equiv :=
+    {
+      aff: Vector n -> Vector n;
+      iso_inv_aff :: InvertibleAffine aff;
+      p_aff_q: forall (fp: Subpart (Isometry n) P), exists (fq: Subpart (Isometry n) Q),
+      forall v, (''fp) v == (aff ∘ (''fq) ∘ aff ⁻¹) v;
+      q_aff_p: forall (fq: Subpart (Isometry n) Q), exists (fp: Subpart (Isometry n) P),
+      forall v, (''fq) v == (aff ⁻¹ ∘ (''fp) ∘ aff) v;
+    }.
+
+End SUB_AFFINE_CONJ.
+
+Arguments Isometry_Affine_Equiv {_} _ _.
+
+Lemma iae_sym: forall {n: nat} (P: Isometry n -> Prop) (Q: Isometry n -> Prop),
+    Isometry_Affine_Equiv P Q -> Isometry_Affine_Equiv Q P.
+Proof.
+  intros. exists (aff ⁻¹) (inv_invertible_affine aff); change ((aff ⁻¹) ⁻¹) with aff.
+  - apply q_aff_p.
+  - apply p_aff_q.
+Defined.

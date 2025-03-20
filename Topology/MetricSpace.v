@@ -1,6 +1,6 @@
 Generalizable All Variables.
 
-Require Import Coq.Reals.Reals.
+Require Import Stdlib.Reals.Reals.
 Require Import FormalMath.Topology.TopologicalSpace.
 
 Local Open Scope R_scope.

@@ -1,8 +1,8 @@
 Require Export FormalMath.lib.Coqlib.
 Require Import FormalMath.Category.Category.
 Require Import FormalMath.Category.CategoryExamples.
-Require Import Coq.Logic.FunctionalExtensionality.
-Require Import Coq.Logic.Eqdep.
+Require Import Stdlib.Logic.FunctionalExtensionality.
+Require Import Stdlib.Logic.Eqdep.
 
 (** Chapter 1.4.6: All categories as a category *)
 Record CatObj: Type := {

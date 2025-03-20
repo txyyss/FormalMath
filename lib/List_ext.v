@@ -1,6 +1,6 @@
-Require Import Coq.Lists.List.
-Require Import Coq.Arith.Arith.
-Require Import Coq.Sorting.Permutation.
+Require Import Stdlib.Lists.List.
+Require Import Stdlib.Arith.Arith.
+Require Import Stdlib.Sorting.Permutation.
 Import ListNotations.
 
 Fixpoint flatten {A: Type} (l: list (list A)): list A :=

@@ -1,5 +1,5 @@
 Require Import FormalMath.lib.Sets_ext.
-Require Import Coq.Logic.Description.
+Require Import Stdlib.Logic.Description.
 
 Inductive invertible {X Y: Type} (f: X -> Y): Prop :=
 | invertible_intro: forall g: Y -> X,

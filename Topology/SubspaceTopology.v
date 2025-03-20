@@ -1,7 +1,7 @@
 Generalizable All Variables.
 
 Require Import FormalMath.Topology.TopologicalSpace.
-Require Import Coq.Logic.ClassicalChoice.
+Require Import Stdlib.Logic.ClassicalChoice.
 
 Section SUBSPACE_TOPOLOGY.
 

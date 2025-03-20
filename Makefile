@@ -1,5 +1,5 @@
-COQC = coqc
-COQDEP = coqdep
+COQC = rocq compile
+COQDEP = rocq dep
 
 COQ_FLAG = -Q "." FormalMath
 

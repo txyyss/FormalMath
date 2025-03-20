@@ -4,7 +4,7 @@ Generalizable All Variables.
 
 Require Export FormalMath.lib.Sets_ext.
 Require Import FormalMath.lib.FiniteType.
-Require Import Coq.Logic.ClassicalChoice.
+Require Import Stdlib.Logic.ClassicalChoice.
 
 Class OpenSet (A: Type) := open: Ensemble A -> Prop.
 #[global] Typeclasses Transparent OpenSet.

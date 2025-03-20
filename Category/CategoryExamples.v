@@ -1,5 +1,5 @@
-Require Import Coq.Logic.Classical.
-Require Import Coq.Classes.RelationClasses.
+Require Import Stdlib.Logic.Classical.
+Require Import Stdlib.Classes.RelationClasses.
 Require Import FormalMath.Category.Category.
 Require Import FormalMath.Algebra.Group.
 Require Import FormalMath.Algebra.GroupExample.

@@ -1,7 +1,7 @@
-Require Import Coq.Arith.Arith_base.
-Require Import Coq.Relations.Relations.
-Require Import Coq.Classes.RelationClasses.
-Require Import Coq.micromega.Lia.
+Require Import Stdlib.Arith.Arith_base.
+Require Import Stdlib.Relations.Relations.
+Require Import Stdlib.Classes.RelationClasses.
+Require Import Stdlib.micromega.Lia.
 
 Lemma lt_plus_S_l: forall (n m: nat), n < n + S m.
 Proof. lia. Qed.

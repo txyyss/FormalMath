@@ -1,12 +1,13 @@
 (** * Lɪʙʀᴀʀʏ ᴏғ Mᴀᴛʀɪx Tʜᴇᴏʀʏ Bᴀsᴇᴅ ᴏɴ Dᴇᴘᴇɴᴅᴇɴᴛ Tʏᴘᴇs *)
 (** * Aᴜᴛʜᴏʀ: Sʜᴇɴɢʏɪ Wᴀɴɢ *)
 
-Require Export Coq.Reals.Reals.
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Logic.EqdepFacts.
-Require Import Coq.Lists.List.
-Require Import Coq.micromega.Lia.
-Require Import Coq.micromega.Lra.
+Require Export Stdlib.Reals.Reals.
+Require Import Stdlib.Arith.Compare_dec.
+Require Import Stdlib.Logic.Eqdep_dec.
+Require Import Stdlib.Logic.EqdepFacts.
+Require Import Stdlib.Lists.List.
+Require Import Stdlib.micromega.Lia.
+Require Import Stdlib.micromega.Lra.
 Require Export FormalMath.lib.Coqlib.
 Require Export FormalMath.lib.dep_list.
 Require Export FormalMath.lib.Reals_ext.

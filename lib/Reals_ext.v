@@ -1,6 +1,6 @@
-Require Import Coq.Reals.Reals.
-Require Import Coq.Reals.Rtrigo_facts.
-Require Import Coq.micromega.Lra.
+Require Import Stdlib.Reals.Reals.
+Require Import Stdlib.Reals.Rtrigo_facts.
+Require Import Stdlib.micromega.Lra.
 
 Local Open Scope R_scope.
 

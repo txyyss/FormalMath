@@ -23,7 +23,7 @@ Class Group (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A}
     neg_left : forall x, neg x & x = one
   }.
 
-Coercion gr_as_setoid : Group >-> Setoid.
+(* Coercion gr_as_setoid : Group >-> Setoid. *)
 
 Class AbelianGroup (A : Type) {Ae : Equiv A} {Aop : BinOp A} {Aunit : GrUnit A}
       {Anegate : Negate A} : Prop :=

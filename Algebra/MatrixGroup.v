@@ -3,7 +3,7 @@
 
 Require Import FormalMath.Algebra.Matrix.
 Require Import FormalMath.Algebra.Group.
-Require Import Coq.micromega.Lra.
+Require Import Stdlib.micromega.Lra.
 
 Section ORTHOGONAL_GROUP.
 

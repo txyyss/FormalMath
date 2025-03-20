@@ -1,7 +1,7 @@
-Require Import Coq.Classes.EquivDec.
-Require Import Coq.Arith.Arith_base.
-Require Import Coq.PArith.PArith.
-Require Import Coq.micromega.Lia.
+Require Import Stdlib.Classes.EquivDec.
+Require Import Stdlib.Arith.Arith_base.
+Require Import Stdlib.PArith.PArith.
+Require Import Stdlib.micromega.Lia.
 Require Import FormalMath.Algebra.FreeGroup.
 Require Import FormalMath.Algebra.CosetEnum.
 Require Import FormalMath.lib.List_ext.

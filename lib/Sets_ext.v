@@ -1,6 +1,6 @@
-Require Export Coq.Sets.Ensembles.
-Require Export Coq.Sets.Image.
-Require Coq.Logic.FinFun.
+Require Export Stdlib.Sets.Ensembles.
+Require Export Stdlib.Sets.Image.
+Require Stdlib.Vectors.FinFun.
 
 Arguments In {_}.
 Arguments Union {_}.
